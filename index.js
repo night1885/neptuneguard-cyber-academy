@@ -54,6 +54,35 @@ async function initializeDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS learner_module_progress (
+      discord_user_id TEXT NOT NULL,
+      course_key TEXT NOT NULL,
+      module_number INTEGER NOT NULL,
+      lesson_completed BOOLEAN NOT NULL DEFAULT FALSE,
+      lab_completed BOOLEAN NOT NULL DEFAULT FALSE,
+      quiz_completed BOOLEAN NOT NULL DEFAULT FALSE,
+      quiz_score INTEGER NOT NULL DEFAULT 0,
+      xp_earned INTEGER NOT NULL DEFAULT 0,
+      completed_at TIMESTAMPTZ,
+      PRIMARY KEY (
+        discord_user_id,
+        course_key,
+        module_number
+      )
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS learner_badges (
+      discord_user_id TEXT NOT NULL,
+      badge_key TEXT NOT NULL,
+      badge_name TEXT NOT NULL,
+      earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (discord_user_id, badge_key)
+    );
+  `);
+
   console.log('NeptuneGuard database is ready.');
 }
 
@@ -283,7 +312,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (!interaction.memberPermissions?.has('ManageGuild')) {
         await interaction.reply({
           content:
-            'You need Manage Server permission to view another learner’s progress.',
+            'You need Manage Server permission to view another learner\'s progress.',
           flags: MessageFlags.Ephemeral
         });
 
