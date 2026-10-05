@@ -8,3 +8,5 @@ deploy-commands-old-backup.js
 index.backup.js
 
 index.module1.backup.js
+
+index.before-next-step.backup.js
