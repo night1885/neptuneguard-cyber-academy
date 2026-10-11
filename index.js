@@ -1,3 +1,7 @@
+import { showBadgePage } from './badge-pages.js';
+import { getCourse } from './course-registry.js';
+import { buildLearnerReport } from './learner-report.js';
+import { showAcademyCourse, handleAcademyButton } from './academy-handler.js';
 import { buildLinuxCourseOverview, isModuleTwoUnlocked } from './course-navigation.js';
 import { getModuleTwoProgress, showModuleTwoDashboard, handleModuleTwoButton } from './module-two.js';
 import 'dotenv/config';
@@ -695,13 +699,7 @@ async function handleLinuxButton(interaction) {
 }
 
 async function showCourseOverview(interaction) {
-  const one = await getModuleProgress(interaction.user.id);
-  const two = await getModuleTwoProgress(pool, interaction.user.id);
-  await interaction.editReply({ content: buildLinuxCourseOverview(one, two),
-    components: [new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('linux-open-m1').setLabel('Open Module 01').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('linux-open-m2').setLabel('Open Module 02')
-        .setStyle(ButtonStyle.Success).setDisabled(!isModuleTwoUnlocked(one)))] });
+  await showAcademyCourse(interaction, pool, MODULE.courseKey);
 }
 
 async function routeCourseButton(interaction) {
@@ -740,10 +738,33 @@ client.once(Events.ClientReady, async readyClient => {
 client.on(Events.InteractionCreate, async interaction => {
   try {
     if (!interaction.isButton() && !interaction.isChatInputCommand()) return;
-    if (interaction.isButton() && !interaction.customId.startsWith('linux-')) return;
+    if (interaction.isButton() && !interaction.customId.startsWith('linux-') && !interaction.customId.startsWith('academy:') && !interaction.customId.startsWith('badge-page:')) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     if (interaction.isButton()) {
-      if (interaction.customId.startsWith('linux-m1-')) await handleLinuxButton(interaction);
+      if (interaction.customId.startsWith('badge-page:')) {
+  if (interaction.guildId !== config.guildId || !await userHasVerifiedRole(interaction)) {
+    await interaction.editReply({ content: 'Complete verification in the configured server first.', components: [] });
+    return;
+  }
+  const match = /^badge-page:(\d+)$/.exec(interaction.customId);
+  if (!match) {
+    await interaction.editReply({ content: 'Invalid badge page. Run /badges again.', components: [] });
+    return;
+  }
+  await showBadgePage(interaction, pool, Number(match[1]));
+}
+else if (interaction.customId.startsWith('academy:')) {
+  if (interaction.guildId !== config.guildId) {
+    await interaction.editReply({ content: 'This academy is not configured for this server.', components: [] });
+    return;
+  }
+  if (!await userHasVerifiedRole(interaction)) {
+    await interaction.editReply({ content: 'Complete server verification before using the academy.', components: [] });
+    return;
+  }
+  await handleAcademyButton(interaction, pool);
+}
+else if (interaction.customId.startsWith('linux-m1-')) await handleLinuxButton(interaction);
       else await routeCourseButton(interaction);
       return;
     }
@@ -835,8 +856,8 @@ client.on(Events.InteractionCreate, async interaction => {
         [interaction.user.id, path]
       );
 
-      const nextStep = path === MODULE.courseKey
-        ? 'Use `/continue` to open the Linux Fundamentals course overview.'
+      const nextStep = getCourse(path)
+        ? 'Use `/continue` to open your selected course overview.'
         : 'Modules for this path will be added in a future build.';
 
       await interaction.editReply({
@@ -854,63 +875,11 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.commandName === 'progress') {
-      const result = await pool.query(
-        `
-          SELECT
-            current_path_slug,
-            total_xp,
-            created_at,
-            last_activity_at
-          FROM learner_profiles
-          WHERE discord_user_id = $1;
-        `,
-        [interaction.user.id]
-      );
+  await interaction.editReply({ content: await buildLearnerReport(pool, interaction.user.id), allowedMentions: { parse: [] } });
+  return;
+}
 
-      if (result.rowCount === 0) {
-        await interaction.editReply({
-          content:
-            'You do not have a learner profile yet. Run `/start` first.'
-        });
-
-        return;
-      }
-
-      const profile = result.rows[0];
-      const moduleProgress = await getModuleProgress(
-        interaction.user.id
-      );
-
-      const moduleLines =
-        profile.current_path_slug === MODULE.courseKey
-          ? [
-              '',
-              `Linux Fundamentals Module 01: **${moduleCompletionCount(moduleProgress)}/3** activities · **${moduleProgress.xp_earned}/100 XP**`
-            ]
-          : [];
-
-      await interaction.editReply({
-        content: [
-          '## Your NeptuneGuard Progress',
-          '',
-          `Current path: \`${profile.current_path_slug || 'Not selected'}\``,
-          `XP: \`${profile.total_xp}\``,
-          ...moduleLines,
-          ...(profile.current_path_slug === MODULE.courseKey
-            ? [`Module 02: ${(await getModuleTwoProgress(pool, interaction.user.id)).xp_earned}/100 XP`] : []),
-          `Started: <t:${Math.floor(
-            new Date(profile.created_at).getTime() / 1000
-          )}:D>`,
-          `Last activity: <t:${Math.floor(
-            new Date(profile.last_activity_at).getTime() / 1000
-          )}:R>`
-        ].join('\n')
-      });
-
-      return;
-    }
-
-    if (interaction.commandName === 'continue') {
+if (interaction.commandName === 'continue') {
       const result = await pool.query(
         `
           SELECT current_path_slug
@@ -932,9 +901,9 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
       }
 
-      if (currentPath === MODULE.courseKey) {
+      if (getCourse(currentPath)) {
         await updateLastActivity(interaction.user.id);
-        await showCourseOverview(interaction);
+        await showAcademyCourse(interaction, pool, currentPath);
         return;
       }
 
@@ -947,81 +916,24 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.commandName === 'badges') {
-      await interaction.editReply({
-        content: await getBadgesSummary(interaction.user.id)
-      });
+  await showBadgePage(interaction, pool);
+  return;
+}
 
-      return;
-    }
-
-    if (interaction.commandName === 'student-progress') {
-      if (!interaction.memberPermissions?.has('ManageGuild')) {
-        await interaction.editReply({
-          content:
-            'You need Manage Server permission to view another learner\'s progress.'
-        });
-
-        return;
-      }
-
-      const targetUser = interaction.options.getUser(
-        'member',
-        true
-      );
-
-      const result = await pool.query(
-        `
-          SELECT
-            current_path_slug,
-            total_xp,
-            created_at,
-            last_activity_at
-          FROM learner_profiles
-          WHERE discord_user_id = $1;
-        `,
-        [targetUser.id]
-      );
-
-      if (result.rowCount === 0) {
-        await interaction.editReply({
-          content:
-            `${targetUser.tag} has not started NeptuneGuard Cyber Academy yet.`
-        });
-
-        return;
-      }
-
-      const profile = result.rows[0];
-      const moduleProgress = await getModuleProgress(
-        targetUser.id
-      );
-
-      const moduleLines =
-        profile.current_path_slug === MODULE.courseKey
-          ? [
-              `Module 01: ${moduleCompletionCount(moduleProgress)}/3 activities · ${moduleProgress.xp_earned}/100 XP`
-            ]
-          : [];
-
-      await interaction.editReply({
-        content: [
-          `## Learner Progress: ${targetUser.tag}`,
-          '',
-          `Current path: \`${profile.current_path_slug || 'Not selected'}\``,
-          `XP: \`${profile.total_xp}\``,
-          ...moduleLines,
-          ...(profile.current_path_slug === MODULE.courseKey
-            ? [`Module 02: ${(await getModuleTwoProgress(pool, targetUser.id)).xp_earned}/100 XP`] : []),
-          `Last activity: <t:${Math.floor(
-            new Date(profile.last_activity_at).getTime() / 1000
-          )}:R>`
-        ].join('\n')
-      });
-
-      return;
-    }
-  } catch (error) {
-    console.error('Interaction error:', error);
+if (interaction.commandName === 'student-progress') {
+  if (!interaction.memberPermissions?.has('ManageGuild')) {
+    await interaction.editReply({ content: 'You need Manage Server permission to view another learner progress.' });
+    return;
+  }
+  const targetUser = interaction.options.getUser('member', true);
+  await interaction.editReply({
+    content: await buildLearnerReport(pool, targetUser.id, 'Learner Progress'),
+    allowedMentions: { parse: [] }
+  });
+  return;
+}
+} catch (error) {
+    console.error('Interaction error:', { name: error?.name, code: error?.code });
 
     if (interaction.isRepliable()) {
       const reply = {
