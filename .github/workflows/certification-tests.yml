@@ -35,11 +35,16 @@ jobs:
         run: node --test test-certification-*.mjs
 
   certification-postgres-tests:
+    name: certification-postgres-tests (PostgreSQL ${{ matrix.postgres }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_USER: certification_ci
           POSTGRES_PASSWORD: disposable_ci_fixture_only
