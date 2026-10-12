@@ -29,5 +29,7 @@ jobs:
       - name: Check certification module syntax
         run: |
           for file in certification-*.js; do node --check "$file" || exit 1; done
+      - name: Validate unapplied entry-point patch
+        run: git apply --check --unidiff-zero patches/certification-entrypoint.patch
       - name: Run certification tests
         run: node --test test-certification-*.mjs
