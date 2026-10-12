@@ -1,6 +1,7 @@
 import { Events, PermissionFlagsBits } from 'discord.js';
 import { loadCertificationConfig } from './certification-config.js';
 import { createCertificationRouter } from './certification-router.js';
+import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
 
 export function attachCertificationRuntime(client, pool, guildId, env = process.env) {
   const config = loadCertificationConfig(env);
@@ -14,14 +15,8 @@ export function attachCertificationRuntime(client, pool, guildId, env = process.
     if (initializing) return initializing;
     initializing = (async () => {
       ready = false;
-      const tables = await pool.query(`SELECT
-        to_regclass('certification_agreements') AS agreements,
-        to_regclass('certification_enrollments') AS enrollments,
-        to_regclass('certification_lab_requests') AS labs,
-        to_regclass('certification_audit_events') AS audit`);
-      if (!tables.rows[0] || Object.values(tables.rows[0]).some(value => !value)) {
-        throw new Error('Certification schema is missing; apply the reviewed migration separately');
-      }
+      await validateCertificationSchema(pool);
+      await validateActiveEnrollmentAgreement(pool, config);
       const guild = await client.guilds.fetch(guildId);
       await guild.members.fetch(config.ownerId);
       const channel = await client.channels.fetch(config.adminChannelId);
