@@ -2,15 +2,18 @@ import { createCertificationSubmissionHandler } from './certification-submission
 import { createSubmissionAttemptGuard } from './certification-submission-attempts.js';
 import { observeSubmissionOperation } from './certification-submission-deadline.js';
 import { handleEnrollmentStatus } from './certification-enrollment-status.js';
+import { createStatusReadGuard } from './certification-status-read-guard.js';
 
 export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000 } = {}) {
   if (!Number.isInteger(responseTimeoutMs) || responseTimeoutMs < 1 || responseTimeoutMs > 60000) throw new Error('Invalid response deadline');
   const handler = createCertificationSubmissionHandler(pool, config, guildId);
   const guard = createSubmissionAttemptGuard();
+  const statusGuard = createStatusReadGuard();
   return async function guardedSubmission(interaction) {
     if (!(interaction.isButton() || interaction.isModalSubmit()) || !interaction.customId?.startsWith('cert:submit:')) return false;
     if (interaction.isButton() && /^cert:submit:status(?::|$)/.test(interaction.customId)) {
-      return handleEnrollmentStatus(interaction, pool, config, guildId, responseTimeoutMs);
+      const guardedPool = { query: (...args) => statusGuard.run(interaction.user?.id, () => pool.query(...args)) };
+      return handleEnrollmentStatus(interaction, guardedPool, config, guildId, responseTimeoutMs);
     }
     if (config.enabled !== true || config.enrollmentSubmissionEnabled !== true ||
         interaction.guildId !== guildId || !/^\d{17,20}$/.test(interaction.user?.id || '')) return handler(interaction);

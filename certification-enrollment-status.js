@@ -1,4 +1,5 @@
 import { observeSubmissionOperation } from './certification-submission-deadline.js';
+import { StatusReadLimitError } from './certification-status-read-guard.js';
 
 export async function handleEnrollmentStatus(interaction, pool, config, guildId, timeoutMs = 10000) {
   if (!interaction.isButton() || !/^cert:submit:status(?::|$)/.test(interaction.customId || '')) return false;
@@ -27,7 +28,13 @@ export async function handleEnrollmentStatus(interaction, pool, config, guildId,
     const id = typeof row.student_id === 'string' && /^NG-PT-[A-Za-z0-9-]{1,80}$/.test(row.student_id) ? row.student_id : 'Not issued or requires owner review';
     await reply(`Discord ID: ${target}\nEnrollment status: ${row.status}\nPermanent student ID: ${id}\n${snapshot}`);
     return true;
-  } catch {
+  } catch (error) {
+    if (error instanceof StatusReadLimitError) {
+      await reply(error.reason === 'busy' ? 'Another status lookup is still processing. Wait for it to finish before retrying.'
+        : error.reason === 'rate_limit' ? 'Too many status lookups. Wait up to one minute before retrying.'
+          : 'Enrollment status checks are busy. Retry later.');
+      return true;
+    }
     await reply('Enrollment status could not be confirmed. Ask the owner to review before resubmitting. No enrollment record was changed by this check.');
     return true;
   }
