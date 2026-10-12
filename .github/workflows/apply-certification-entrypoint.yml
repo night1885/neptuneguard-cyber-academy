@@ -27,7 +27,7 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --ignore-scripts
-      - name: Apply exact reviewed changes
+      - name: Apply exact reviewed entry-point changes
         shell: bash
         run: |
           python3 - <<'PY'
@@ -44,24 +44,17 @@ jobs:
               raise SystemExit('Expected exactly one login anchor')
           text = "import { attachCertificationRuntime } from './certification-runtime.js';\n" + text
           text = text.replace(anchor, 'attachCertificationRuntime(client, pool, config.guildId);\n' + anchor)
-          workflow = Path('.github/workflows/certification-tests.yml')
-          previous = workflow.read_text()
-          old = '      - name: Validate unapplied entry-point patch\n        run: git apply --check --unidiff-zero patches/certification-entrypoint.patch\n'
-          new = '      - name: Check integrated entry-point syntax\n        run: node --check index.js\n'
-          if previous.count(old) != 1:
-              raise SystemExit('CI validation step differs from the reviewed step; no changes applied')
           entry.write_bytes(text.encode('utf-8'))
-          workflow.write_text(previous.replace(old, new))
           PY
       - name: Validate integrated source and certification tests
         run: |
           node --check index.js
           for file in certification-*.js; do node --check "$file" || exit 1; done
           node --test test-certification-*.mjs
-      - name: Commit reviewed integration to feature branch only
+      - name: Commit reviewed source integration to feature branch only
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.js .github/workflows/certification-tests.yml
+          git add index.js
           git commit -m 'Attach certification runtime before Discord login after passing tests'
           git push origin HEAD:refs/heads/feature/certification-dashboard
