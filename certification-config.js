@@ -1,0 +1,36 @@
+export function loadCertificationConfig(env = process.env) {
+  const ownerId = env.ACADEMY_OWNER_ID || '1223123544301633567';
+  const adminChannelId = env.ACADEMY_ADMIN_CHANNEL_ID || '1339276399390887956';
+  for (const [name, value] of Object.entries({ ownerId, adminChannelId })) {
+    if (!/^\d{17,20}$/.test(value)) throw new Error(`Invalid certification ${name}`);
+  }
+  const enabled = env.CERTIFICATION_ENABLED === 'true';
+  const flag = env.CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED;
+  if (flag !== undefined && flag !== 'true' && flag !== 'false') throw new Error('Invalid enrollment submission flag');
+  const enrollmentSubmissionEnabled = flag === 'true';
+  const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled };
+  if (!enrollmentSubmissionEnabled) return Object.freeze(base);
+  if (!enabled) throw new Error('Certification must be enabled before submission configuration');
+  const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
+  if (typeof raw !== 'string' || raw.length > 12000) throw new Error('Valid enrollment manifest required');
+  let manifest;
+  try { manifest = JSON.parse(raw); } catch { throw new Error('Valid enrollment manifest required'); }
+  const identifier = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(value);
+  const check = manifest?.comprehensionCheck;
+  if (!identifier(manifest?.agreementVersion) || typeof manifest?.agreementSha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(manifest.agreementSha256) || !identifier(check?.version) ||
+      !Array.isArray(check?.questions) || check.questions.length < 1 || check.questions.length > 3 ||
+      !check.questions.every(q => typeof q?.prompt === 'string' && q.prompt.trim().length > 0 && q.prompt.length <= 300) ||
+      !Array.isArray(check?.correctAnswers) || check.correctAnswers.length !== check.questions.length ||
+      !check.correctAnswers.every(a => typeof a === 'string' && a.trim().length > 0 && a.length <= 100)) {
+    throw new Error('Valid enrollment agreement and comprehension configuration required');
+  }
+  const questions = Object.freeze(check.questions.map(q => Object.freeze({ prompt: q.prompt })));
+  const comprehensionCheck = Object.freeze({ version: check.version, questions, correctAnswers: Object.freeze([...check.correctAnswers]) });
+  return Object.freeze({ ...base, activeAgreementVersion: manifest.agreementVersion,
+    activeAgreementSha256: manifest.agreementSha256, comprehensionCheck });
+}
+
+export function isCertificationOwner(interaction, config) {
+  return interaction.user?.id === config.ownerId;
+}

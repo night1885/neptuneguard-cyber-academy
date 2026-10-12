@@ -1,0 +1,11 @@
+# Isolated certification pool — preparation only
+
+This patch adds a lazy certification-only PostgreSQL pool factory. It is deliberately not attached to index.js or the runtime yet. The existing shared academy pool remains unchanged; these timeout settings do not currently protect runtime operations. Integration requires a subsequent reviewed patch after CI passes.
+
+Default limits are four connections, a 3-second pool connection/acquisition timeout, 5-second server statement timeout, 2-second lock timeout, and 10-second idle-in-transaction timeout. Limits must be positive bounded integers; lock timeout must be shorter than statement timeout. The factory requires an explicit PostgreSQL URL naming a database, without query parameters or fragments. TLS policy is supplied explicitly via ssl rather than URL options. It does not choose credentials or change certificate-verification policy.
+
+Startup options apply server limits to each connection. No client-side query_timeout race is introduced. A response timeout does not establish whether a write committed. Statement timeout is per statement, lock timeout is per lock wait, and idle transaction timeout is not a total transaction deadline or network watchdog. These settings do not bound an entire multi-statement transaction or provide distributed admission control.
+
+Tests check configuration validation and lazy creation. Disposable PostgreSQL coverage checks effective server settings, long-statement cancellation, rollback of earlier transaction writes after cancellation, lock-wait cancellation, exhausted-pool checkout rejection, and subsequent pool reuse. Idle transaction timeout is checked via SHOW only; actual idle-session termination is not tested in this batch. CI results for this exact patch are pending at preparation time.
+
+Runtime integration must retain disabled-by-default behavior, validate configuration before creating the separate pool, establish safe pool shutdown and sanitized error handling, and ensure all certification routes use the isolated pool. Controlled testing must cover uncertain outcomes and least-privilege roles before activation. No production migration, runtime-pool replacement, merge, publication, deployment, or enrollment activation occurs in this patch.
