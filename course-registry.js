@@ -1,3 +1,4 @@
+import { SOC_COURSE } from './soc-analyst.js';
 import { SECURITY_COURSE } from './linux-security-engineering.js';
 import { ADMINISTRATION_COURSE } from './linux-administration.js';
 import { FUNDAMENTALS_STAGE_THREE } from './fundamentals-stage-three.js';
@@ -182,7 +183,7 @@ export const ADDITIONAL_FUNDAMENTALS_MODULES = [
 export const COURSES = [{
   key: 'linux-fundamentals', title: 'Linux Fundamentals',
   modules: [MODULE_ONE, MODULE_TWO, ...ADDITIONAL_FUNDAMENTALS_MODULES, ...FUNDAMENTALS_STAGE_TWO, ...FUNDAMENTALS_STAGE_THREE]
-}, ADMINISTRATION_COURSE, SECURITY_COURSE];
+}, ADMINISTRATION_COURSE, SECURITY_COURSE, SOC_COURSE];
 
 export function getCourse(key) { return COURSES.find(course => course.key === key); }
 export function getModule(key, number) { return getCourse(key)?.modules.find(module => module.number === number); }
