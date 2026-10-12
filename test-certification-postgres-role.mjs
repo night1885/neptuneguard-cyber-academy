@@ -44,6 +44,17 @@ test('restricted PostgreSQL login role supports enrollment lifecycle but cannot 
     assert.deepEqual(identity, { current: role, session: role });
     const privileges = (await client.query('SELECT rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls FROM pg_roles WHERE rolname=current_user')).rows[0];
     assert.ok(Object.values(privileges).every(value => value === false));
+    const lockedRead = 'SELECT content, content_sha256 FROM certification_agreements WHERE version=$1 FOR SHARE';
+    await assert.rejects(client.query(lockedRead, ['fixture-v1']), error => error.code === '42501');
+    await admin.query(`GRANT UPDATE (version) ON certification_agreements TO "${role}"`);
+    const columns = (await client.query(`SELECT
+      has_column_privilege(current_user, 'certification_agreements', 'version', 'UPDATE') AS version_update,
+      has_column_privilege(current_user, 'certification_agreements', 'content', 'UPDATE') AS content_update,
+      has_column_privilege(current_user, 'certification_agreements', 'content_sha256', 'UPDATE') AS hash_update`)).rows[0];
+    assert.deepEqual(columns, { version_update: true, content_update: false, hash_update: false });
+    assert.equal((await client.query(lockedRead, ['fixture-v1'])).rows[0].content, content);
+    await assert.rejects(client.query("UPDATE certification_agreements SET version='blocked-version' WHERE version='fixture-v1'"),
+      error => error.code === 'P0001' && /immutable/.test(error.message));
     const pool = { query: (...args) => client.query(...args),
       async connect() { return { query: (...args) => client.query(...args), release() {} }; } };
     const owner = '1223123544301633567'; const learner = '1223123544301633568';
