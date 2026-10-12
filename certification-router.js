@@ -4,6 +4,7 @@ import { handleEnrollmentAction } from './certification-enrollment-actions.js';
 import { createCertificationService } from './certification-service.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
 import { handleCertificationLearner } from './certification-learner.js';
+import { createCertificationSubmissionHandler } from './certification-submission-interactions.js';
 
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 
@@ -11,9 +12,11 @@ export function createCertificationRouter(pool, config, guildId) {
   if (!/^\d{17,20}$/.test(guildId || '')) throw new Error('Configured guild ID required');
   const service = createCertificationService(pool, config);
   const access = createAccessActionHandler(pool, config, guildId);
+  const submission = createCertificationSubmissionHandler(pool, config, guildId);
   return async function routeCertificationInteraction(interaction) {
     if (!(interaction.isButton() || interaction.isModalSubmit()) || !interaction.customId.startsWith('cert:')) return false;
     if (interaction.customId.startsWith('cert:access:')) return access(interaction);
+    if (interaction.customId.startsWith('cert:submit:')) return submission(interaction);
     if (!interaction.isButton()) {
       await interaction.reply({ content: 'Unsupported certification form.', flags: 64 }); return true;
     }
