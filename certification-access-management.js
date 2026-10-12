@@ -1,3 +1,5 @@
+import { hasCompleteTypedAcknowledgment } from './certification-acknowledgment.js';
+
 export function createCertificationAccessManagement(pool, config) {
   const transitions = {
     deny: { from: ['pending'], to: 'denied' },
@@ -8,7 +10,7 @@ export function createCertificationAccessManagement(pool, config) {
 
   async function changeEnrollmentStatus(actorId, studentDiscordId, action, reason) {
     if (!config.enabled || actorId !== config.ownerId) throw new Error('Enabled certification and owner authorization required');
-    if (!/^\d{17,20}$/.test(studentDiscordId)) throw new Error('Invalid student Discord ID');
+    if (typeof studentDiscordId !== 'string' || !/^\d{17,20}$/.test(studentDiscordId)) throw new Error('Invalid student Discord ID');
     const transition = Object.hasOwn(transitions, action) ? transitions[action] : null;
     if (!transition) throw new Error('Invalid access-management action');
     if (typeof reason !== 'string' || !reason.trim() || reason.length > 1000) throw new Error('A reason of 1–1000 characters is required');
@@ -19,9 +21,8 @@ export function createCertificationAccessManagement(pool, config) {
         'SELECT * FROM certification_enrollments WHERE discord_user_id=$1 FOR UPDATE', [studentDiscordId]);
       const row = result.rows[0];
       if (!row || !transition.from.includes(row.status)) throw new Error('Enrollment status does not permit this action');
-      if (action === 'reinstate' && (!row.student_id || !row.agreement_version || !row.acknowledged_at ||
-          !row.signature_method || !row.signature_reference || !row.learner_confirmed_read_at ||
-          !row.comprehension_passed_at || !row.approved_by || !row.approved_at)) {
+      if (action === 'reinstate' && (!row.student_id || !row.approved_by || !row.approved_at ||
+          !hasCompleteTypedAcknowledgment(row))) {
         throw new Error('Prior approval and complete acknowledgment are required for reinstatement');
       }
       await db.query(
