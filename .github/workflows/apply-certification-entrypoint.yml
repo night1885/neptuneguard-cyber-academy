@@ -1,0 +1,67 @@
+name: Apply certification entry-point integration
+
+on:
+  push:
+    branches: [feature/certification-dashboard]
+    paths: [.github/workflows/apply-certification-entrypoint.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-certification-entrypoint
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/certification-dashboard
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Apply exact reviewed changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          entry = Path('index.js')
+          original = entry.read_bytes()
+          blob = b'blob ' + str(len(original)).encode() + b'\0' + original
+          if hashlib.sha1(blob).hexdigest() != '12f009cd476fbb9a787182a26128bbb6f7a645d1':
+              raise SystemExit('index.js revision differs from the reviewed revision; no changes applied')
+          text = original.decode('utf-8')
+          anchor = 'client.login(process.env.DISCORD_TOKEN);'
+          if text.count(anchor) != 1:
+              raise SystemExit('Expected exactly one login anchor')
+          text = "import { attachCertificationRuntime } from './certification-runtime.js';\n" + text
+          text = text.replace(anchor, 'attachCertificationRuntime(client, pool, config.guildId);\n' + anchor)
+          workflow = Path('.github/workflows/certification-tests.yml')
+          previous = workflow.read_text()
+          old = '      - name: Validate unapplied entry-point patch\n        run: git apply --check --unidiff-zero patches/certification-entrypoint.patch\n'
+          new = '      - name: Check integrated entry-point syntax\n        run: node --check index.js\n'
+          if previous.count(old) != 1:
+              raise SystemExit('CI validation step differs from the reviewed step; no changes applied')
+          entry.write_bytes(text.encode('utf-8'))
+          workflow.write_text(previous.replace(old, new))
+          PY
+      - name: Validate integrated source and certification tests
+        run: |
+          node --check index.js
+          for file in certification-*.js; do node --check "$file" || exit 1; done
+          node --test test-certification-*.mjs
+      - name: Commit reviewed integration to feature branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.js .github/workflows/certification-tests.yml
+          git commit -m 'Attach certification runtime before Discord login after passing tests'
+          git push origin HEAD:refs/heads/feature/certification-dashboard
