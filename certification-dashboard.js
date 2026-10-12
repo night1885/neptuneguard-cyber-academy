@@ -32,7 +32,7 @@ export async function handleCertificationDashboard(interaction, pool, config, gu
       (SELECT COUNT(*) FROM certification_lab_requests WHERE status='pending') AS pending_labs`);
     const counts = result.rows[0];
     embed.setTitle('NeptuneGuard Certification — Owner Console').setDescription(
-      `Pending enrollments: ${counts.pending_enrollments}\nApproved students: ${counts.enrolled_students}\nPending lab requests: ${counts.pending_labs}\n\nReview queues below. This version is read-only; approval actions are not connected yet.`
+      `Pending enrollments: ${counts.pending_enrollments}\nApproved students: ${counts.enrolled_students}\nPending lab requests: ${counts.pending_labs}\n\nReview enrollment requests and student access below. Hosted-lab approval and session controls are separate; enrollment approval does not grant lab access or award a certificate.`
     );
   } else {
     const enrollment = view === 'enrollments';
