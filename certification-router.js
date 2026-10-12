@@ -4,7 +4,7 @@ import { handleEnrollmentAction } from './certification-enrollment-actions.js';
 import { createCertificationService } from './certification-service.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
 import { handleCertificationLearner } from './certification-learner.js';
-import { createCertificationSubmissionHandler } from './certification-submission-interactions.js';
+import { createGuardedSubmissionHandler as createCertificationSubmissionHandler } from './certification-submission-guarded.js';
 
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 
