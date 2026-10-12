@@ -3,11 +3,12 @@ import { loadCertificationConfig } from './certification-config.js';
 import { createCertificationRouter } from './certification-router.js';
 import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
 import { createCertificationDatabasePool } from './certification-database-pool.js';
+import { loadCertificationDatabaseConnection } from './certification-database-config.js';
 
-export function attachCertificationRuntime(client, pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
+export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
   const config = loadCertificationConfig(env);
   if (!config.enabled) return { enabled: false, detach() {} };
-  const database = createPool({ connectionString: pool.options?.connectionString, ssl: pool.options?.ssl });
+  const database = createPool(loadCertificationDatabaseConnection(env));
   let route;
   try { route = createCertificationRouter(database, config, guildId); }
   catch (error) {

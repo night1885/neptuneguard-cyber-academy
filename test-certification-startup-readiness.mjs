@@ -8,6 +8,7 @@ import { requiredEnrollmentColumns } from './certification-schema-readiness.js';
 const guildId = '1339276399390887957';
 const content = 'Startup fixture only.'; const hash = createHash('sha256').update(content).digest('hex');
 const environment = { CERTIFICATION_ENABLED: 'true', CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED: 'true',
+  CERTIFICATION_DATABASE_URL: 'postgresql://fixture:fixture@localhost/certification_test', CERTIFICATION_DATABASE_TLS: 'disable',
   CERTIFICATION_ENROLLMENT_MANIFEST_JSON: JSON.stringify({ agreementVersion: 'fixture-v2', agreementSha256: hash,
     comprehensionCheck: { version: 'fixture-check', questions: [{ prompt: 'Test question.' }], correctAnswers: ['stop'] } }) };
 function fixture(options = {}) {

@@ -4,18 +4,20 @@ import { EventEmitter } from 'node:events';
 import { attachCertificationRuntime } from './certification-runtime.js';
 
 const guildId = '1339276399390887957';
+const databaseEnvironment = { CERTIFICATION_DATABASE_URL: 'postgresql://cert_fixture:fixture@localhost/certification_test', CERTIFICATION_DATABASE_TLS: 'disable' };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function clientFixture() {
   const client = new EventEmitter(); client.isReady = () => false;
   client.guilds = { async fetch() { throw new Error('Unexpected guild lookup'); } }; return client;
 }
 function attach(client, pool, env) {
-  return attachCertificationRuntime(client, {}, guildId, env, { createPool: () => ({ ...pool, async end() {} }) });
+  return attachCertificationRuntime(client, {}, guildId, { ...databaseEnvironment, ...env }, { createPool: () => ({ ...pool, async end() {} }) });
 }
 
-test('disabled runtime registers no listeners and constructs no pool', () => {
+test('disabled runtime registers no listeners and ignores invalid unused database configuration', () => {
   const client = clientFixture();
-  const runtime = attachCertificationRuntime(client, {}, guildId, {}, { createPool() { assert.fail('Disabled runtime must not create a pool'); } });
+  const runtime = attachCertificationRuntime(client, {}, guildId, { CERTIFICATION_DATABASE_URL: 'invalid', CERTIFICATION_DATABASE_TLS: 'invalid' },
+    { createPool() { assert.fail('Disabled runtime must not create a pool'); } });
   assert.equal(runtime.enabled, false); assert.equal(client.eventNames().length, 0); runtime.detach();
 });
 test('missing schema keeps runtime unavailable and detach removes listeners', async () => {
@@ -39,19 +41,20 @@ test('unrelated academy interaction is untouched', async () => {
     isButton: () => true, isModalSubmit: () => false, customId: 'academy:existing', async reply() { replies++; } });
   await tick(); assert.equal(replies, 0); await runtime.detach();
 });
-test('owned pool receives explicit source configuration and closes exactly once without ending shared pool', async () => {
+test('owned pool uses certification configuration instead of academy credentials and closes once', async () => {
   const client = clientFixture(); let ended = 0; let received;
-  const source = { options: { connectionString: 'postgresql://fixture:fixture@localhost/certification_test', ssl: false },
+  const source = { options: { connectionString: 'postgresql://academy_fixture:fixture@localhost/academy_test', ssl: { rejectUnauthorized: false } },
     async end() { assert.fail('Shared academy pool must not be closed'); } };
-  const runtime = attachCertificationRuntime(client, source, guildId, { CERTIFICATION_ENABLED: 'true' }, {
+  const runtime = attachCertificationRuntime(client, source, guildId, { ...databaseEnvironment, CERTIFICATION_ENABLED: 'true' }, {
     createPool(connection) { received = connection; return { async end() { ended++; } }; } });
-  assert.deepEqual(received, source.options);
+  assert.deepEqual(received, { connectionString: databaseEnvironment.CERTIFICATION_DATABASE_URL, ssl: false });
+  assert.notEqual(received.connectionString, source.options.connectionString);
   const first = runtime.detach(); assert.equal(runtime.detach(), first); await first;
   assert.equal(ended, 1); assert.equal(runtime.ready, false);
 });
 test('detach waits for pending startup before ending owned pool', async () => {
   const client = clientFixture(); let release; let ended = 0;
-  const runtime = attachCertificationRuntime(client, {}, guildId, { CERTIFICATION_ENABLED: 'true' }, {
+  const runtime = attachCertificationRuntime(client, {}, guildId, { ...databaseEnvironment, CERTIFICATION_ENABLED: 'true' }, {
     createPool: () => ({ query() { return new Promise(resolve => { release = resolve; }); }, async end() { ended++; } }) });
   client.emit('clientReady'); const closed = runtime.detach(); await tick(); assert.equal(ended, 0);
   release({ rows: [{ agreements: null, enrollments: null, labs: null, audit: null }] });
@@ -59,7 +62,7 @@ test('detach waits for pending startup before ending owned pool', async () => {
 });
 test('detach waits for tracked reply and stops admitting interactions', async () => {
   const client = clientFixture(); let release; let ended = 0; let replies = 0;
-  const runtime = attachCertificationRuntime(client, {}, guildId, { CERTIFICATION_ENABLED: 'true' }, {
+  const runtime = attachCertificationRuntime(client, {}, guildId, { ...databaseEnvironment, CERTIFICATION_ENABLED: 'true' }, {
     createPool: () => ({ async end() { ended++; } }) });
   const interaction = { isButton: () => true, isModalSubmit: () => false, customId: 'cert:admin:overview:0',
     reply() { replies++; return new Promise(resolve => { release = resolve; }); } };
@@ -73,8 +76,15 @@ test('invalid enabled configuration fails before pool creation', () => {
     createPool() { calls++; } }));
   assert.equal(calls, 0); assert.equal(client.eventNames().length, 0);
 });
-test('enabled default factory requires explicit source URL before listener registration', () => {
-  const client = clientFixture();
-  assert.throws(() => attachCertificationRuntime(client, {}, guildId, { CERTIFICATION_ENABLED: 'true' }), /Explicit certification database URL required/);
+test('enabled runtime cannot fall back to shared academy URL before listener registration', () => {
+  const client = clientFixture(); const source = { options: { connectionString: databaseEnvironment.CERTIFICATION_DATABASE_URL, ssl: false } };
+  assert.throws(() => attachCertificationRuntime(client, source, guildId, { CERTIFICATION_ENABLED: 'true' }), /Explicit certification database URL required/);
   assert.equal(client.eventNames().length, 0);
+});
+test('remote TLS disable fails before factory invocation and listener registration', () => {
+  const client = clientFixture(); let calls = 0;
+  assert.throws(() => attachCertificationRuntime(client, {}, guildId, { CERTIFICATION_ENABLED: 'true',
+    CERTIFICATION_DATABASE_URL: 'postgresql://fixture:fixture@database.example.invalid/certification_fixture', CERTIFICATION_DATABASE_TLS: 'disable' },
+    { createPool() { calls++; } }), /loopback/);
+  assert.equal(calls, 0); assert.equal(client.eventNames().length, 0);
 });
