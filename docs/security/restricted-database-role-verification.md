@@ -1,0 +1,15 @@
+# Restricted database-role fixture — verification pending
+
+Access-confirmation commit fd486b7e53d10b8125de8ea1f7102b9fb314931a passed both unit and PostgreSQL CI runs before preparing this patch. This new integration test and CI change require their own results. No production role provisioning is included.
+
+The test requires both CERTIFICATION_TEST_DATABASE_URL and CERTIFICATION_TEST_ALLOW_ROLE_DDL=true. It rejects URLs outside loopback or a database other than certification_test, and rejects URL query parameters and fragments. CI sets the role-DDL opt-in only in the disposable PostgreSQL service job. Ordinary unit runs skip the suite. The test verifies current_database before creating resources.
+
+PostgreSQL roles are cluster-wide, not schema-local. This suite therefore belongs only on a dedicated disposable test cluster, never a shared production cluster—even if a database named certification_test exists there. Generated unique role/schema names prevent intentional collision, but the URL checks cannot prove cluster isolation. The explicit flag acknowledges this extra requirement. Cleanup attempts to close the worker, remove only the generated schema, and drop only the generated role.
+
+A generated login role with a generated test-only password authenticates on a separate connection. Both current_user and session_user must be that role, not an administrator using SET ROLE. It has no superuser, database-creation, role-creation, replication, bypass-RLS, or inherited-role privileges. Grants cover schema usage, agreement SELECT, enrollment SELECT/INSERT/UPDATE, lab SELECT/UPDATE, audit INSERT, and sequence USAGE inside the generated schema. The role does not own the tables.
+
+Actual services exercise submission, approval, idempotent repeat approval, suspension, reinstatement, revocation, authorization checks, and readiness checks. The final student ID remains unchanged and exactly five audit events are expected. Permission-denial checks cover agreement UPDATE, audit UPDATE/DELETE/TRUNCATE, enrollment DELETE, disabling the student-ID safeguard, and creating a table. These checks use real PostgreSQL permissions and SQL, not mock query responses. Lab requests are not seeded and actual lab-session termination is not tested.
+
+The fixture is evidence for these service permissions, not a full production least-privilege design. It uses normal PostgreSQL PUBLIC connection/function defaults, no production RLS policies, no public-dashboard live testing, and no certificate-verified TLS. Other database objects, role memberships, default privileges, and security-definer functions require review in the actual target cluster. SQL-level access to enrollment updates still trusts the backend; owner identity authorization remains in application logic.
+
+Production provisioning, separate runtime credentials, migration ownership, TLS policy, and controlled rollout require explicit review and approval. No production migration, merge, publication, deployment, or enrollment activation occurs in this patch.
