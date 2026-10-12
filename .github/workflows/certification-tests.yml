@@ -1,0 +1,38 @@
+name: Certification foundation tests
+
+on:
+  push:
+    branches: [feature/certification-dashboard]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: certification-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  certification-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Check certification module syntax
+        run: |
+          node --check certification-config.js
+          node --check certification-service.js
+          node --check certification-ui.js
+          node --check certification-dashboard.js
+          node --check certification-enrollment-actions.js
+          node --check certification-router.js
+      - name: Run mocked enrollment service tests
+        run: node --test test-certification-service.mjs
