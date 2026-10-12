@@ -1,4 +1,4 @@
-import { attachCertificationRuntime } from './certification-runtime.js';
+import { createAcademyApplication } from './certification-academy-application.js';
 import { showBadgePage } from './badge-pages.js';
 import { getCourse } from './course-registry.js';
 import { buildLearnerReport } from './learner-report.js';
@@ -723,20 +723,7 @@ async function routeCourseButton(interaction) {
   else await handleModuleTwoButton(interaction, pool);
 }
 
-client.once(Events.ClientReady, async readyClient => {
-  try {
-    await initializeDatabase();
-
-    console.log(
-      `NeptuneGuard Cyber Academy is online as ${readyClient.user.tag}`
-    );
-  } catch (error) {
-    console.error('Database setup failed:', error);
-    process.exit(1);
-  }
-});
-
-client.on(Events.InteractionCreate, async interaction => {
+async function handleAcademyInteraction(interaction) {
   try {
     if (!interaction.isButton() && !interaction.isChatInputCommand()) return;
     if (interaction.isButton() && !interaction.customId.startsWith('linux-') && !interaction.customId.startsWith('academy:') && !interaction.customId.startsWith('badge-page:')) return;
@@ -952,7 +939,10 @@ if (interaction.commandName === 'student-progress') {
       }
     }
   }
-});
+}
 
-attachCertificationRuntime(client, pool, config.guildId);
-client.login(process.env.DISCORD_TOKEN);
+const application = createAcademyApplication({
+  client, pool, guildId: config.guildId, initializeDatabase,
+  handleInteraction: handleAcademyInteraction
+});
+void application.start(process.env.DISCORD_TOKEN);
