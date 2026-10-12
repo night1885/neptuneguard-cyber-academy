@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const applicationUrl = new URL('./certification-academy-application.js', import.meta.url).href;
-const childSource = `
+const childSource = String.raw`
 import { EventEmitter } from 'node:events';
 import { createAcademyApplication } from ${JSON.stringify(applicationUrl)};
 const mode = process.argv[1];
@@ -29,6 +29,13 @@ const application = createAcademyApplication({
 void application.start('synthetic-fixture-not-a-token');
 `;
 
+test('generated child fixture is valid JavaScript before process execution', () => {
+  const result = spawnSync(process.execPath, ['--input-type=module', '--check'], {
+    input: childSource, encoding: 'utf8', env: { NODE_ENV: 'test' }, timeout: 10000
+  });
+  assert.ifError(result.error); assert.equal(result.status, 0, result.stderr);
+});
+
 function launch(t, mode) {
   const child = spawn(process.execPath, ['--input-type=module', '-e', childSource, mode], {
     env: { NODE_ENV: 'test' }, stdio: ['ignore', 'pipe', 'pipe']
@@ -52,7 +59,7 @@ function launch(t, mode) {
   child.on('error', error => { clearTimeout(watchdog); rejectReady(error); rejectDone(error); });
   child.on('close', (code, signal) => {
     clearTimeout(watchdog);
-    if (!sawReady) rejectReady(new Error('Fixture exited before readiness'));
+    if (!sawReady) rejectReady(new Error(`Fixture exited before readiness (${code}/${signal}): ${stderr.slice(0, 2000)}`));
     resolveDone({ code, signal, stdout, stderr });
   });
   t.after(() => {
