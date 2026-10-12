@@ -6,6 +6,9 @@ diff --git a/index.js b/index.js
  import { showBadgePage } from './badge-pages.js';
  import { getCourse } from './course-registry.js';
  import { buildLearnerReport } from './learner-report.js';
-@@ -935,1 +936,2 @@
+@@ -932,4 +933,5 @@
+   }
+ });
+ 
 +attachCertificationRuntime(client, pool, config.guildId);
  client.login(process.env.DISCORD_TOKEN);
