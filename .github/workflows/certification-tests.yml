@@ -69,4 +69,4 @@ jobs:
       - name: Require explicit disposable database configuration
         run: test -n "$CERTIFICATION_TEST_DATABASE_URL"
       - name: Run real PostgreSQL certification integration tests
-        run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs
+        run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs test-certification-database-pool.mjs
