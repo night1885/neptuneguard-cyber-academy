@@ -1,3 +1,4 @@
+import { attachCertificationRuntime } from './certification-runtime.js';
 import { showBadgePage } from './badge-pages.js';
 import { getCourse } from './course-registry.js';
 import { buildLearnerReport } from './learner-report.js';
@@ -953,4 +954,5 @@ if (interaction.commandName === 'student-progress') {
   }
 });
 
+attachCertificationRuntime(client, pool, config.guildId);
 client.login(process.env.DISCORD_TOKEN);
