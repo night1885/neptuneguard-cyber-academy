@@ -33,3 +33,40 @@ jobs:
         run: node --check index.js
       - name: Run certification tests
         run: node --test test-certification-*.mjs
+
+  certification-postgres-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: certification_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U certification_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Require explicit disposable database configuration
+        run: test -n "$CERTIFICATION_TEST_DATABASE_URL"
+      - name: Run real PostgreSQL certification integration tests
+        run: node --test test-certification-postgres.mjs
