@@ -29,5 +29,5 @@ jobs:
       - name: Check certification module syntax
         run: |
           for file in certification-*.js; do node --check "$file" || exit 1; done
-      - name: Run mocked certification service tests
-        run: node --test test-certification-service.mjs test-certification-access.mjs
+      - name: Run certification tests
+        run: node --test test-certification-*.mjs
