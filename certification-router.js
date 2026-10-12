@@ -3,6 +3,7 @@ import { handleCertificationDashboard } from './certification-dashboard.js';
 import { handleEnrollmentAction } from './certification-enrollment-actions.js';
 import { createCertificationService } from './certification-service.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
+import { handleCertificationLearner } from './certification-learner.js';
 
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 
@@ -16,6 +17,7 @@ export function createCertificationRouter(pool, config, guildId) {
     if (!interaction.isButton()) {
       await interaction.reply({ content: 'Unsupported certification form.', flags: 64 }); return true;
     }
+    if (await handleCertificationLearner(interaction, config, guildId, service)) return true;
     if (interaction.customId.startsWith('cert:enrollment:')) return handleEnrollmentAction(interaction, pool, config, guildId, service);
     if (interaction.customId.startsWith('cert:students:')) {
       await interaction.deferReply({ flags: 64 });
