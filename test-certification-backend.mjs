@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 const suites = [
   'test-certification-acknowledgment.mjs',
   'test-certification-service.mjs',
-  'test-certification-access.mjs'
+  'test-certification-access.mjs',
+  'test-certification-submission.mjs'
 ];
 
 const result = spawnSync(process.execPath, ['--test', ...suites], {

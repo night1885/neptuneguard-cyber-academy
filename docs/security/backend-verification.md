@@ -8,21 +8,34 @@ From a repository checkout with a compatible Node.js runtime, run:
 node test-certification-backend.mjs
 ```
 
-The runner executes the repository's acknowledgment, enrollment approval, and access-management unit-test files together. It preserves test output and returns a nonzero exit status on test failure, launch failure, timeout, or signal termination. It does not start the bot or invoke migrations.
+The runner now executes four unit-test files: acknowledgment, enrollment approval, access management, and enrollment submission. It preserves test output and returns nonzero on test failure, launch failure, timeout, or signal termination. It does not start the bot or invoke migrations.
 
-## Local development check — October 12, 2026
+## Local checks — October 12, 2026
 
-A local reconstruction of the tool-visible source and test assertions associated with commit 5de4564c02462a0c4d17726b46b0c780b843134e passed 27 Node.js tests: 5 acknowledgment, 13 enrollment approval, and 9 access-management tests, with no failures or skips. Formatting was condensed for local execution. This was not a Git checkout, an exact-file integrity verification, a GitHub Actions run, or execution of this newly added runner.
+### Earlier three-suite run
 
-The tests mock database query responses. They exercise owner authorization, typed-name completeness, approval state checks, permanent ID handling, transaction command ordering, rollback on audit-write failure, suspension lab-revocation commands, and reinstatement without automatic lab restoration. They do not prove actual database rollback, row-lock behavior, schema compatibility, or production authorization.
+A local reconstruction of tool-visible source and assertions associated with commit 5de4564c02462a0c4d17726b46b0c780b843134e passed 27 tests: 5 acknowledgment, 13 approval, and 9 access-management tests, without failures or skips. Formatting was condensed. This was not a Git checkout or exact-file integrity verification.
 
-## Outstanding verification and implementation
+### Submission suite
 
-- Execute the runner against an actual checkout and retain its output in the normal development or CI process.
-- Run the remaining repository tests and Discord review-screen tests with the project's dependencies installed.
-- Verify proposed migrations against a disposable PostgreSQL database, including existing records and database constraints.
-- Test concurrent approval and transactional audit failure using real PostgreSQL.
-- Build and test learner enrollment submission against the exact approved agreement and server-side comprehension rules. The learner flow remains disconnected from submission.
-- Revise the learner agreement and resolve age eligibility and acknowledgment-metadata retention before activation.
+The 10 submission unit tests from commit 0738118e75819ec30ab389c9b46870cde4dbbb6f passed without failures or skips. Before execution, Git blob hashes of all three copied JavaScript files were verified against GitHub:
 
-No deployment, migration application, enrollment activation, signature collection, or deletion of existing records is authorized by adding this runner or these notes. Passing these unit tests alone is not a release approval.
+- certification-submission.js: 42da9e69baa974a65aa25be220add5978a9af1ab
+- test-certification-submission.mjs: 5813b2f00c99e24d9ee8166efb08f4a496c6553f
+- certification-acknowledgment.js: df9e3c5a18cbe3f4bd9247af55f648bcdda625f2
+
+These exact copied files ran in a temporary directory with a minimal type=module package.json. This was not a full repository checkout, a GitHub Actions run, or execution of the updated four-suite runner.
+
+The aggregate is 37 passing tests across two separate local runs, not a combined 37-test checkout run. All database calls were mocked.
+
+## Limits and remaining work
+
+Passing unit tests verifies assertions about validation and mocked query behavior. It does not prove PostgreSQL schema compatibility, real rollback, row-lock behavior, concurrent submissions or approvals, Discord interactions, or production authorization.
+
+- Run the four-suite runner against an actual checkout and retain output in development or CI.
+- Run the remaining repository and Discord review-screen tests with project dependencies.
+- Test migrations 002 and 003, transaction failures, and concurrency against disposable PostgreSQL.
+- Build authenticated Discord submission sessions, agreement display, expiry, and abuse controls.
+- Approve the revised agreement, age eligibility, metadata retention, and real comprehension questions before activation.
+
+No deployment, migration application, enrollment activation, agreement publication, or deletion is authorized by this verification update. Unit-test success alone is not release approval.
