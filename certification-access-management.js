@@ -15,6 +15,7 @@ export function createCertificationAccessManagement(pool, config) {
     if (!transition) throw new Error('Invalid access-management action');
     if (typeof reason !== 'string' || !reason.trim() || reason.length > 1000) throw new Error('A reason of 1–1000 characters is required');
     const db = await pool.connect();
+    let discard = false;
     try {
       await db.query('BEGIN');
       const result = await db.query(
@@ -48,10 +49,10 @@ export function createCertificationAccessManagement(pool, config) {
       return { status: transition.to, studentId: row.student_id, revokedLabRequests,
         sessionTerminationRequired: action === 'suspend' || action === 'revoke' };
     } catch (error) {
-      await db.query('ROLLBACK').catch(() => {});
+      try { await db.query('ROLLBACK'); } catch { discard = true; }
       throw error;
     } finally {
-      db.release();
+      db.release(discard);
     }
   }
 

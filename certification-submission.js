@@ -26,6 +26,7 @@ export function createCertificationSubmission(pool, config) {
       throw new Error('Comprehension check did not pass');
     }
     const db = await pool.connect();
+    let discard = false;
     try {
       await db.query('BEGIN');
       const agreement = (await db.query(
@@ -66,9 +67,9 @@ export function createCertificationSubmission(pool, config) {
       await db.query('COMMIT');
       return { status: 'pending', alreadySubmitted: false };
     } catch (error) {
-      await db.query('ROLLBACK').catch(() => {});
+      try { await db.query('ROLLBACK'); } catch { discard = true; }
       throw error;
-    } finally { db.release(); }
+    } finally { db.release(discard); }
   }
 
   return Object.freeze({ submitEnrollment });

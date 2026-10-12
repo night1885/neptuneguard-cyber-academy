@@ -11,6 +11,7 @@ export function createCertificationService(pool, config) {
     requireOwner(actorId);
     if (typeof studentDiscordId !== 'string' || !/^\d{17,20}$/.test(studentDiscordId)) throw new Error('Invalid student Discord ID');
     const db = await pool.connect();
+    let discard = false;
     try {
       await db.query('BEGIN');
       const result = await db.query(
@@ -44,10 +45,10 @@ export function createCertificationService(pool, config) {
       await db.query('COMMIT');
       return { studentId, alreadyApproved: false };
     } catch (error) {
-      await db.query('ROLLBACK').catch(() => {});
+      try { await db.query('ROLLBACK'); } catch { discard = true; }
       throw error;
     } finally {
-      db.release();
+      db.release(discard);
     }
   }
 
