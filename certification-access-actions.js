@@ -10,7 +10,8 @@ export function buildAccessControls(studentId, status) {
       .setStyle(action === 'reinstate' ? ButtonStyle.Success : ButtonStyle.Danger)))] : [];
 }
 
-export function createAccessActionHandler(pool, config, guildId) {
+export function createAccessActionHandler(pool, config, guildId, { now = Date.now } = {}) {
+  if (typeof now !== 'function') throw new Error('Invalid access-confirmation clock');
   const service = createCertificationAccessManagement(pool, config);
   const pending = new Map();
   return async function handleAccessAction(interaction) {
@@ -19,7 +20,8 @@ export function createAccessActionHandler(pool, config, guildId) {
     if (!config.enabled || interaction.user.id !== config.ownerId || interaction.guildId !== guildId) {
       await respond({ content: 'Owner authorization in the configured server is required.' }); return true;
     }
-    for (const [key, value] of pending) if (value.expiresAt <= Date.now()) pending.delete(key);
+    const timestamp = now();
+    for (const [key, value] of pending) if (value.expiresAt <= timestamp) pending.delete(key);
     const confirm = /^cert:access:(confirm|cancel):([a-f0-9-]{36})$/.exec(interaction.customId);
     if (confirm && interaction.isButton()) {
       const record = pending.get(confirm[2]);
@@ -46,7 +48,7 @@ export function createAccessActionHandler(pool, config, guildId) {
     if (!reason || reason.length > 1000) { await respond({ content: 'A reason of 1–1000 characters is required.' }); return true; }
     if (pending.size >= 100) { await respond({ content: 'Too many pending confirmations. Cancel one or retry after five minutes.' }); return true; }
     const token = randomUUID();
-    pending.set(token, { actorId: interaction.user.id, studentId: action[2], action: action[1], reason, expiresAt: Date.now() + 300000 });
+    pending.set(token, { actorId: interaction.user.id, studentId: action[2], action: action[1], reason, expiresAt: timestamp + 300000 });
     const displayReason = reason.replace(/[`*_~|<>]/g, '');
     await respond({ content: `Confirm ${action[1]} for Discord user ${action[2]}?\nReason: ${displayReason}\nPermanent student ID will be preserved. Suspension or revocation also revokes lab requests.`, components: [
       new ActionRowBuilder().addComponents(
