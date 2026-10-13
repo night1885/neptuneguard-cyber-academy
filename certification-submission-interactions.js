@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
-import { createCertificationSubmission } from './certification-submission.js';
+import { createAgeCheckedCertificationSubmission } from './certification-age-submission.js';
+import { requireEligibleCertificationAge } from './certification-age-eligibility.js';
 
 export function createCertificationSubmissionHandler(pool, config, guildId) {
   if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) throw new Error('Configured guild ID required');
@@ -13,7 +14,7 @@ export function createCertificationSubmissionHandler(pool, config, guildId) {
     typeof version === 'string' && typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash) &&
     typeof checkVersion === 'string' && prompts.length >= 1 && prompts.length <= 3 &&
     prompts.length === answers.length && prompts.every(p => typeof p === 'string' && p.length > 0 && p.length <= 300);
-  const service = createCertificationSubmission(pool, { ...config, comprehensionCheck: { version: checkVersion, correctAnswers: answers } });
+  const service = createAgeCheckedCertificationSubmission(pool, { ...config, comprehensionCheck: { version: checkVersion, correctAnswers: answers } });
   const sessions = new Map();
   const unchanged = () => config.enabled === true && config.enrollmentSubmissionEnabled === true &&
     config.activeAgreementVersion === version && config.activeAgreementSha256 === hash &&
@@ -50,7 +51,7 @@ export function createCertificationSubmissionHandler(pool, config, guildId) {
         }
         if (!unchanged() || sessions.size >= 100) { await respond({ content: 'Enrollment configuration changed or the service is busy. Start again later.' }); return true; }
         for (const [token, record] of sessions) if (record.actorId === interaction.user.id) sessions.delete(token);
-        const text = `${row.content}\n\nComprehension questions (${checkVersion})\n${prompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nOpening every page does not prove reading. The form requires your explicit reading confirmation. Submission requests enrollment only; it grants no course or lab access.`;
+        const text = `${row.content}\n\nComprehension questions (${checkVersion})\n${prompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nEnrollment requires age 16 or older. In the reading field, type READ followed by your age in whole years, for example READ 16. This confirms reading and reports your age; it does not independently verify either. No parental-consent step is required by the selected policy. Opening every page does not prove reading. Submission requests enrollment only; it grants no course or lab access.`;
         const pages = []; for (let i = 0; i < text.length; i += 1700) pages.push(text.slice(i, i + 1700));
         const token = randomUUID();
         const record = { actorId: interaction.user.id, guildId, pages, page: 0, stage: 'reading', expiresAt: Date.now() + 900000 };
@@ -71,16 +72,22 @@ export function createCertificationSubmissionHandler(pool, config, guildId) {
         const modal = new ModalBuilder().setCustomId(`cert:submit:send:${token}`).setTitle('Acknowledge and request enrollment');
         const field = (id, label, max) => new ActionRowBuilder().addComponents(new TextInputBuilder()
           .setCustomId(id).setLabel(label).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(max));
-        modal.addComponents(field('name', 'Type your full name to acknowledge', 200), field('read', 'Type READ to confirm reading the agreement', 4));
+        modal.addComponents(field('name', 'Type your full name to acknowledge', 200), field('read', 'Type READ and your age (example: READ 16)', 21));
         prompts.forEach((_, i) => modal.addComponents(field(`answer${i}`, `Question ${i + 1}: answer as instructed`, 100)));
         record.stage = 'form'; await interaction.showModal(modal); return true;
       }
       if (action === 'send' && interaction.isModalSubmit() && record.stage === 'form') {
         sessions.delete(token);
         await interaction.deferReply({ flags: 64 });
+        const reading = /^READ (0|[1-9][0-9]*)$/.exec(interaction.fields.getTextInputValue('read').trim());
+        try { requireEligibleCertificationAge(reading?.[1]); }
+        catch {
+          await respond({ content: 'Enrollment requires age 16 or older and explicit reading confirmation. Enter READ followed by your age in whole years. No enrollment record changed. People under 16 cannot register.' });
+          return true;
+        }
         const result = await service.submitEnrollment(interaction.user.id, {
           typedName: interaction.fields.getTextInputValue('name'),
-          confirmedRead: interaction.fields.getTextInputValue('read') === 'READ',
+          confirmedRead: true, reportedAge: reading[1],
           agreementVersion: version, agreementSha256: hash, comprehensionCheckVersion: checkVersion,
           answers: prompts.map((_, i) => interaction.fields.getTextInputValue(`answer${i}`))
         });
