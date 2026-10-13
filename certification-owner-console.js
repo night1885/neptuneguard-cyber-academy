@@ -34,7 +34,7 @@ export async function handleOwnerConsole(interaction, pool, config, guildId) {
       embed.setTitle('NeptuneGuard Certification — Owner Console').setDescription('Your enrollment and access-review workspace. Choose a focused queue below, inspect the learner record, then use its existing review controls. Counts describe stored statuses, not verified age or effective authorization.');
       for (const [key, label] of [['pending_enrollments', 'Pending enrollments'], ['approved_enrollments', 'Approved enrollments'], ['suspended_enrollments', 'Suspended enrollments'], ['revoked_enrollments', 'Revoked enrollments'], ['awaiting_acknowledgment', 'Awaiting acknowledgment'], ['pending_labs', 'Pending lab requests']]) embed.addFields({ name: label, value: count(row[key]), inline: true });
       embed.addFields({ name: 'Operational boundaries', value: 'Eligibility is self-reported, not independent age verification. Renewal does not remove restrictions. Enrollment approval, owner reinstatement, lab authorization, and certificate issuance remain separate.' });
-      components.push(new ActionRowBuilder().addComponents(button('cert:console:enrollments:0', 'Review enrollments'), button('cert:console:restricted:0', 'Review restrictions'), button('cert:console:overview:0', 'Refresh overview')));
+      components.push(new ActionRowBuilder().addComponents(button('cert:console:enrollments:0', 'Review enrollments'), button('cert:console:restricted:0', 'Review restrictions'), button('cert:console:overview:0', 'Refresh overview'), button('cert:owner:lookup', 'Find learner')));
     } else {
       const labs = view === 'labs';
       const where = view === 'enrollments' ? "WHERE status='pending'" : view === 'restricted' ? "WHERE status IN ('suspended','revoked')" : '';
