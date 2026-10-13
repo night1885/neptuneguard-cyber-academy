@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { handleCertificationDashboard } from './certification-dashboard.js';
 import { handleEnrollmentAction } from './certification-enrollment-actions.js';
-import { createCertificationService } from './certification-service.js';
+import { createAgeCheckedCertificationService } from './certification-age-approval.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
 import { handleCertificationLearner } from './certification-learner.js';
 import { createGuardedSubmissionHandler as createCertificationSubmissionHandler } from './certification-submission-guarded.js';
@@ -10,7 +10,7 @@ const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(
 
 export function createCertificationRouter(pool, config, guildId) {
   if (!/^\d{17,20}$/.test(guildId || '')) throw new Error('Configured guild ID required');
-  const service = createCertificationService(pool, config);
+  const service = createAgeCheckedCertificationService(pool, config);
   const access = createAccessActionHandler(pool, config, guildId);
   const submission = createCertificationSubmissionHandler(pool, config, guildId);
   return async function routeCertificationInteraction(interaction) {
