@@ -77,4 +77,4 @@ jobs:
           test -n "$CERTIFICATION_TEST_DATABASE_URL"
           test "$CERTIFICATION_TEST_ALLOW_ROLE_DDL" = true
       - name: Run real PostgreSQL certification integration tests
-        run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs test-certification-database-pool.mjs test-certification-postgres-role.mjs test-certification-postgres-age-evidence.mjs test-certification-age-evidence-writes.mjs test-certification-age-approval.mjs test-certification-postgres-age-renewal.mjs
+        run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs test-certification-database-pool.mjs test-certification-postgres-role.mjs test-certification-postgres-age-evidence.mjs test-certification-age-evidence-writes.mjs test-certification-age-approval.mjs test-certification-postgres-age-renewal.mjs test-certification-postgres-console.mjs
