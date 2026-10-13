@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { handleCertificationDashboard } from './certification-dashboard.js';
 import { handleOwnerConsole } from './certification-owner-console.js';
+import { buildOwnerLearnerRecord } from './certification-owner-record.js';
 import { handleEnrollmentAction } from './certification-enrollment-actions.js';
 import { createAgeCheckedCertificationService } from './certification-age-approval.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
@@ -33,7 +34,7 @@ export function createCertificationRouter(pool, config, guildId) {
       }
       const list = /^cert:students:list:(\d{1,6})$/.exec(interaction.customId);
       const detail = /^cert:students:detail:(\d{17,20})$/.exec(interaction.customId);
-      const back = new ActionRowBuilder().addComponents(button('cert:admin:overview:0', 'Overview'), button('cert:students:list:0', 'Student directory'));
+      const back = new ActionRowBuilder().addComponents(button('cert:admin:overview:0', 'Overview'), button('cert:console:directory:0', 'Student directory'));
       if (list) {
         const page = Number(list[1]);
         const result = await pool.query('SELECT discord_user_id, status FROM certification_enrollments ORDER BY created_at, discord_user_id LIMIT 6 OFFSET $1', [page * 5]);
@@ -47,12 +48,12 @@ export function createCertificationRouter(pool, config, guildId) {
         await respond({ embeds: [embed], components }); return true;
       }
       if (detail) {
-        const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version FROM certification_enrollments WHERE discord_user_id=$1', [detail[1]]);
+        const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, signature_method, acknowledgment_name, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, approved_at, approved_by, age_eligibility_confirmed, age_eligibility_confirmed_at, age_policy_version FROM certification_enrollments WHERE discord_user_id=$1', [detail[1]]);
         const row = result.rows[0];
         if (!row) { await respond({ content: 'Student record not found.', components: [back] }); return true; }
-        const safe = value => String(value ?? 'Not issued').replace(/[`*_~|<>]/g, '').slice(0, 100);
-        const embed = new EmbedBuilder().setColor(0x3498db).setTitle('Student access record').setDescription(`Discord ID: ${row.discord_user_id}\nPermanent ID: ${safe(row.student_id)}\nStatus: ${row.status}\nAgreement: ${safe(row.agreement_version)}`);
-        const components = [back, ...buildAccessControls(row.discord_user_id, row.status)];
+        if (row.discord_user_id !== detail[1] || !['awaiting_acknowledgment', 'pending', 'approved', 'denied', 'suspended', 'revoked'].includes(row.status)) { await respond({ content: 'Student record requires owner review; no access controls are available.', components: [back] }); return true; }
+        const embed = buildOwnerLearnerRecord(row);
+        const components = [back, ...buildAccessControls(row.discord_user_id, row.status), new ActionRowBuilder().addComponents(button(`cert:students:detail:${row.discord_user_id}`, 'Refresh record'), button(`cert:submit:status:${row.discord_user_id}`, 'Check enrollment snapshot'))];
         if (row.status === 'pending') components.push(new ActionRowBuilder().addComponents(button(`cert:enrollment:review:${row.discord_user_id}`, 'Review acknowledgment')));
         await respond({ embeds: [embed], components }); return true;
       }
