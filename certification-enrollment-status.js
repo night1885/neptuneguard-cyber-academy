@@ -1,5 +1,6 @@
 import { observeSubmissionOperation } from './certification-submission-deadline.js';
 import { StatusReadLimitError } from './certification-status-read-guard.js';
+import { hasCurrentAgeEligibility } from './certification-age-evidence.js';
 
 export async function handleEnrollmentStatus(interaction, pool, config, guildId, timeoutMs = 10000) {
   if (!interaction.isButton() || !/^cert:submit:status(?::|$)/.test(interaction.customId || '')) return false;
@@ -14,9 +15,11 @@ export async function handleEnrollmentStatus(interaction, pool, config, guildId,
     await reply('Owner authorization is required to view a specified learner.'); return true;
   }
   const target = match[1] || interaction.user.id;
+  const ownerView = interaction.user.id === config.ownerId;
+  const columns = ownerView ? 'status, student_id, age_eligibility_confirmed, age_eligibility_confirmed_at, age_policy_version' : 'status, student_id';
   try {
     const observed = await observeSubmissionOperation(pool.query(
-      'SELECT status, student_id FROM certification_enrollments WHERE discord_user_id=$1', [target]),
+      `SELECT ${columns} FROM certification_enrollments WHERE discord_user_id=$1`, [target]),
       () => reply('Enrollment status could not be confirmed in time. This does not prove the submission failed. Ask the owner to review before resubmitting.'), timeoutMs);
     if (observed.timedOut) return true;
     const row = observed.value.rows[0];
@@ -26,7 +29,8 @@ export async function handleEnrollmentStatus(interaction, pool, config, guildId,
       await reply('The enrollment record requires owner review. This check grants no access.'); return true;
     }
     const id = typeof row.student_id === 'string' && /^NG-PT-[A-Za-z0-9-]{1,80}$/.test(row.student_id) ? row.student_id : 'Not issued or requires owner review';
-    await reply(`Discord ID: ${target}\nEnrollment status: ${row.status}\nPermanent student ID: ${id}\n${snapshot}`);
+    const evidence = ownerView ? `\nAge eligibility evidence: ${hasCurrentAgeEligibility(row) ? 'Current-policy self-reported confirmation recorded' : 'Missing, invalid, or outdated; owner review required'}.\nSelf-report is not independent age verification. Eligibility evidence alone does not approve enrollment or restore restricted access. Owner reinstatement remains separate.` : '';
+    await reply(`Discord ID: ${target}\nEnrollment status: ${row.status}\nPermanent student ID: ${id}${evidence}\n${snapshot}`);
     return true;
   } catch (error) {
     if (error instanceof StatusReadLimitError) {
