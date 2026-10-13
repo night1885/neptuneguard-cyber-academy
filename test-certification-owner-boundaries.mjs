@@ -22,7 +22,7 @@ function fixture(customId, actor = owner, guildId = guild, modal = false) {
   const queries = []; const connects = []; const replies = []; const deferrals = []; const modals = []; let fieldReads = 0;
   const pool = { async query(sql, params) {
     queries.push({ sql, params });
-    return { rows: sql.includes('COUNT(*)') ? [{ pending_enrollments: '0', enrolled_students: '0', pending_labs: '0' }] : [] };
+    return { rows: sql.includes('COUNT(*)') ? [{ pending_enrollments: '0', approved_enrollments: '0', suspended_enrollments: '0', revoked_enrollments: '0', awaiting_acknowledgment: '0', pending_labs: '0' }] : [] };
   }, async connect() { connects.push(true); assert.fail('This fixture must not perform mutations'); } };
   const interaction = { customId, user: { id: actor }, guildId,
     memberPermissions: { has: () => true }, isButton: () => !modal, isModalSubmit: () => modal,
@@ -56,10 +56,16 @@ test('authorized access button opens a form without changing records', async () 
   assert.equal(f.modals.length, 1); assert.equal(f.queries.length, 0); assert.equal(f.connects.length, 0);
   assert.equal(f.fieldReads, 0);
 });
-test('owner overview describes connected enrollment review without promising lab or certificate grants', async () => {
+test('owner overview offers structured review with explicit permission boundaries', async () => {
   const f = fixture('cert:admin:overview:0'); await createCertificationRouter(f.pool, config, guild)(f.interaction);
-  const description = f.replies[0].embeds[0].data.description;
-  assert.match(description, /Review enrollment requests/); assert.match(description, /does not grant lab access or award a certificate/);
-  assert.ok(!description.includes('approval actions are not connected yet'));
-  assert.equal(f.queries.length, 1); assert.equal(f.connects.length, 0); assert.equal(f.deferrals[0].flags, 64);
+  const payload = f.replies[0]; const embed = payload.embeds[0].toJSON();
+  assert.match(embed.description, /existing review controls/); assert.match(embed.description, /not verified age or effective authorization/);
+  const boundaries = embed.fields.find(field => field.name === 'Operational boundaries').value;
+  assert.match(boundaries, /Renewal does not remove restrictions/);
+  assert.match(boundaries, /Enrollment approval, owner reinstatement, lab authorization, and certificate issuance remain separate/);
+  assert.equal(embed.fields.find(field => field.name === 'Approved enrollments').value, '0');
+  assert.equal(payload.components[0].toJSON().components[0].type, 3);
+  assert.equal(payload.components[1].toJSON().components[0].custom_id, 'cert:console:enrollments:0');
+  assert.deepEqual(payload.allowedMentions, { parse: [] });
+  assert.equal(f.queries.length, 1); assert.ok(f.queries[0].sql.startsWith('SELECT')); assert.equal(f.connects.length, 0); assert.equal(f.deferrals[0].flags, 64);
 });
