@@ -58,7 +58,9 @@ Relevant records may be disclosed when required by a valid court order or other 
 The operator will maintain an appropriate security and incident-response program and assess applicable Massachusetts and federal requirements. Suspected unauthorized access, disclosure, loss, or misuse will be evaluated. Legally required notices will be provided to applicable individuals, authorities, and other recipients according to the relevant requirements. Contract confidentiality does not prevent mandatory reporting. These are proposed obligations, not representations of current implementation.
 
 ## 13. Eligibility and minors
-Minimum age and any guardian requirements must be decided and disclosed before enrollment opens. Do not approve applications involving minors until the operator establishes an appropriate eligibility, consent, privacy, and contracting process. Do not assume that a guardian acknowledgment alone resolves children's privacy requirements. No age rule is selected by this draft, and no age or guardian-verification control is certified as implemented.
+Operator decision (recorded 2026-10-13, pending counsel review): the minimum enrollment age is 16. Applicants under 16 are ineligible and must not be approved. Applicants aged 16 or 17 require, in addition to their own acknowledgment and explicit owner approval, the consent of a parent or legal guardian before any permanent student ID, course access, or lab authorization is granted. Lab authorization requests by learners under 18 also require recorded guardian consent. Withdrawal of guardian consent suspends the learner's access pending owner review.
+
+The guardian verification method is not yet selected, and no age or guardian-verification control is implemented or certified by this draft. Age is self-reported unless a verification method is approved. Do not assume that a guardian acknowledgment alone resolves children's privacy requirements; counsel must confirm applicable federal and Massachusetts obligations before enrollment opens.
 
 ## 14. Intellectual property
 Academy materials may be used for authorized learning. Redistribution, publication, and commercial reuse require permission unless permitted by applicable license or law. Learners retain rights in their original submissions, subject to third-party rights, and grant the operator a limited permission to use submissions for assessment, administration, security review, and recordkeeping. No unrestricted publicity license is granted.
@@ -78,7 +80,7 @@ Proposed record fields: authenticated Discord user ID; typed full name; agreemen
 
 ## Release blockers
 - Counsel review of final terms and applicable requirements.
-- Minimum-age and minors policy, with an approved operational enforcement process.
+- Guardian-consent verification method and its implemented enforcement for learners aged 16–17 (minimum age 16 selected).
 - Final electronic-consent, attribution, accessibility, and agreement-copy process.
 - Privacy notice and separate metadata, audit, progress, lab, and incident retention schedules.
 - Security program, incident procedures, legal-hold and disclosure review process.

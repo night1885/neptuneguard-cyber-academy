@@ -9,7 +9,8 @@ The last approved configuration set CERTIFICATION_ENABLED=false and CERTIFICATIO
 
 ## Policy and learner-facing gates
 - [ ] Obtain legal review and operator approval of the revised acknowledgment-only agreement; DRAFT-2 is not approved learner content.
-- [ ] Select minimum age and any minors/guardian process; verify how the actual workflow enforces that decision.
+- [x] Select minimum age and minors process: minimum age 16; learners aged 16–17 require parent/legal guardian consent plus owner approval (operator decision 2026-10-13, pending counsel review).
+- [ ] Select the guardian verification method and implement under-16 rejection, guardian-consent status, approval gating, lab-request gating, and consent-withdrawal suspension; verify the actual workflow enforces them.
 - [ ] Approve a privacy notice and separate retention/deletion schedules, including start events, closed requests, audit records, backups, and lawful preservation. Do not reuse retired uploaded-document schedules.
 - [ ] Verify explicit electronic-acknowledgment intent, agreement-copy access, accessibility, and attribution in the actual learner flow.
 - [ ] Approve one to three comprehension questions, their answer formats, server-side answer key, and check version. Never place the answer key in learner messages or logs.
