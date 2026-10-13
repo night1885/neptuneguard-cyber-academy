@@ -1,4 +1,5 @@
 import { hasCompleteTypedAcknowledgment } from './certification-acknowledgment.js';
+import { hasCurrentAgeEligibility, CERTIFICATION_AGE_POLICY_VERSION } from './certification-age-evidence.js';
 
 export function createCertificationAccessManagement(pool, config) {
   const transitions = {
@@ -14,47 +15,29 @@ export function createCertificationAccessManagement(pool, config) {
     const transition = Object.hasOwn(transitions, action) ? transitions[action] : null;
     if (!transition) throw new Error('Invalid access-management action');
     if (typeof reason !== 'string' || !reason.trim() || reason.length > 1000) throw new Error('A reason of 1–1000 characters is required');
-    const db = await pool.connect();
-    let discard = false;
+    const db = await pool.connect(); let discard = false;
     try {
       await db.query('BEGIN');
-      const result = await db.query(
-        'SELECT * FROM certification_enrollments WHERE discord_user_id=$1 FOR UPDATE', [studentDiscordId]);
-      const row = result.rows[0];
+      const row = (await db.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1 FOR UPDATE', [studentDiscordId])).rows[0];
       if (!row || !transition.from.includes(row.status)) throw new Error('Enrollment status does not permit this action');
-      if (action === 'reinstate' && (!row.student_id || !row.approved_by || !row.approved_at ||
-          !hasCompleteTypedAcknowledgment(row))) {
-        throw new Error('Prior approval and complete acknowledgment are required for reinstatement');
-      }
-      await db.query(
-        `UPDATE certification_enrollments SET status=$2, status_reason=$3, updated_at=NOW()
-         WHERE discord_user_id=$1`, [studentDiscordId, transition.to, reason.trim()]);
+      if (action === 'reinstate' && (!row.student_id || !row.approved_by || !row.approved_at || !hasCompleteTypedAcknowledgment(row))) throw new Error('Prior approval and complete acknowledgment are required for reinstatement');
+      if (action === 'reinstate' && !hasCurrentAgeEligibility(row)) throw new Error('Current self-reported age eligibility is required before reinstatement; fresh learner confirmation and owner review are required');
+      await db.query(`UPDATE certification_enrollments SET status=$2, status_reason=$3, updated_at=NOW() WHERE discord_user_id=$1`, [studentDiscordId, transition.to, reason.trim()]);
       let revokedLabRequests = [];
       if (action === 'suspend' || action === 'revoke') {
-        const labs = await db.query(
-          `UPDATE certification_lab_requests
-           SET status='revoked', status_reason=$2, updated_at=NOW()
-           WHERE discord_user_id=$1 AND status IN ('pending','approved','suspended')
-           RETURNING request_id`, [studentDiscordId, `Course access ${transition.to}: ${reason.trim()}`]);
+        const labs = await db.query(`UPDATE certification_lab_requests SET status='revoked', status_reason=$2, updated_at=NOW() WHERE discord_user_id=$1 AND status IN ('pending','approved','suspended') RETURNING request_id`, [studentDiscordId, `Course access ${transition.to}: ${reason.trim()}`]);
         revokedLabRequests = labs.rows.map(lab => lab.request_id);
       }
-      await db.query(
-        `INSERT INTO certification_audit_events
-         (actor_discord_user_id, subject_discord_user_id, action, details)
-         VALUES ($1,$2,$3,$4::jsonb)`,
-        [actorId, studentDiscordId, `enrollment_${action}`, JSON.stringify({
-          from: row.status, to: transition.to, reason: reason.trim(), studentId: row.student_id, revokedLabRequests
-        })]);
+      await db.query(`INSERT INTO certification_audit_events (actor_discord_user_id, subject_discord_user_id, action, details) VALUES ($1,$2,$3,$4::jsonb)`, [actorId, studentDiscordId, `enrollment_${action}`, JSON.stringify({
+        from: row.status, to: transition.to, reason: reason.trim(), studentId: row.student_id, revokedLabRequests,
+        ...(action === 'reinstate' ? { agePolicyVersion: CERTIFICATION_AGE_POLICY_VERSION, ageEligibilityMethod: 'self_report' } : {})
+      })]);
       await db.query('COMMIT');
-      return { status: transition.to, studentId: row.student_id, revokedLabRequests,
-        sessionTerminationRequired: action === 'suspend' || action === 'revoke' };
+      return { status: transition.to, studentId: row.student_id, revokedLabRequests, sessionTerminationRequired: action === 'suspend' || action === 'revoke' };
     } catch (error) {
       try { await db.query('ROLLBACK'); } catch { discard = true; }
       throw error;
-    } finally {
-      db.release(discard);
-    }
+    } finally { db.release(discard); }
   }
-
   return Object.freeze({ changeEnrollmentStatus });
 }
