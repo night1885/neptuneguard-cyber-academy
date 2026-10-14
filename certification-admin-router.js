@@ -1,3 +1,4 @@
+import { ActionRowBuilder } from 'discord.js';
 import { createCertificationRouter as createExistingRouter } from './certification-router.js';
 import { adminSectionTarget, buildAdminNavigation } from './certification-admin-navigation.js';
 
@@ -32,7 +33,16 @@ export function createCertificationRouter(pool, config, guildId) {
         if (selection && (key === 'isModalSubmit' || key === 'isStringSelectMenu')) return () => false;
         if (key === 'editReply') return payload => {
           if (section && config.enabled && original.user?.id === config.ownerId && original.guildId === guildId && payload.components?.length) {
-            payload = { ...payload, components: [buildAdminNavigation(section), ...payload.components.slice(1)] };
+            const components = [buildAdminNavigation(section), ...payload.components.slice(1)].map((row, rowIndex) => {
+              const copy = ActionRowBuilder.from(row.toJSON());
+              copy.components.forEach((component, componentIndex) => {
+                if (component.data.type === 2 && component.data.disabled) {
+                  component.setCustomId(`cert:disabled:${rowIndex}:${componentIndex}`);
+                }
+              });
+              return copy;
+            });
+            payload = { ...payload, components };
           }
           return original.editReply(payload);
         };
