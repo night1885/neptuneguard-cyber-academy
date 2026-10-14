@@ -4,6 +4,7 @@ import { handleOwnerConsole } from './certification-owner-console.js';
 import { buildOwnerLearnerRecord } from './certification-owner-record.js';
 import { handleOwnerLookup } from './certification-owner-lookup.js';
 import { withOwnerQueueContext, handleContextualOwnerRecord } from './certification-owner-context.js';
+import { createGuardedOwnerReads } from './certification-owner-read-guard.js';
 import { handleEnrollmentAction } from './certification-enrollment-actions.js';
 import { createAgeCheckedCertificationService } from './certification-age-approval.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
@@ -12,12 +13,12 @@ import { createGuardedSubmissionHandler as createCertificationSubmissionHandler 
 
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 
-export function createCertificationRouter(pool, config, guildId) {
+export function createCertificationRouter(pool, config, guildId, { ownerReadTimeoutMs = 10000, ownerReadLimit = 60 } = {}) {
   if (!/^\d{17,20}$/.test(guildId || '')) throw new Error('Configured guild ID required');
   const service = createAgeCheckedCertificationService(pool, config);
   const access = createAccessActionHandler(pool, config, guildId);
   const submission = createCertificationSubmissionHandler(pool, config, guildId);
-  return async function routeCertificationInteraction(interaction) {
+  const route = async function routeCertificationInteraction(interaction) {
     if (!(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.() === true) || !interaction.customId?.startsWith('cert:')) return false;
     if (await handleContextualOwnerRecord(interaction, routeCertificationInteraction)) return true;
     if (interaction.customId.startsWith('cert:owner:lookup')) return handleOwnerLookup(interaction, config, guildId, routeCertificationInteraction);
@@ -81,4 +82,5 @@ export function createCertificationRouter(pool, config, guildId) {
     await interaction.reply({ content: 'This certification feature is not connected yet.', flags: 64 });
     return true;
   };
+  return createGuardedOwnerReads(route, config, guildId, { responseTimeoutMs: ownerReadTimeoutMs, limit: ownerReadLimit });
 }
