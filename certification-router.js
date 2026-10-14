@@ -3,6 +3,7 @@ import { handleCertificationDashboard } from './certification-dashboard.js';
 import { handleOwnerConsole } from './certification-owner-console.js';
 import { buildOwnerLearnerRecord } from './certification-owner-record.js';
 import { handleOwnerLookup } from './certification-owner-lookup.js';
+import { withOwnerQueueContext, handleContextualOwnerRecord } from './certification-owner-context.js';
 import { handleEnrollmentAction } from './certification-enrollment-actions.js';
 import { createAgeCheckedCertificationService } from './certification-age-approval.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
@@ -18,8 +19,9 @@ export function createCertificationRouter(pool, config, guildId) {
   const submission = createCertificationSubmissionHandler(pool, config, guildId);
   return async function routeCertificationInteraction(interaction) {
     if (!(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.() === true) || !interaction.customId?.startsWith('cert:')) return false;
+    if (await handleContextualOwnerRecord(interaction, routeCertificationInteraction)) return true;
     if (interaction.customId.startsWith('cert:owner:lookup')) return handleOwnerLookup(interaction, config, guildId, routeCertificationInteraction);
-    if (interaction.customId.startsWith('cert:console:') || interaction.customId === 'cert:admin:overview:0') return handleOwnerConsole(interaction, pool, config, guildId);
+    if (interaction.customId.startsWith('cert:console:') || interaction.customId === 'cert:admin:overview:0') return handleOwnerConsole(withOwnerQueueContext(interaction), pool, config, guildId);
     if (interaction.isStringSelectMenu?.() === true) { await interaction.reply({ content: 'Unsupported certification selection.', flags: 64, allowedMentions: { parse: [] } }); return true; }
     if (interaction.customId.startsWith('cert:access:')) return access(interaction);
     if (interaction.customId.startsWith('cert:submit:')) return submission(interaction);

@@ -21,7 +21,7 @@ test('dropdown enrollment queue shows evidence and wired review controls', async
   const payload = i.replies.at(-1); assert.match(payload.embeds[0].toJSON().fields[0].value, /Current-policy self-report recorded/); assert.equal(payload.components[2].toJSON().components[0].custom_id, `cert:enrollment:review:${learner}`); assert.deepEqual(f.calls[0].params, [0]);
 });
 test('restricted queue preserves distinction between missing evidence and access status', async () => {
-  const f = fixture([{ discord_user_id: learner, status: 'revoked' }]); const i = interaction('cert:console:section', ['restricted']); await f.route(i); assert.match(f.calls[0].sql, /suspended.*revoked/); const payload = i.replies.at(-1); assert.match(payload.embeds[0].toJSON().fields[0].value, /Status: revoked/); assert.match(payload.embeds[0].toJSON().fields[0].value, /review required/); assert.equal(payload.components[2].toJSON().components[0].custom_id, `cert:students:detail:${learner}`);
+  const f = fixture([{ discord_user_id: learner, status: 'revoked' }]); const i = interaction('cert:console:section', ['restricted']); await f.route(i); assert.match(f.calls[0].sql, /suspended.*revoked/); const payload = i.replies.at(-1); assert.match(payload.embeds[0].toJSON().fields[0].value, /Status: revoked/); assert.match(payload.embeds[0].toJSON().fields[0].value, /review required/); assert.equal(payload.components[2].toJSON().components[0].custom_id, `cert:students:detail:${learner}:restricted:0`);
 });
 test('forged selections, non-owner, foreign guild and disabled console do not query', async () => {
   for (const [values, actor, server, enabled] of [[['invalid'], owner, guild, true], [['overview','labs'], owner, guild, true], [['overview'], learner, guild, true], [['overview'], owner, learner, true], [['overview'], owner, guild, false]]) { const f = fixture(); f.config.enabled = enabled; const i = interaction('cert:console:section', values, actor, server); await f.route(i); assert.equal(f.calls.length, 0); assert.equal(i.replies.at(-1).components.length, 0); }
@@ -34,4 +34,20 @@ test('empty lab queue offers no approval or provider controls', async () => {
 });
 test('missing counts are unavailable, not fabricated zeroes', async () => {
   const f = fixture(); const i = interaction(); await f.route(i); assert.equal(i.replies.at(-1).embeds[0].toJSON().fields[0].value, 'Unavailable');
+});
+test('queue to record to refresh and back preserves section and page', async () => {
+  for (const view of ['directory', 'restricted']) {
+    const f = fixture([{ discord_user_id: learner, status: 'revoked' }]); const queue = interaction(`cert:console:${view}:3`); await f.route(queue);
+    const detailId = queue.replies[0].components[2].toJSON().components[0].custom_id; assert.equal(detailId, `cert:students:detail:${learner}:${view}:3`); assert.ok(detailId.length <= 100);
+    const record = interaction(detailId); await f.route(record); assert.deepEqual(f.calls.at(-1).params, [learner]); const payload = record.replies[0]; assert.equal(record.options.flags, 64); assert.deepEqual(payload.allowedMentions, { parse: [] });
+    const controls = payload.components.flatMap(row => row.toJSON().components); const back = controls.find(control => control.custom_id === `cert:console:${view}:3`); assert.ok(back); assert.match(back.label, /page 4/); assert.ok(controls.some(control => control.custom_id === detailId));
+    const refreshed = interaction(detailId); await f.route(refreshed); assert.ok(refreshed.replies[0].components.flatMap(row => row.toJSON().components).some(control => control.custom_id === `cert:console:${view}:3`));
+    await f.route(interaction(back.custom_id)); assert.deepEqual(f.calls.at(-1).params, [15]); assert.ok(f.calls.every(call => call.sql.startsWith('SELECT')));
+  }
+});
+test('contextual detail cannot bypass owner or guild checks', async () => {
+  for (const [actor, server, enabled] of [[learner, guild, true], [owner, learner, true], [owner, guild, false]]) { const f = fixture([{ discord_user_id: learner, status: 'revoked' }]); f.config.enabled = enabled; const i = interaction(`cert:students:detail:${learner}:restricted:2`, null, actor, server); await f.route(i); assert.equal(f.calls.length, 0); assert.equal(i.replies[0].embeds.length, 0); }
+});
+test('malformed contextual detail is rejected before querying a learner', async () => {
+  for (const suffix of ['directory:-1', 'restricted:1000000', 'labs:0', 'directory:2:extra']) { const f = fixture(); const i = interaction(`cert:students:detail:${learner}:${suffix}`); await f.route(i); assert.equal(f.calls.length, 0); assert.match(i.replies[0].content, /Invalid/); }
 });
