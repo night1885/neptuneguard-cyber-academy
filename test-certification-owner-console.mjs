@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCertificationRouter } from './certification-router.js';
+import { handleContextualOwnerRecord } from './certification-owner-context.js';
 import { CERTIFICATION_AGE_POLICY_VERSION } from './certification-age-evidence.js';
 const owner = '1223123544301633567'; const learner = '1223123544301633568'; const guild = '1339276399390887956';
 function fixture(rows = [], counts = {}) {
@@ -55,7 +56,7 @@ test('pending review and cancel retain original queue page without approval writ
   const row = { discord_user_id: learner, status: 'pending', signature_method: 'typed_name', acknowledgment_name: 'Fixture Learner', agreement_version: 'fixture', acknowledged_at: 'date', learner_confirmed_read_at: 'date', comprehension_passed_at: 'date', age_eligibility_confirmed: true, age_eligibility_confirmed_at: new Date(), age_policy_version: CERTIFICATION_AGE_POLICY_VERSION };
   const f = fixture([row]); const queue = interaction('cert:console:enrollments:2'); await f.route(queue); const reviewId = queue.replies[0].components[2].toJSON().components[0].custom_id; assert.equal(reviewId, `cert:enrollment:review:${learner}:enrollments:2`);
   const review = interaction(reviewId); await f.route(review); assert.equal(review.options.flags, 64); const controls = review.replies[0].components.flatMap(r => r.toJSON().components);
-  assert.ok(controls.some(c => c.custom_id === `cert:enrollment:approve:${learner}` && c.disabled === false));
+  assert.ok(controls.some(c => c.custom_id === `cert:enrollment:approve:${learner}:enrollments:2` && c.disabled === false));
   const cancel = controls.find(c => c.label === 'Cancel and return to queue'); assert.equal(cancel.custom_id, 'cert:console:enrollments:2');
   const detail = controls.find(c => c.label === 'View learner record'); assert.equal(detail.custom_id, `cert:students:detail:${learner}:enrollments:2`);
   const record = interaction(detail.custom_id); await f.route(record); assert.ok(record.replies[0].components.flatMap(r => r.toJSON().components).some(c => c.custom_id === reviewId));
@@ -63,4 +64,15 @@ test('pending review and cancel retain original queue page without approval writ
 });
 test('contextual review still denies non-owner, foreign guild and disabled configuration', async () => {
   for (const [actor, server, enabled] of [[learner, guild, true], [owner, learner, true], [owner, guild, false]]) { const f = fixture([{ status: 'pending' }]); f.config.enabled = enabled; const i = interaction(`cert:enrollment:review:${learner}:enrollments:1`, null, actor, server); await f.route(i); assert.equal(f.calls.length, 0); assert.equal(i.replies[0].components.length, 0); }
+});
+test('contextual approval forwards unchanged target and preserves navigation on success replies', async () => {
+  for (const content of ['Enrollment approved. Permanent student ID: NG-PT-fixture.', 'Already approved. Permanent student ID: NG-PT-fixture.']) {
+    const i = interaction(`cert:enrollment:approve:${learner}:enrollments:2`); let calls = 0;
+    await handleContextualOwnerRecord(i, async forwarded => { calls++; assert.equal(forwarded.customId, `cert:enrollment:approve:${learner}`); assert.equal(forwarded.user.id, owner); assert.equal(forwarded.guildId, guild); await forwarded.deferReply({ flags: 64 }); await forwarded.editReply({ content, embeds: [], components: [], allowedMentions: { parse: [] } }); return true; });
+    assert.equal(calls, 1); assert.equal(i.replies[0].content, content); const controls = i.replies[0].components[0].toJSON().components; assert.equal(controls[0].custom_id, 'cert:console:enrollments:2'); assert.equal(controls[1].custom_id, `cert:students:detail:${learner}:enrollments:2`); assert.equal(i.options.flags, 64);
+  }
+});
+test('contextual approval cannot bypass owner/guild checks or decorate denial as success', async () => {
+  for (const [actor, server, enabled] of [[learner, guild, true], [owner, learner, true], [owner, guild, false]]) { const f = fixture(); f.config.enabled = enabled; const i = interaction(`cert:enrollment:approve:${learner}:enrollments:2`, null, actor, server); await f.route(i); assert.equal(f.calls.length, 0); assert.equal(i.replies[0].components.length, 0); assert.match(i.replies[0].content, /Owner authorization/); }
+  const i = interaction(`cert:enrollment:approve:${learner}:enrollments:2`); await handleContextualOwnerRecord(i, async forwarded => { await forwarded.editReply({ content: 'Approval outcome unconfirmed.', components: [] }); return true; }); assert.equal(i.replies[0].components.length, 0);
 });
