@@ -18,7 +18,7 @@ test('legacy dashboard entry opens metrics and a five-section dropdown privately
 });
 test('dropdown enrollment queue shows evidence and wired review controls', async () => {
   const f = fixture([{ discord_user_id: learner, status: 'pending', agreement_version: 'fixture', acknowledged_at: 'date', learner_confirmed_read_at: 'date', comprehension_passed_at: 'date', age_eligibility_confirmed: true, age_eligibility_confirmed_at: new Date(), age_policy_version: CERTIFICATION_AGE_POLICY_VERSION }]); const i = interaction('cert:console:section', ['enrollments']); await f.route(i);
-  const payload = i.replies.at(-1); assert.match(payload.embeds[0].toJSON().fields[0].value, /Current-policy self-report recorded/); assert.equal(payload.components[2].toJSON().components[0].custom_id, `cert:enrollment:review:${learner}`); assert.deepEqual(f.calls[0].params, [0]);
+  const payload = i.replies.at(-1); assert.match(payload.embeds[0].toJSON().fields[0].value, /Current-policy self-report recorded/); assert.equal(payload.components[2].toJSON().components[0].custom_id, `cert:enrollment:review:${learner}:enrollments:0`); assert.deepEqual(f.calls[0].params, [0]);
 });
 test('restricted queue preserves distinction between missing evidence and access status', async () => {
   const f = fixture([{ discord_user_id: learner, status: 'revoked' }]); const i = interaction('cert:console:section', ['restricted']); await f.route(i); assert.match(f.calls[0].sql, /suspended.*revoked/); const payload = i.replies.at(-1); assert.match(payload.embeds[0].toJSON().fields[0].value, /Status: revoked/); assert.match(payload.embeds[0].toJSON().fields[0].value, /review required/); assert.equal(payload.components[2].toJSON().components[0].custom_id, `cert:students:detail:${learner}:restricted:0`);
@@ -50,4 +50,17 @@ test('contextual detail cannot bypass owner or guild checks', async () => {
 });
 test('malformed contextual detail is rejected before querying a learner', async () => {
   for (const suffix of ['directory:-1', 'restricted:1000000', 'labs:0', 'directory:2:extra']) { const f = fixture(); const i = interaction(`cert:students:detail:${learner}:${suffix}`); await f.route(i); assert.equal(f.calls.length, 0); assert.match(i.replies[0].content, /Invalid/); }
+});
+test('pending review and cancel retain original queue page without approval writes', async () => {
+  const row = { discord_user_id: learner, status: 'pending', signature_method: 'typed_name', acknowledgment_name: 'Fixture Learner', agreement_version: 'fixture', acknowledged_at: 'date', learner_confirmed_read_at: 'date', comprehension_passed_at: 'date', age_eligibility_confirmed: true, age_eligibility_confirmed_at: new Date(), age_policy_version: CERTIFICATION_AGE_POLICY_VERSION };
+  const f = fixture([row]); const queue = interaction('cert:console:enrollments:2'); await f.route(queue); const reviewId = queue.replies[0].components[2].toJSON().components[0].custom_id; assert.equal(reviewId, `cert:enrollment:review:${learner}:enrollments:2`);
+  const review = interaction(reviewId); await f.route(review); assert.equal(review.options.flags, 64); const controls = review.replies[0].components.flatMap(r => r.toJSON().components);
+  assert.ok(controls.some(c => c.custom_id === `cert:enrollment:approve:${learner}` && c.disabled === false));
+  const cancel = controls.find(c => c.label === 'Cancel and return to queue'); assert.equal(cancel.custom_id, 'cert:console:enrollments:2');
+  const detail = controls.find(c => c.label === 'View learner record'); assert.equal(detail.custom_id, `cert:students:detail:${learner}:enrollments:2`);
+  const record = interaction(detail.custom_id); await f.route(record); assert.ok(record.replies[0].components.flatMap(r => r.toJSON().components).some(c => c.custom_id === reviewId));
+  await f.route(interaction(cancel.custom_id)); assert.deepEqual(f.calls.at(-1).params, [10]); assert.ok(f.calls.every(c => c.sql.startsWith('SELECT')));
+});
+test('contextual review still denies non-owner, foreign guild and disabled configuration', async () => {
+  for (const [actor, server, enabled] of [[learner, guild, true], [owner, learner, true], [owner, guild, false]]) { const f = fixture([{ status: 'pending' }]); f.config.enabled = enabled; const i = interaction(`cert:enrollment:review:${learner}:enrollments:1`, null, actor, server); await f.route(i); assert.equal(f.calls.length, 0); assert.equal(i.replies[0].components.length, 0); }
 });

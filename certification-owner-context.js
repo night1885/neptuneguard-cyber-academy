@@ -1,3 +1,5 @@
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+
 function forward(interaction, customId, edit) {
   return new Proxy(interaction, { get(target, property) {
     if (property === 'customId') return customId;
@@ -7,28 +9,31 @@ function forward(interaction, customId, edit) {
 }
 export function withOwnerQueueContext(interaction) {
   let view; let page = 0;
-  if (interaction.isStringSelectMenu?.() === true && interaction.customId === 'cert:console:section' && interaction.values?.length === 1 && ['directory', 'restricted'].includes(interaction.values[0])) view = interaction.values[0];
-  else if (interaction.isButton()) { const match = /^cert:console:(directory|restricted):(\d{1,6})$/.exec(interaction.customId); if (match) { view = match[1]; page = Number(match[2]); } }
+  if (interaction.isStringSelectMenu?.() === true && interaction.customId === 'cert:console:section' && interaction.values?.length === 1 && ['directory', 'restricted', 'enrollments'].includes(interaction.values[0])) view = interaction.values[0];
+  else if (interaction.isButton()) { const match = /^cert:console:(directory|restricted|enrollments):(\d{1,6})$/.exec(interaction.customId); if (match) { view = match[1]; page = Number(match[2]); } }
   if (!view) return interaction;
   return forward(interaction, interaction.customId, async (target, payload) => {
     for (const row of payload.components || []) for (const control of row.components || []) {
-      const match = /^cert:students:detail:(\d{17,20})$/.exec(control.data?.custom_id || '');
-      if (match) control.setCustomId(`${control.data.custom_id}:${view}:${page}`);
+      if (/^cert:(students:detail|enrollment:review):\d{17,20}$/.test(control.data?.custom_id || '')) control.setCustomId(`${control.data.custom_id}:${view}:${page}`);
     }
     return target.editReply(payload);
   });
 }
 export async function handleContextualOwnerRecord(interaction, route) {
   if (!interaction.isButton()) return false;
-  const match = /^cert:students:detail:(\d{17,20}):(directory|restricted):(\d{1,6})$/.exec(interaction.customId || '');
+  const match = /^cert:(students:detail|enrollment:review):(\d{17,20}):(directory|restricted|enrollments):(\d{1,6})$/.exec(interaction.customId || '');
   if (!match) return false;
-  const [, learner, view, pageText] = match; const page = Number(pageText); const legacyId = `cert:students:detail:${learner}`;
-  const contextualId = `${legacyId}:${view}:${page}`;
+  const [, action, learner, view, pageText] = match; const page = Number(pageText); const legacyId = `cert:${action}:${learner}`;
+  const contextualId = `${legacyId}:${view}:${page}`; const backId = `cert:console:${view}:${page}`;
+  const label = view === 'restricted' ? 'restrictions' : view === 'enrollments' ? 'enrollments' : 'directory';
   const forwarded = forward(interaction, legacyId, async (target, payload) => {
     for (const row of payload.components || []) for (const control of row.components || []) {
-      if (control.data?.custom_id === 'cert:console:directory:0') control.setCustomId(`cert:console:${view}:${page}`).setLabel(`Back to ${view === 'restricted' ? 'restrictions' : 'directory'} · page ${page + 1}`);
+      if (control.data?.custom_id === 'cert:console:directory:0') control.setCustomId(backId).setLabel(`Back to ${label} · page ${page + 1}`);
       else if (control.data?.custom_id === legacyId) control.setCustomId(contextualId);
+      else if (control.data?.custom_id === `cert:enrollment:review:${learner}`) control.setCustomId(`cert:enrollment:review:${learner}:${view}:${page}`);
+      else if (control.data?.custom_id === `cert:enrollment:cancel:${learner}`) control.setCustomId(backId).setLabel('Cancel and return to queue');
     }
+    if (action === 'enrollment:review' && payload.embeds?.length && payload.components?.length) payload.components.push(new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`cert:students:detail:${learner}:${view}:${page}`).setLabel('View learner record').setStyle(ButtonStyle.Secondary)));
     return target.editReply(payload);
   });
   return route(forwarded);
