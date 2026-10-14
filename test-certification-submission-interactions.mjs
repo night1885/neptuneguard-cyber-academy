@@ -2,26 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createCertificationSubmissionHandler } from './certification-submission-interactions.js';
+import { createCertificationRouter } from './certification-router.js';
 
 const student = '1223123544301633568';
 const other = '1223123544301633569';
 const guild = '1339276399390887956';
-const fields = { name: 'Example Learner', read: 'READ', answer0: 'stop' };
+const fields = { name: 'Example Learner', read: 'READ 16', answer0: 'stop' };
 
-function fixture(content = 'Fixture agreement only.') {
+function fixture(content = 'Fixture agreement only.', questions = 1, routed = false) {
   const hash = createHash('sha256').update(content).digest('hex');
-  const config = { enabled: true, enrollmentSubmissionEnabled: true, activeAgreementVersion: 'fixture-v2',
+  const config = { enabled: true, enrollmentSubmissionEnabled: true, ownerId: other, activeAgreementVersion: 'fixture-v2',
     activeAgreementSha256: hash, comprehensionCheck: { version: 'fixture-check',
-      questions: [{ prompt: 'For this test, enter stop.' }], correctAnswers: ['stop'] } };
-  const calls = [];
+      questions: Array.from({ length: questions }, () => ({ prompt: 'For this test, enter stop.' })), correctAnswers: Array(questions).fill('stop') } };
+  const calls = []; let connections = 0;
   const query = async (sql, params) => {
     calls.push({ sql, params });
     if (sql.includes('FROM certification_agreements')) return { rows: [{ content, content_sha256: hash }] };
     if (sql.includes('FOR UPDATE')) return { rows: [{ status: 'awaiting_acknowledgment' }] };
     return { rows: [] };
   };
-  const pool = { query, async connect() { return { query, release() {} }; } };
-  return { config, pool, calls, handle: createCertificationSubmissionHandler(pool, config, guild) };
+  const pool = { query, async connect() { connections++; return { query, release() {} }; } };
+  const handle = routed ? createCertificationRouter(pool, config, guild) : createCertificationSubmissionHandler(pool, config, guild);
+  return { config, pool, calls, handle, get connections() { return connections; } };
 }
 
 function interaction(customId, kind = 'button', userId = student, guildId = guild, values = fields) {
@@ -147,4 +149,42 @@ test('agreement database errors return a generic response without leaking detail
   const i = interaction('cert:submit:start'); await f.handle(i);
   assert.match(i.replies.at(-1).content, /could not be completed/);
   assert.ok(!i.replies.at(-1).content.includes('PRIVATE')); assert.equal(wrote(f), false);
+});
+
+test('routed age rejection prevents checkout and enrollment writes and consumes the token', async () => {
+  for (const read of ['READ 15', 'READ', 'READ 16.5', 'READ sixteen', 'READ -1', 'READ 016', '']) {
+    const f = fixture('Fixture agreement only.', 1, true); const { sendId } = await openForm(f);
+    const i = interaction(sendId, 'modal', student, guild, { ...fields, read }); await f.handle(i);
+    assert.equal(f.connections, 0); assert.equal(wrote(f), false);
+    assert.match(i.replies.at(-1).content, /age 16 or older/);
+    assert.equal(i.deferOptions.flags, 64);
+    assert.deepEqual(i.replies.at(-1).allowedMentions, { parse: [] });
+    const replay = interaction(sendId, 'modal'); await f.handle(replay);
+    assert.match(replay.replies.at(-1).content, /Session expired/); assert.equal(f.connections, 0);
+  }
+});
+test('routed missing reading-age field cannot checkout or write', async () => {
+  const f = fixture('Fixture agreement only.', 1, true); const { sendId } = await openForm(f);
+  const i = interaction(sendId, 'modal', student, guild, { name: fields.name, answer0: 'stop' });
+  await f.handle(i); assert.equal(f.connections, 0); assert.equal(wrote(f), false);
+});
+test('routed ages 16 and 17 create pending requests without parental input or age echo', async () => {
+  for (const age of [16, 17]) {
+    const f = fixture('Fixture agreement only.', 1, true); const { sendId } = await openForm(f);
+    const i = interaction(sendId, 'modal', student, guild, { ...fields, read: `READ ${age}` }); await f.handle(i);
+    assert.equal(f.connections, 1); assert.match(i.replies.at(-1).content, /submitted for owner review/);
+    assert.ok(!i.replies.at(-1).content.includes(`READ ${age}`)); assert.equal(f.calls.at(-1).sql, 'COMMIT');
+  }
+});
+test('all supported question counts serialize with the combined age-reading field', async () => {
+  for (const count of [1, 2, 3]) {
+    const f = fixture('Fixture agreement only.', count, true); const { form, sendId } = await openForm(f);
+    assert.equal(form.modal.components.length, count + 2);
+    const reading = form.modal.components[1].components[0];
+    assert.equal(reading.custom_id, 'read'); assert.equal(reading.max_length, 21);
+    assert.match(reading.label, /READ 16/);
+    const values = { ...fields }; for (let n = 0; n < count; n++) values[`answer${n}`] = 'stop';
+    const i = interaction(sendId, 'modal', student, guild, values); await f.handle(i);
+    assert.equal(f.connections, 1); assert.equal(f.calls.at(-1).sql, 'COMMIT');
+  }
 });

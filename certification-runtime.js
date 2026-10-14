@@ -67,7 +67,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   function onInteraction(interaction) {
-    if (detached || !(interaction.isButton() || interaction.isModalSubmit()) || !interaction.customId?.startsWith('cert:')) return;
+    if (detached || !(interaction.isButton() || interaction.isModalSubmit() || (interaction.isStringSelectMenu?.() === true && interaction.customId?.startsWith('cert:console:'))) || !interaction.customId?.startsWith('cert:')) return;
     const task = handleInteraction(interaction); active.add(task);
     void task.finally(() => active.delete(task)).catch(error => {
       console.error('Certification reply failed:', { name: error?.name, code: error?.code });

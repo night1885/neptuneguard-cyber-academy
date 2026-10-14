@@ -1,20 +1,29 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { handleCertificationDashboard } from './certification-dashboard.js';
+import { handleOwnerConsole } from './certification-owner-console.js';
+import { buildOwnerLearnerRecord } from './certification-owner-record.js';
+import { handleOwnerLookup } from './certification-owner-lookup.js';
+import { withOwnerQueueContext, handleContextualOwnerRecord } from './certification-owner-context.js';
+import { createGuardedOwnerReads } from './certification-owner-read-guard.js';
 import { handleEnrollmentAction } from './certification-enrollment-actions.js';
-import { createCertificationService } from './certification-service.js';
+import { createAgeCheckedCertificationService } from './certification-age-approval.js';
 import { createAccessActionHandler, buildAccessControls } from './certification-access-actions.js';
 import { handleCertificationLearner } from './certification-learner.js';
 import { createGuardedSubmissionHandler as createCertificationSubmissionHandler } from './certification-submission-guarded.js';
 
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 
-export function createCertificationRouter(pool, config, guildId) {
+export function createCertificationRouter(pool, config, guildId, { ownerReadTimeoutMs = 10000, ownerReadLimit = 60 } = {}) {
   if (!/^\d{17,20}$/.test(guildId || '')) throw new Error('Configured guild ID required');
-  const service = createCertificationService(pool, config);
+  const service = createAgeCheckedCertificationService(pool, config);
   const access = createAccessActionHandler(pool, config, guildId);
   const submission = createCertificationSubmissionHandler(pool, config, guildId);
-  return async function routeCertificationInteraction(interaction) {
-    if (!(interaction.isButton() || interaction.isModalSubmit()) || !interaction.customId.startsWith('cert:')) return false;
+  const route = async function routeCertificationInteraction(interaction) {
+    if (!(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.() === true) || !interaction.customId?.startsWith('cert:')) return false;
+    if (await handleContextualOwnerRecord(interaction, routeCertificationInteraction)) return true;
+    if (interaction.customId.startsWith('cert:owner:lookup')) return handleOwnerLookup(interaction, config, guildId, routeCertificationInteraction);
+    if (interaction.customId.startsWith('cert:console:') || interaction.customId === 'cert:admin:overview:0') return handleOwnerConsole(withOwnerQueueContext(interaction), pool, config, guildId);
+    if (interaction.isStringSelectMenu?.() === true) { await interaction.reply({ content: 'Unsupported certification selection.', flags: 64, allowedMentions: { parse: [] } }); return true; }
     if (interaction.customId.startsWith('cert:access:')) return access(interaction);
     if (interaction.customId.startsWith('cert:submit:')) return submission(interaction);
     if (!interaction.isButton()) {
@@ -30,7 +39,7 @@ export function createCertificationRouter(pool, config, guildId) {
       }
       const list = /^cert:students:list:(\d{1,6})$/.exec(interaction.customId);
       const detail = /^cert:students:detail:(\d{17,20})$/.exec(interaction.customId);
-      const back = new ActionRowBuilder().addComponents(button('cert:admin:overview:0', 'Overview'), button('cert:students:list:0', 'Student directory'));
+      const back = new ActionRowBuilder().addComponents(button('cert:admin:overview:0', 'Overview'), button('cert:console:directory:0', 'Student directory'));
       if (list) {
         const page = Number(list[1]);
         const result = await pool.query('SELECT discord_user_id, status FROM certification_enrollments ORDER BY created_at, discord_user_id LIMIT 6 OFFSET $1', [page * 5]);
@@ -44,12 +53,12 @@ export function createCertificationRouter(pool, config, guildId) {
         await respond({ embeds: [embed], components }); return true;
       }
       if (detail) {
-        const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version FROM certification_enrollments WHERE discord_user_id=$1', [detail[1]]);
+        const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, signature_method, acknowledgment_name, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, approved_at, approved_by, age_eligibility_confirmed, age_eligibility_confirmed_at, age_policy_version FROM certification_enrollments WHERE discord_user_id=$1', [detail[1]]);
         const row = result.rows[0];
         if (!row) { await respond({ content: 'Student record not found.', components: [back] }); return true; }
-        const safe = value => String(value ?? 'Not issued').replace(/[`*_~|<>]/g, '').slice(0, 100);
-        const embed = new EmbedBuilder().setColor(0x3498db).setTitle('Student access record').setDescription(`Discord ID: ${row.discord_user_id}\nPermanent ID: ${safe(row.student_id)}\nStatus: ${row.status}\nAgreement: ${safe(row.agreement_version)}`);
-        const components = [back, ...buildAccessControls(row.discord_user_id, row.status)];
+        if (row.discord_user_id !== detail[1] || !['awaiting_acknowledgment', 'pending', 'approved', 'denied', 'suspended', 'revoked'].includes(row.status)) { await respond({ content: 'Student record requires owner review; no access controls are available.', components: [back] }); return true; }
+        const embed = buildOwnerLearnerRecord(row);
+        const components = [back, ...buildAccessControls(row.discord_user_id, row.status), new ActionRowBuilder().addComponents(button(`cert:students:detail:${row.discord_user_id}`, 'Refresh record'), button(`cert:submit:status:${row.discord_user_id}`, 'Check enrollment snapshot'))];
         if (row.status === 'pending') components.push(new ActionRowBuilder().addComponents(button(`cert:enrollment:review:${row.discord_user_id}`, 'Review acknowledgment')));
         await respond({ embeds: [embed], components }); return true;
       }
@@ -73,4 +82,5 @@ export function createCertificationRouter(pool, config, guildId) {
     await interaction.reply({ content: 'This certification feature is not connected yet.', flags: 64 });
     return true;
   };
+  return createGuardedOwnerReads(route, config, guildId, { responseTimeoutMs: ownerReadTimeoutMs, limit: ownerReadLimit });
 }
