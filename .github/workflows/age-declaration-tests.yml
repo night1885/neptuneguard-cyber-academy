@@ -1,0 +1,23 @@
+name: Age declaration policy tests
+on:
+  push:
+    paths:
+      - 'certification-age-declaration.js'
+      - 'test-certification-age-declaration.mjs'
+      - '.github/workflows/age-declaration-tests.yml'
+  pull_request:
+    paths:
+      - 'certification-age-declaration.js'
+      - 'test-certification-age-declaration.mjs'
+      - '.github/workflows/age-declaration-tests.yml'
+permissions:
+  contents: read
+jobs:
+  age-declaration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node --test test-certification-age-declaration.mjs
