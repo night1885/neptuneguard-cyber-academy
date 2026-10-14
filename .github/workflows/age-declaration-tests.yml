@@ -2,18 +2,18 @@ name: Age declaration policy tests
 on:
   push:
     paths:
-      - 'certification-age-declaration.js'
-      - 'certification-account-acknowledgment.js'
+      - 'certification-*.js'
       - 'test-certification-age-declaration.mjs'
       - 'test-certification-account-acknowledgment.mjs'
+      - 'test-certification-limited-data-backend.mjs'
       - 'migrations/005-account-acknowledgment-age.sql'
       - '.github/workflows/age-declaration-tests.yml'
   pull_request:
     paths:
-      - 'certification-age-declaration.js'
-      - 'certification-account-acknowledgment.js'
+      - 'certification-*.js'
       - 'test-certification-age-declaration.mjs'
       - 'test-certification-account-acknowledgment.mjs'
+      - 'test-certification-limited-data-backend.mjs'
       - 'migrations/005-account-acknowledgment-age.sql'
       - '.github/workflows/age-declaration-tests.yml'
 permissions:
@@ -26,4 +26,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: node --test test-certification-age-declaration.mjs test-certification-account-acknowledgment.mjs
+      - run: node --test test-certification-age-declaration.mjs test-certification-account-acknowledgment.mjs test-certification-limited-data-backend.mjs
