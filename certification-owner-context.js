@@ -34,6 +34,7 @@ export async function handleContextualOwnerRecord(interaction, route) {
       else if (control.data?.custom_id === `cert:enrollment:review:${learner}`) control.setCustomId(`cert:enrollment:review:${learner}:${view}:${page}`);
       else if (control.data?.custom_id === `cert:enrollment:approve:${learner}`) control.setCustomId(`cert:enrollment:approve:${learner}:${view}:${page}`);
       else if (control.data?.custom_id === `cert:enrollment:cancel:${learner}`) control.setCustomId(backId).setLabel('Cancel and return to queue');
+      else if (new RegExp(`^cert:access:(deny|suspend|revoke|reinstate):${learner}$`).test(control.data?.custom_id || '')) control.setCustomId(`${control.data.custom_id}:${view}:${page}`);
     }
     if (action === 'enrollment:review' && payload.embeds?.length && payload.components?.length) payload.components.push(new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(recordId).setLabel('View learner record').setStyle(ButtonStyle.Secondary)));
     if (action === 'enrollment:approve' && /^(Enrollment approved\.|Already approved\.)/.test(payload.content || '')) {
