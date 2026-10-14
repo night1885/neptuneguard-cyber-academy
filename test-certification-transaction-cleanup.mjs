@@ -8,7 +8,7 @@ const owner = '1223123544301633567'; const student = '1223123544301633568';
 const config = { enabled: true, enrollmentSubmissionEnabled: true, ownerId: owner,
   activeAgreementVersion: 'fixture-v1', activeAgreementSha256: 'a'.repeat(64),
   comprehensionCheck: { version: 'fixture-check', correctAnswers: ['stop'] } };
-const submission = { typedName: 'Fixture Learner', confirmedRead: true, answers: ['stop'],
+const submission = { ageEligibility: 'yes', acknowledgmentAccepted: true, confirmedRead: true, answers: ['stop'],
   agreementVersion: config.activeAgreementVersion, agreementSha256: config.activeAgreementSha256,
   comprehensionCheckVersion: config.comprehensionCheck.version };
 const operations = {
@@ -27,17 +27,17 @@ function fixture({ rollbackFails = false, beginFails = false } = {}) {
   return { original, calls, releases, pool: { async connect() { return db; } } };
 }
 for (const [name, operation] of Object.entries(operations)) {
-  test(`${name} returns connection normally after successful rollback and preserves original error`, async () => {
+  test(`${name} returns connection after successful rollback and preserves original error`, async () => {
     const f = fixture(); await assert.rejects(operation(f.pool), error => error === f.original);
     assert.equal(f.calls.filter(sql => sql === 'ROLLBACK').length, 1); assert.deepEqual(f.releases, [false]);
-    assert.ok(!f.calls.includes('COMMIT'));
+    assert.ok(f.calls.includes('BEGIN')); assert.ok(!f.calls.includes('COMMIT'));
   });
   test(`${name} discards connection after failed rollback and preserves original error`, async () => {
     const f = fixture({ rollbackFails: true }); await assert.rejects(operation(f.pool), error => error === f.original);
     assert.equal(f.calls.filter(sql => sql === 'ROLLBACK').length, 1); assert.deepEqual(f.releases, [true]);
     assert.ok(!f.calls.includes('COMMIT'));
   });
-  test(`${name} also discards on BEGIN failure followed by rollback failure`, async () => {
+  test(`${name} discards on BEGIN failure followed by rollback failure`, async () => {
     const f = fixture({ rollbackFails: true, beginFails: true });
     await assert.rejects(operation(f.pool), error => error === f.original);
     assert.deepEqual(f.calls, ['BEGIN', 'ROLLBACK']); assert.deepEqual(f.releases, [true]);

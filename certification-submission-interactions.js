@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createCertificationSubmission } from './certification-submission.js';
+import { AGE_DECLARATION_QUESTION, validateAgeDeclaration } from './certification-age-declaration.js';
 
 export function createCertificationSubmissionHandler(pool, config, guildId) {
   if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) throw new Error('Configured guild ID required');
@@ -44,13 +45,12 @@ export function createCertificationSubmissionHandler(pool, config, guildId) {
         for (const [token, record] of sessions) if (record.actorId === interaction.user.id) sessions.delete(token);
         if (sessions.size >= 100) { await respond({ content: 'Enrollment is busy. Retry after existing sessions expire.' }); return true; }
         const row = (await pool.query('SELECT content, content_sha256 FROM certification_agreements WHERE version=$1', [version])).rows[0];
-        if (!row || typeof row.content !== 'string' || row.content.length > 60000 || row.content_sha256 !== hash ||
-            createHash('sha256').update(row.content, 'utf8').digest('hex') !== hash) {
+        if (!row || typeof row.content !== 'string' || row.content.length > 60000 || row.content_sha256 !== hash || createHash('sha256').update(row.content, 'utf8').digest('hex') !== hash) {
           await respond({ content: 'The approved agreement is unavailable. No enrollment record changed.' }); return true;
         }
         if (!unchanged() || sessions.size >= 100) { await respond({ content: 'Enrollment configuration changed or the service is busy. Start again later.' }); return true; }
         for (const [token, record] of sessions) if (record.actorId === interaction.user.id) sessions.delete(token);
-        const text = `${row.content}\n\nComprehension questions (${checkVersion})\n${prompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nOpening every page does not prove reading. The form requires your explicit reading confirmation. Submission requests enrollment only; it grants no course or lab access.`;
+        const text = `${row.content}\n\nComprehension questions (${checkVersion})\n${prompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${AGE_DECLARATION_QUESTION} Answer Yes or No in the form. Only Yes permits enrollment. Type AGREE to state that you have read and agree to this agreement using your Discord account. Do not enter your name, birth date, contact details, or identity-document information. This is self-declared eligibility, not independent verification. Submission requests owner approval only; it grants no course or lab access.`;
         const pages = []; for (let i = 0; i < text.length; i += 1700) pages.push(text.slice(i, i + 1700));
         const token = randomUUID();
         const record = { actorId: interaction.user.id, guildId, pages, page: 0, stage: 'reading', expiresAt: Date.now() + 900000 };
@@ -69,18 +69,20 @@ export function createCertificationSubmissionHandler(pool, config, guildId) {
       }
       if (action === 'form' && interaction.isButton() && record.stage === 'reading' && record.page === record.pages.length - 1) {
         const modal = new ModalBuilder().setCustomId(`cert:submit:send:${token}`).setTitle('Acknowledge and request enrollment');
-        const field = (id, label, max) => new ActionRowBuilder().addComponents(new TextInputBuilder()
-          .setCustomId(id).setLabel(label).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(max));
-        modal.addComponents(field('name', 'Type your full name to acknowledge', 200), field('read', 'Type READ to confirm reading the agreement', 4));
+        const field = (id, label, max) => new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(id).setLabel(label).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(max));
+        modal.addComponents(field('age', 'Age 18 or older? Type Yes or No', 3), field('read', 'Type AGREE: I have read and agree', 5));
         prompts.forEach((_, i) => modal.addComponents(field(`answer${i}`, `Question ${i + 1}: answer as instructed`, 100)));
         record.stage = 'form'; await interaction.showModal(modal); return true;
       }
       if (action === 'send' && interaction.isModalSubmit() && record.stage === 'form') {
         sessions.delete(token);
         await interaction.deferReply({ flags: 64 });
+        const ageEligibility = interaction.fields.getTextInputValue('age').toLowerCase();
+        if (ageEligibility === 'no') { await respond({ content: 'Enrollment requires age 18 or older. No enrollment record was submitted.' }); return true; }
+        validateAgeDeclaration({ ageEligibility });
+        const accepted = interaction.fields.getTextInputValue('read') === 'AGREE';
         const result = await service.submitEnrollment(interaction.user.id, {
-          typedName: interaction.fields.getTextInputValue('name'),
-          confirmedRead: interaction.fields.getTextInputValue('read') === 'READ',
+          ageEligibility, acknowledgmentAccepted: accepted, confirmedRead: accepted,
           agreementVersion: version, agreementSha256: hash, comprehensionCheckVersion: checkVersion,
           answers: prompts.map((_, i) => interaction.fields.getTextInputValue(`answer${i}`))
         });
@@ -90,7 +92,7 @@ export function createCertificationSubmissionHandler(pool, config, guildId) {
     } catch {
       const token = /^cert:submit:[a-z]+:([a-f0-9-]{36})$/.exec(interaction.customId)?.[1];
       if (token) sessions.delete(token);
-      await respond({ content: 'The submission could not be completed. If you already submitted, check with the owner before retrying. Otherwise start again and confirm the agreement and answers. No automatic access is granted.' });
+      await respond({ content: 'The submission could not be completed. If you already submitted, check with the owner before retrying. Otherwise start again and confirm the agreement, age eligibility, and answers. No automatic access is granted.' });
       return true;
     }
   };
