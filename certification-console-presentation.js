@@ -13,6 +13,8 @@ const routes = [
   new RegExp(`^cert:labview:detail:(${uuid})$`)
 ];
 const json = value => typeof value?.toJSON === 'function' ? value.toJSON() : value;
+const restore = (original, data) => typeof original?.toJSON === 'function' && typeof original.constructor?.from === 'function'
+  ? original.constructor.from(data) : data;
 
 export function consoleViewId(interaction) {
   const id = interaction.customId || '';
@@ -41,14 +43,14 @@ function viewColor(id) {
 export function styleConsolePayload(payload, id) {
   return {
     ...payload,
-    ...(payload.embeds ? { embeds: payload.embeds.map(embed => ({ ...json(embed), color: viewColor(id) })) } : {}),
+    ...(payload.embeds ? { embeds: payload.embeds.map(embed => restore(embed, { ...json(embed), color: viewColor(id) })) } : {}),
     ...(payload.components ? { components: payload.components.map(row => {
       const data = json(row);
-      return { ...data, components: data.components.map(component => {
+      return restore(row, { ...data, components: data.components.map(component => {
         const item = json(component);
         const navigation = item.custom_id === 'cert:admin:overview:0' || /^Refresh(?: |$)/.test(item.label || '');
         return item.type === 2 && item.style === 2 && !item.disabled && navigation ? { ...item, style: 1 } : { ...item };
-      }) };
+      }) });
     }) } : {})
   };
 }
