@@ -1,4 +1,5 @@
 import { buildLabActionControls, createLabActionHandler } from './certification-lab-actions.js';
+import { handleLabReview } from './certification-console-lab-review.js';
 const statuses = ['all', 'pending', 'approved', 'denied', 'suspended', 'revoked', 'expired'];
 const safe = value => String(value ?? 'Not supplied').replace(/[`*_~|<>@]/g, '').slice(0, 100);
 const stamp = value => value instanceof Date ? value.toISOString() : safe(value);
@@ -11,6 +12,7 @@ export function createConsoleLabController(pool, config, guildId) {
   return async interaction => (await action(interaction)) || handleConsoleLabs(interaction, pool, config, guildId);
 }
 export async function handleConsoleLabs(interaction, pool, config, guildId) {
+  if (await handleLabReview(interaction, pool, config, guildId)) return true;
   const id = interaction.customId || '';
   if (!interaction.isButton?.() || !id.startsWith('cert:labview:')) return false;
   const allowedMentions = { parse: [] };
@@ -50,7 +52,7 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
       ] };
     const studentLinks = typeof record.discord_user_id === 'string' && /^\d{17,20}$/.test(record.discord_user_id)
       ? [button(`cert:students:detail:${record.discord_user_id}`, 'Student access record'), button(`cert:labview:student:${record.discord_user_id}:all:0`, 'This learner\'s lab records')] : [];
-    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request'), ...studentLinks), ...buildLabActionControls(record.request_id, record.status));
+    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request'), ...studentLinks, button(`cert:labview:review:${record.request_id}`, 'Review prerequisites')), ...buildLabActionControls(record.request_id, record.status));
   } else {
     const { student, status, page } = list;
     const target = (filter, number) => student ? `cert:labview:student:${student}:${filter}:${number}` : `cert:labview:${filter}:${number}`;

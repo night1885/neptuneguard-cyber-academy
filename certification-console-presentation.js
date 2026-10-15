@@ -10,7 +10,7 @@ const routes = [
   new RegExp(`^cert:dir:(${statusNames}):\\d{1,5}:[A-Za-z0-9-]{0,48}$`),
   new RegExp(`^cert:labview:(${statusNames}):\\d{1,5}$`),
   new RegExp(`^cert:labview:student:\\d{17,20}:(${statusNames}):\\d{1,5}$`),
-  new RegExp(`^cert:labview:detail:(${uuid})$`)
+  new RegExp(`^cert:labview:(detail|review):(${uuid})$`)
 ];
 const json = value => typeof value?.toJSON === 'function' ? value.toJSON() : value;
 const restore = (original, data) => typeof original?.toJSON === 'function' && typeof original.constructor?.from === 'function'
@@ -30,6 +30,7 @@ export function consoleViewId(interaction) {
 }
 
 function viewColor(id) {
+  if (id.startsWith('cert:labview:review:')) return COLORS.amber;
   if (id.startsWith('cert:audit:') || id.startsWith('cert:student-audit:')) return COLORS.purple;
   const status = /^cert:labview:(?:student:\d{17,20}:)?(all|pending|approved|denied|suspended|revoked|expired):/.exec(id)?.[1]
     || /^cert:dir:(all|awaiting_acknowledgment|pending|approved|denied|suspended|revoked):/.exec(id)?.[1];
