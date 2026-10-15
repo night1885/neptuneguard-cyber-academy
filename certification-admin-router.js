@@ -5,11 +5,12 @@ import { handleConsoleSettings } from './certification-console-settings.js';
 import { handleConsoleBrowser } from './certification-console-browser.js';
 import { createConsoleLabController } from './certification-console-labs.js';
 import { handleConsoleStudent } from './certification-console-student.js';
+import { withConsolePresentation } from './certification-console-presentation.js';
 
 export function createCertificationRouter(pool, config, guildId) {
   const route = createExistingRouter(pool, config, guildId);
   const labs = createConsoleLabController(pool, config, guildId);
-  return async function routeWithAdminNavigation(interaction) {
+  return withConsolePresentation(async function routeWithAdminNavigation(interaction) {
     if (await handleConsoleStudent(interaction, pool, config, guildId)) return true;
     if (await labs(interaction)) return true;
     if (await handleConsoleBrowser(interaction, pool, config, guildId)) return true;
@@ -66,5 +67,5 @@ export function createCertificationRouter(pool, config, guildId) {
       }
     });
     return route(adapter);
-  };
+  }, config, guildId);
 }
