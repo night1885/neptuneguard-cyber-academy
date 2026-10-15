@@ -17,9 +17,12 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
   if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
     await interaction.reply({ content: 'Owner authorization in the configured server is required.', flags: 64, allowedMentions }); return true;
   }
-  const list = /^cert:labview:(all|pending|approved|denied|suspended|revoked|expired):(\d{1,5})$/.exec(id);
+  const globalList = /^cert:labview:(all|pending|approved|denied|suspended|revoked|expired):(\d{1,5})$/.exec(id);
+  const studentList = /^cert:labview:student:(\d{17,20}):(all|pending|approved|denied|suspended|revoked|expired):(\d{1,5})$/.exec(id);
+  const list = globalList ? { student: null, status: globalList[1], page: Number(globalList[2]) }
+    : studentList ? { student: studentList[1], status: studentList[2], page: Number(studentList[3]) } : null;
   const detail = new RegExp(`^cert:labview:detail:(${uuid})$`).exec(id);
-  if ((!list && !detail) || (list && Number(list[2]) > 10000)) {
+  if ((!list && !detail) || (list && list.page > 10000)) {
     await interaction.reply({ content: 'Invalid lab-record action. Open Lab records again.', flags: 64, allowedMentions }); return true;
   }
   await interaction.deferReply({ flags: 64 });
@@ -45,23 +48,27 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
         { name: 'Approved by', value: safe(record.approved_by), inline: true },
         { name: 'Approval time', value: stamp(record.approved_at), inline: true }
       ] };
-    const studentLink = typeof record.discord_user_id === 'string' && /^\d{17,20}$/.test(record.discord_user_id)
-      ? [button(`cert:students:detail:${record.discord_user_id}`, 'Student access record')] : [];
-    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request'), ...studentLink), ...buildLabActionControls(record.request_id, record.status));
+    const studentLinks = typeof record.discord_user_id === 'string' && /^\d{17,20}$/.test(record.discord_user_id)
+      ? [button(`cert:students:detail:${record.discord_user_id}`, 'Student access record'), button(`cert:labview:student:${record.discord_user_id}:all:0`, 'This learner\'s lab records')] : [];
+    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request'), ...studentLinks), ...buildLabActionControls(record.request_id, record.status));
   } else {
-    const status = list[1], page = Number(list[2]);
-    const result = await pool.query(`SELECT request_id, discord_user_id, lab_key, status, starts_at, expires_at FROM certification_lab_requests WHERE ($1::text='all' OR status=$1) ORDER BY created_at DESC, request_id DESC LIMIT 6 OFFSET $2`, [status, page * 5]);
+    const { student, status, page } = list;
+    const target = (filter, number) => student ? `cert:labview:student:${student}:${filter}:${number}` : `cert:labview:${filter}:${number}`;
+    if (student) components[0].components.push(button(`cert:students:detail:${student}`, 'Student access record'), button('cert:labview:all:0', 'All lab records'));
+    const result = student
+      ? await pool.query(`SELECT request_id, discord_user_id, lab_key, status, starts_at, expires_at FROM certification_lab_requests WHERE discord_user_id=$1 AND ($2::text='all' OR status=$2) ORDER BY created_at DESC, request_id DESC LIMIT 6 OFFSET $3`, [student, status, page * 5])
+      : await pool.query(`SELECT request_id, discord_user_id, lab_key, status, starts_at, expires_at FROM certification_lab_requests WHERE ($1::text='all' OR status=$1) ORDER BY created_at DESC, request_id DESC LIMIT 6 OFFSET $2`, [status, page * 5]);
     const records = result.rows.slice(0, 5);
-    embed = { title: `Lab records — ${status} — page ${page + 1}`, color: 0x3498db,
-      description: `${records.length ? 'Select a request to inspect its recorded authorization.' : 'No matching lab records on this page.'} Authorization status is not provider-session status. No approval, launch, or termination is performed.`,
+    embed = { title: `${student ? 'Student lab records' : 'Lab records'} — ${status} — page ${page + 1}`, color: 0x3498db,
+      description: `${student ? `Student Discord ID: ${student}\n` : ''}${records.length ? 'Select a request to inspect its recorded authorization.' : 'No matching lab records on this page.'} Authorization status is not provider-session status. No approval, launch, or termination is performed.`,
       fields: records.map(record => ({ name: `Request ${safe(record.request_id)}`, value: `Student: ${safe(record.discord_user_id)}\nLab: ${safe(record.lab_key)}\nStatus: ${safe(record.status)}\nStart: ${stamp(record.starts_at)}\nExpiry: ${stamp(record.expires_at)}` })) };
     if (records.length) components.push(row(...records.map((record, index) => button(`cert:labview:detail:${record.request_id}`, `Request ${index + 1}`))));
     components.push(row(
-      button(page === 0 ? 'cert:noop:labs:previous' : `cert:labview:${status}:${page - 1}`, 'Previous', page === 0),
-      button(`cert:labview:${status}:${page}`, 'Refresh'),
-      button(page === 10000 ? 'cert:noop:labs:next' : `cert:labview:${status}:${page + 1}`, 'Next', result.rows.length <= 5 || page === 10000)
+      button(page === 0 ? 'cert:noop:labs:previous' : target(status, page - 1), 'Previous', page === 0),
+      button(target(status, page), 'Refresh'),
+      button(page === 10000 ? 'cert:noop:labs:next' : target(status, page + 1), 'Next', result.rows.length <= 5 || page === 10000)
     ));
-    const filters = statuses.filter(value => value !== status).map(value => button(`cert:labview:${value}:0`, value === 'all' ? 'All statuses' : value));
+    const filters = statuses.filter(value => value !== status).map(value => button(target(value, 0), value === 'all' ? 'All statuses' : value));
     for (let i = 0; i < filters.length; i += 5) components.push(row(...filters.slice(i, i + 5)));
   }
   await interaction.editReply({ content: '', embeds: [{ ...embed, footer: { text: 'Owner-only • Inspection is read-only • No provider calls' } }], components, allowedMentions });
