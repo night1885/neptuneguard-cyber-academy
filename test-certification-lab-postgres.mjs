@@ -97,4 +97,56 @@ test('dedicated disposable PostgreSQL lab and console integration', { skip: !dat
     assert.equal(history.replies[0].embeds[0].fields.length, 1);
     assert.match(history.replies[0].embeds[0].fields[0].name, /lab.request.denied/);
   }));
+  await t.test('concurrent suspensions commit one audit and preserve enrollment and lab metadata', async () => isolated(async pool => {
+    const id = await seedLab(pool, 'approved'), before = await lab(pool, id);
+    const enrollment = (await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1', [student])).rows[0];
+    const service = createCertificationLabManagement(pool, config);
+    const results = await Promise.all([service.changeLabStatus(owner,id,'suspend','Fixture suspension'),service.changeLabStatus(owner,id,'suspend','Fixture suspension')]);
+    assert.deepEqual(results.map(result => result.alreadyApplied).sort(), [false,true]);
+    assert.ok(results.every(result => result.sessionTerminationRequired === true));
+    const after = await lab(pool,id);
+    assert.equal(after.status,'suspended'); assert.equal(after.status_reason,'Fixture suspension');
+    const preserved = record => Object.fromEntries(Object.entries(record).filter(([key]) => !['status','status_reason','updated_at'].includes(key)));
+    assert.deepEqual(preserved(after),preserved(before));
+    assert.deepEqual((await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1', [student])).rows[0],enrollment);
+    assert.equal(await audits(pool,'lab_request_suspended'),1);
+    const details = (await pool.query('SELECT details FROM certification_audit_events WHERE action=$1', ['lab_request_suspended'])).rows[0].details;
+    assert.deepEqual(details,{ requestId: id,from: 'approved',to: 'suspended',reason: 'Fixture suspension',providerSessionTerminated: false });
+  }));
+  await t.test('suspension audit failure rolls back the entire lab record', async () => isolated(async pool => {
+    const id = await seedLab(pool,'approved'), before = await lab(pool,id);
+    await pool.query(`CREATE FUNCTION lab_test_reject_suspension_audit() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Injected suspension audit failure'; END; $$; CREATE TRIGGER lab_test_suspension_audit_failure BEFORE INSERT ON certification_audit_events FOR EACH ROW EXECUTE FUNCTION lab_test_reject_suspension_audit();`);
+    await assert.rejects(createCertificationLabManagement(pool,config).changeLabStatus(owner,id,'suspend','Fixture review'),/Injected suspension audit failure/);
+    assert.deepEqual(await lab(pool,id),before); assert.equal(await audits(pool,'lab_request_suspended'),0);
+  }));
+  await t.test('suspension rejects invalid stored states without writes or audits', async () => isolated(async pool => {
+    const service = createCertificationLabManagement(pool,config);
+    for (const status of ['pending','denied','revoked','expired']) {
+      const id = await seedLab(pool,status), before = await lab(pool,id);
+      await assert.rejects(service.changeLabStatus(owner,id,'suspend','Fixture review'),/does not permit/);
+      assert.deepEqual(await lab(pool,id),before);
+    }
+    assert.equal(await audits(pool,'lab_request_suspended'),0);
+  }));
+  await t.test('router reason and confirmation flow commits suspension once against real PostgreSQL', async () => isolated(async pool => {
+    const id = await seedLab(pool,'approved'), route = createCertificationRouter(pool,config,guild);
+    const detail = interaction(`cert:labview:detail:${id}`); await route(detail);
+    assert.ok(detail.replies[0].components.flatMap(row => row.components).some(control => control.custom_id === `cert:labact:suspend:${id}`));
+    const preview = interaction(`cert:labact:suspend:${id}`);
+    preview.isButton = () => false; preview.isModalSubmit = () => true;
+    preview.fields = { getTextInputValue: () => 'Fixture owner suspension' };
+    await route(preview);
+    assert.equal((await lab(pool,id)).status,'approved'); assert.equal(await audits(pool,'lab_request_suspended'),0);
+    const token = preview.replies[0].components[0].components[0].custom_id;
+    const confirmed = interaction(token); await route(confirmed);
+    assert.equal((await lab(pool,id)).status,'suspended'); assert.equal(await audits(pool,'lab_request_suspended'),1);
+    assert.match(confirmed.replies[0].content,/did not terminate a running session/);
+    const replay = interaction(token); replay.reply = async payload => replay.replies.push(payload);
+    await route(replay); assert.match(replay.replies[0].content,/expired or was invalidated/);
+    assert.equal(await audits(pool,'lab_request_suspended'),1);
+    const refreshed = interaction(`cert:labview:detail:${id}`); await route(refreshed);
+    const controls = refreshed.replies[0].components.flatMap(row => row.components);
+    assert.ok(!controls.some(control => control.custom_id === `cert:labact:suspend:${id}`));
+    assert.ok(controls.some(control => control.custom_id === `cert:labact:revoke:${id}`));
+  }));
 });
