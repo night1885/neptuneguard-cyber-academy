@@ -7,12 +7,15 @@ import { createConsoleLabController } from './certification-console-labs.js';
 import { handleConsoleStudent } from './certification-console-student.js';
 import { withConsolePresentation } from './certification-console-presentation.js';
 import { createOwnerRegistrationHandler } from './certification-owner-registration-ui.js';
+import { createInitialConsoleHandler } from './certification-initial-console.js';
 
 export function createCertificationRouter(pool, config, guildId) {
   const route = createExistingRouter(pool, config, guildId);
   const labs = createConsoleLabController(pool, config, guildId);
   const registration = createOwnerRegistrationHandler(pool, config, guildId);
+  const initialConsole = createInitialConsoleHandler(pool, config, guildId);
   return withConsolePresentation(async function routeWithAdminNavigation(interaction) {
+    if (await initialConsole(interaction)) return true;
     if (await registration(interaction)) return true;
     if (await handleConsoleStudent(interaction, pool, config, guildId)) return true;
     if (await labs(interaction)) return true;
@@ -49,9 +52,7 @@ export function createCertificationRouter(pool, config, guildId) {
             const components = [buildAdminNavigation(section), ...payload.components.slice(1)].map((row, rowIndex) => {
               const copy = ActionRowBuilder.from(row.toJSON());
               copy.components.forEach((component, componentIndex) => {
-                if (component.data.type === 2 && component.data.disabled) {
-                  component.setCustomId(`cert:disabled:${rowIndex}:${componentIndex}`);
-                }
+                if (component.data.type === 2 && component.data.disabled) component.setCustomId(`cert:disabled:${rowIndex}:${componentIndex}`);
               });
               return copy;
             });
