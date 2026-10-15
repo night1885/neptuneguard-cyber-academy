@@ -6,11 +6,14 @@ import { handleConsoleBrowser } from './certification-console-browser.js';
 import { createConsoleLabController } from './certification-console-labs.js';
 import { handleConsoleStudent } from './certification-console-student.js';
 import { withConsolePresentation } from './certification-console-presentation.js';
+import { createOwnerRegistrationHandler } from './certification-owner-registration-ui.js';
 
 export function createCertificationRouter(pool, config, guildId) {
   const route = createExistingRouter(pool, config, guildId);
   const labs = createConsoleLabController(pool, config, guildId);
+  const registration = createOwnerRegistrationHandler(pool, config, guildId);
   return withConsolePresentation(async function routeWithAdminNavigation(interaction) {
+    if (await registration(interaction)) return true;
     if (await handleConsoleStudent(interaction, pool, config, guildId)) return true;
     if (await labs(interaction)) return true;
     if (await handleConsoleBrowser(interaction, pool, config, guildId)) return true;
@@ -56,7 +59,8 @@ export function createCertificationRouter(pool, config, guildId) {
               new ButtonBuilder().setCustomId('cert:console:settings').setLabel('Configuration').setStyle(ButtonStyle.Secondary),
               new ButtonBuilder().setCustomId('cert:dir:search').setLabel('Search / filter students').setStyle(ButtonStyle.Secondary),
               new ButtonBuilder().setCustomId('cert:audit:0').setLabel('Audit history').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId('cert:labview:all:0').setLabel('Lab records').setStyle(ButtonStyle.Secondary)
+              new ButtonBuilder().setCustomId('cert:labview:all:0').setLabel('Lab records').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('cert:register:open').setLabel('Register student').setStyle(ButtonStyle.Success)
             ));
             payload = { ...payload, components };
           }
