@@ -2,6 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'disc
 import { buildAdminNavigation } from './certification-admin-navigation.js';
 import { buildAccessControls } from './certification-access-actions.js';
 import { formatAuditAction } from './certification-console-browser.js';
+import { evaluateCourseAccessReadiness } from './certification-access-readiness.js';
 const safe = (value, max = 100) => String(value ?? 'Not recorded').replace(/[`*_~|<>@]/g, '').slice(0, max);
 const stamp = value => value instanceof Date ? value.toISOString() : safe(value);
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
@@ -22,7 +23,7 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
   const components = [buildAdminNavigation('students')];
   const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Owner-only • Inspection is read-only • Separate confirmations for access changes' });
   if (detail) {
-    const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, signature_method, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, age_eligible, age_declared_at, age_declaration_version, approved_by, approved_at, status_reason, created_at, updated_at FROM certification_enrollments WHERE discord_user_id=$1', [studentId]);
+    const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, agreement_content_sha256, acknowledgment_name, signature_reference, signature_method, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, age_eligible, age_declared_at, age_declaration_version, approved_by, approved_at, status_reason, created_at, updated_at FROM certification_enrollments WHERE discord_user_id=$1', [studentId]);
     const record = result.rows[0];
     if (!record) { await interaction.editReply({ content: 'Student record not found.', embeds: [], components, allowedMentions: { parse: [] } }); return true; }
     const labs = (await pool.query(`SELECT COUNT(*) AS total,
@@ -34,7 +35,9 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
       COUNT(*) FILTER (WHERE status='expired') AS expired
       FROM certification_lab_requests WHERE discord_user_id=$1`, [studentId])).rows[0];
     const count = key => safe(labs?.[key] ?? '0', 30);
+    const readiness = evaluateCourseAccessReadiness(record, config);
     embed.setTitle('Student access record').setDescription(`Discord ID: ${studentId}\nPermanent ID: ${safe(record.student_id)}\nStored status: ${safe(record.status)}\n\nRecorded declarations are not independent identity or age verification. This view does not grant lab access or issue a certificate.`).addFields(
+      { name: 'Course access readiness', value: `Course access checks: ${readiness.authorized ? 'Passed' : 'Blocked'}\nPending record ready for approval: ${readiness.readyForApproval ? 'Yes' : 'No'}\n${readiness.blockers.length ? readiness.blockers.join('\n') : 'No course-access blockers found.'}\nInspection does not change access or approve enrollment.` },
       { name: 'Agreement acknowledgment', value: `Version: ${safe(record.agreement_version)}\nMethod: ${safe(record.signature_method)}\nAcknowledged: ${stamp(record.acknowledged_at)}\nLearner-confirmed reading: ${stamp(record.learner_confirmed_read_at)}` },
       { name: 'Comprehension record', value: `Check version: ${safe(record.comprehension_check_version)}\nPassed at: ${stamp(record.comprehension_passed_at)}`, inline: true },
       { name: 'Self-declared age eligibility', value: `Age 18+: ${record.age_eligible === true ? 'Yes' : record.age_eligible === false ? 'No' : 'Not recorded'}\nDeclaration version: ${safe(record.age_declaration_version)}\nDeclared at: ${stamp(record.age_declared_at)}`, inline: true },
