@@ -40,7 +40,7 @@ export async function handleConsoleBrowser(interaction, pool, config, guildId) {
     : await pool.query(`SELECT discord_user_id, student_id, status, agreement_version, signature_method, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, age_eligible, age_declared_at, approved_at FROM certification_enrollments WHERE ($1::text='all' OR status=$1) AND ($2::text='' OR discord_user_id=$2 OR LOWER(student_id)=LOWER($2)) ORDER BY created_at, discord_user_id LIMIT 6 OFFSET $3`, [status, query, page * 5]);
   const entries = result.rows.slice(0, 5);
   const target = n => audit ? `cert:audit:${n}` : `cert:dir:${status}:${n}:${query}`;
-  const components = [row(button('cert:admin:overview:0', 'Overview'), button('cert:dir:search', 'Search / filter students'), button('cert:audit:0', 'Audit history'))];
+  const components = [row(button('cert:admin:overview:0', 'Overview'), button('cert:dir:search', 'Search / filter students'), ...(audit ? [] : [button('cert:audit:0', 'Audit history')]))];
   if (!audit && entries.length) components.push(row(...entries.map((entry, index) => button(`cert:students:detail:${entry.discord_user_id}`, `Open student ${index + 1}`))));
   components.push(row(
     button(page === 0 ? 'cert:noop:browser:previous' : target(page - 1), 'Previous', page === 0),
