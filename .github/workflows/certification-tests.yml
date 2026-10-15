@@ -59,6 +59,7 @@ jobs:
     env:
       CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
       CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      CERTIFICATION_TEST_ALLOW_LAB_DDL: 'true'
       CERTIFICATION_ENABLED: 'false'
       DATABASE_URL: ''
       DISCORD_TOKEN: ''
@@ -76,5 +77,6 @@ jobs:
         run: |
           test -n "$CERTIFICATION_TEST_DATABASE_URL"
           test "$CERTIFICATION_TEST_ALLOW_ROLE_DDL" = true
+          test "$CERTIFICATION_TEST_ALLOW_LAB_DDL" = true
       - name: Run real PostgreSQL certification integration tests
-        run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs test-certification-database-pool.mjs test-certification-postgres-role.mjs
+        run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs test-certification-database-pool.mjs test-certification-postgres-role.mjs test-certification-lab-postgres.mjs
