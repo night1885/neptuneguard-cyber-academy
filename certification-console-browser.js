@@ -4,6 +4,7 @@ const button = (id, label, disabled = false) => ({ type: 2, style: 2, custom_id:
 const row = (...components) => ({ type: 1, components });
 const base = { allowedMentions: { parse: [] } };
 const stamp = value => value instanceof Date ? value.toISOString() : clean(value);
+export function formatAuditAction(action) { return clean(String(action ?? 'Not supplied').replaceAll('_', ' ')); }
 
 export async function handleConsoleBrowser(interaction, pool, config, guildId) {
   const id = interaction.customId || '';
@@ -48,7 +49,7 @@ export async function handleConsoleBrowser(interaction, pool, config, guildId) {
     button(page >= 10000 ? 'cert:noop:browser:next' : target(page + 1), 'Next', result.rows.length <= 5 || page >= 10000)
   ));
   const fields = entries.map(entry => audit
-    ? { name: `Event ${clean(entry.event_id)} — ${clean(entry.action)}`, value: `Actor: ${clean(entry.actor_discord_user_id)}\nSubject: ${clean(entry.subject_discord_user_id)}\nTime: ${stamp(entry.created_at)}` }
+    ? { name: `Event ${clean(entry.event_id)} — ${formatAuditAction(entry.action)}`, value: `Actor: ${clean(entry.actor_discord_user_id)}\nSubject: ${clean(entry.subject_discord_user_id)}\nTime: ${stamp(entry.created_at)}` }
     : { name: `Student ${clean(entry.discord_user_id)}`, value: `Permanent ID: ${clean(entry.student_id)}\nStatus: ${clean(entry.status)}\nAgreement: ${clean(entry.agreement_version)}\nAcknowledgment method: ${clean(entry.signature_method)}\nAcknowledged: ${entry.acknowledged_at ? 'Yes' : 'No'} | Read declaration: ${entry.learner_confirmed_read_at ? 'Yes' : 'No'} | Comprehension: ${entry.comprehension_passed_at ? 'Yes' : 'No'}\nSelf-declared age 18+: ${entry.age_eligible === true ? 'Yes' : entry.age_eligible === false ? 'No' : 'Not recorded'}\nAge declaration: ${stamp(entry.age_declared_at)}\nApproved: ${stamp(entry.approved_at)}` });
   await interaction.editReply({ ...base, content: '', embeds: [{ title: `${audit ? 'Audit history' : 'Student search'} — page ${page + 1}`, color: 0x3498db,
     description: audit ? `${entries.length ? 'Newest events first.' : 'No events on this page.'} Event details and private notes are intentionally omitted.` : `Status: ${clean(status)} | Exact ID: ${query ? clean(query) : 'Any'}\n${entries.length ? 'Open a student for existing access controls. Age eligibility is self-declared, not independently verified.' : 'No matching students on this page. Use Previous or change the filter.'}`, fields, footer: { text: 'Owner-only • Read-only • No records changed' } }], components });
