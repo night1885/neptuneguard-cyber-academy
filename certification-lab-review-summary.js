@@ -1,6 +1,6 @@
 import { hasCompleteAccountAcknowledgment } from './certification-account-acknowledgment.js';
 
-const safe = value => String(value ?? 'Not recorded').replace(/[`*_~|<>@]/g, '').slice(0, 100);
+const safe = value => String(value ?? 'Not recorded').replace(/[`*~|<>@]/g, '').slice(0, 100);
 const timestamp = value => {
   if (!(value instanceof Date) && (typeof value !== 'string' || !value.trim())) return null;
   const milliseconds = value instanceof Date ? value.getTime() : Date.parse(value);
