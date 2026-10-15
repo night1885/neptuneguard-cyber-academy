@@ -26,14 +26,41 @@ export async function handleCertificationDashboard(interaction, pool, config, gu
   const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Owner console • Lab approval is separate from enrollment' });
   const components = [navigation];
   if (view === 'overview') {
-    const result = await pool.query(`SELECT
-      (SELECT COUNT(*) FROM certification_enrollments WHERE status='pending') AS pending_enrollments,
-      (SELECT COUNT(*) FROM certification_enrollments WHERE status='approved') AS enrolled_students,
-      (SELECT COUNT(*) FROM certification_lab_requests WHERE status='pending') AS pending_labs`);
-    const counts = result.rows[0];
+    const result = await pool.query(`SELECT e.*, l.*,
+      (SELECT COUNT(*) FROM certification_audit_events) AS audit_events
+      FROM (SELECT COUNT(*) AS total_students,
+        COUNT(*) FILTER (WHERE status='pending') AS pending_enrollments,
+        COUNT(*) FILTER (WHERE status='approved') AS enrolled_students,
+        COUNT(*) FILTER (WHERE status='awaiting_acknowledgment') AS awaiting_acknowledgment,
+        COUNT(*) FILTER (WHERE status='denied') AS denied_students,
+        COUNT(*) FILTER (WHERE status='suspended') AS suspended_students,
+        COUNT(*) FILTER (WHERE status='revoked') AS revoked_students,
+        COUNT(*) FILTER (WHERE status IN ('approved','pending') AND
+          (signature_method IS DISTINCT FROM 'discord_account' OR age_eligible IS DISTINCT FROM TRUE OR age_declared_at IS NULL)) AS declaration_review_candidates
+        FROM certification_enrollments) e
+      CROSS JOIN (SELECT
+        COUNT(*) FILTER (WHERE status='pending') AS pending_labs,
+        COUNT(*) FILTER (WHERE status='approved') AS approved_lab_records,
+        COUNT(*) FILTER (WHERE status='approved' AND starts_at <= NOW() AND expires_at > NOW()) AS current_lab_authorizations,
+        COUNT(*) FILTER (WHERE status='approved' AND expires_at <= NOW()) AS elapsed_approved_lab_records,
+        COUNT(*) FILTER (WHERE status='revoked') AS revoked_lab_records
+        FROM certification_lab_requests) l`);
+    const counts = result.rows[0] || {};
+    const count = key => String(counts[key] ?? '0');
     embed.setTitle('NeptuneGuard Certification — Owner Console').setDescription(
-      `Pending enrollments: ${counts.pending_enrollments}\nApproved students: ${counts.enrolled_students}\nPending lab requests: ${counts.pending_labs}\n\nReview enrollment requests and student access below. Hosted-lab approval and session controls are separate; enrollment approval does not grant lab access or award a certificate.`
+      `Pending enrollments: ${count('pending_enrollments')}\nApproved students: ${count('enrolled_students')}\nPending lab requests: ${count('pending_labs')}\n\nReview enrollment requests and student access below. Enrollment approval does not grant lab access or award a certificate.`
+    ).addFields(
+      { name: 'Student directory', value: `Total: ${count('total_students')}\nAwaiting acknowledgment: ${count('awaiting_acknowledgment')}\nDenied: ${count('denied_students')}\nSuspended: ${count('suspended_students')}\nRevoked: ${count('revoked_students')}`, inline: true },
+      { name: 'Lab authorization records', value: `Approved records: ${count('approved_lab_records')}\nWithin recorded time window: ${count('current_lab_authorizations')}\nApproved but elapsed: ${count('elapsed_approved_lab_records')}\nRevoked records: ${count('revoked_lab_records')}\nThese are authorization records, not running provider sessions.`, inline: true },
+      { name: 'Requires review', value: `Pending/approved records with a legacy method or missing positive age declaration: ${count('declaration_review_candidates')}. This is a limited compatibility indicator, not a full eligibility assessment. No records were converted or changed.` },
+      { name: 'Runtime configuration and audit', value: `New enrollment submissions: ${config.enrollmentSubmissionEnabled === true ? 'Enabled' : 'Disabled'}\nRecorded audit events: ${count('audit_events')}\nUse Configuration for the running process snapshot and Audit history for event metadata. This overview does not test provider health or implement certificate issuance.` }
     );
+    components.push(new ActionRowBuilder().addComponents(
+      button('cert:dir:pending:0:', 'Pending students'),
+      button('cert:dir:approved:0:', 'Approved students'),
+      button('cert:dir:suspended:0:', 'Suspended students'),
+      button('cert:dir:revoked:0:', 'Revoked students')
+    ));
   } else {
     const enrollment = view === 'enrollments';
     const result = await pool.query(enrollment
