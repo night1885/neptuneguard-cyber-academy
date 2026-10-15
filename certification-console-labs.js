@@ -45,7 +45,9 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
         { name: 'Approved by', value: safe(record.approved_by), inline: true },
         { name: 'Approval time', value: stamp(record.approved_at), inline: true }
       ] };
-    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request')), ...buildLabActionControls(record.request_id, record.status));
+    const studentLink = typeof record.discord_user_id === 'string' && /^\d{17,20}$/.test(record.discord_user_id)
+      ? [button(`cert:students:detail:${record.discord_user_id}`, 'Student access record')] : [];
+    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request'), ...studentLink), ...buildLabActionControls(record.request_id, record.status));
   } else {
     const status = list[1], page = Number(list[2]);
     const result = await pool.query(`SELECT request_id, discord_user_id, lab_key, status, starts_at, expires_at FROM certification_lab_requests WHERE ($1::text='all' OR status=$1) ORDER BY created_at DESC, request_id DESC LIMIT 6 OFFSET $2`, [status, page * 5]);
