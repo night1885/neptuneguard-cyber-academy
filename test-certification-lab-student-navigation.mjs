@@ -14,12 +14,12 @@ async function render(studentId, status = 'pending', missing = false) {
   return { payload: replies[0], queries };
 }
 for (const status of ['pending', 'approved', 'denied', 'suspended', 'revoked', 'expired']) {
-  test(`lab ${status} links the exact student without changing action controls`, async () => {
+  test(`lab ${status} links the exact student with status-appropriate action controls`, async () => {
     const { payload, queries } = await render(student, status);
     assert.equal(queries.length, 1); assert.deepEqual(queries[0].params, [request]);
     const controls = payload.components.flatMap(row => row.components);
     assert.ok(controls.some(control => control.custom_id === `cert:students:detail:${student}` && control.label === 'Student access record'));
-    const expected = status === 'pending' ? ['deny'] : ['approved', 'suspended'].includes(status) ? ['revoke'] : [];
+    const expected = status === 'pending' ? ['deny'] : status === 'approved' ? ['revoke','suspend'] : status === 'suspended' ? ['revoke'] : [];
     assert.deepEqual(controls.filter(control => control.custom_id.startsWith('cert:labact:')).map(control => control.custom_id.split(':')[2]), expected);
     assert.equal(new Set(controls.map(control => control.custom_id)).size, controls.length);
     assert.ok(payload.components.length <= 5); assert.ok(payload.components.every(row => row.components.length <= 5));
