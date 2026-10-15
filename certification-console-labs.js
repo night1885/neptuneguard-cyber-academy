@@ -1,3 +1,4 @@
+import { buildLabActionControls, createLabActionHandler } from './certification-lab-actions.js';
 const statuses = ['all', 'pending', 'approved', 'denied', 'suspended', 'revoked', 'expired'];
 const safe = value => String(value ?? 'Not supplied').replace(/[`*_~|<>@]/g, '').slice(0, 100);
 const stamp = value => value instanceof Date ? value.toISOString() : safe(value);
@@ -5,6 +6,10 @@ const button = (custom_id, label, disabled = false) => ({ type: 2, style: 2, cus
 const row = (...components) => ({ type: 1, components });
 const uuid = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}';
 
+export function createConsoleLabController(pool, config, guildId) {
+  const action = createLabActionHandler(pool, config, guildId);
+  return async interaction => (await action(interaction)) || handleConsoleLabs(interaction, pool, config, guildId);
+}
 export async function handleConsoleLabs(interaction, pool, config, guildId) {
   const id = interaction.customId || '';
   if (!interaction.isButton?.() || !id.startsWith('cert:labview:')) return false;
@@ -27,7 +32,7 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
       await interaction.editReply({ content: 'Lab request not found. No records changed.', embeds: [], components: [...components, row(button('cert:labview:all:0', 'All lab records'))], allowedMentions }); return true;
     }
     embed = { title: 'Lab authorization record', color: 0x3498db,
-      description: 'Read-only inspection. This is not proof of a running session or permission to launch one. Scope details and private notes are not displayed by this view.',
+      description: 'Inspection does not change records. Denial/revocation requires a reason and separate confirmation. This is not proof of a running session or permission to launch one. Scope details and private notes are not displayed by this view.',
       fields: [
         { name: 'Request', value: safe(record.request_id) },
         { name: 'Student Discord ID', value: safe(record.discord_user_id), inline: true },
@@ -40,7 +45,7 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
         { name: 'Approved by', value: safe(record.approved_by), inline: true },
         { name: 'Approval time', value: stamp(record.approved_at), inline: true }
       ] };
-    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request')));
+    components.push(row(button('cert:labview:all:0', 'All lab records'), button(id, 'Refresh request')), ...buildLabActionControls(record.request_id, record.status));
   } else {
     const status = list[1], page = Number(list[2]);
     const result = await pool.query(`SELECT request_id, discord_user_id, lab_key, status, starts_at, expires_at FROM certification_lab_requests WHERE ($1::text='all' OR status=$1) ORDER BY created_at DESC, request_id DESC LIMIT 6 OFFSET $2`, [status, page * 5]);
@@ -57,6 +62,6 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
     const filters = statuses.filter(value => value !== status).map(value => button(`cert:labview:${value}:0`, value === 'all' ? 'All statuses' : value));
     for (let i = 0; i < filters.length; i += 5) components.push(row(...filters.slice(i, i + 5)));
   }
-  await interaction.editReply({ content: '', embeds: [{ ...embed, footer: { text: 'Owner-only • Read-only • No provider calls' } }], components, allowedMentions });
+  await interaction.editReply({ content: '', embeds: [{ ...embed, footer: { text: 'Owner-only • Inspection is read-only • No provider calls' } }], components, allowedMentions });
   return true;
 }
