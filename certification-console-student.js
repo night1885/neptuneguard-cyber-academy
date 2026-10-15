@@ -25,13 +25,23 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
     const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, signature_method, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, age_eligible, age_declared_at, age_declaration_version, approved_by, approved_at, status_reason, created_at, updated_at FROM certification_enrollments WHERE discord_user_id=$1', [studentId]);
     const record = result.rows[0];
     if (!record) { await interaction.editReply({ content: 'Student record not found.', embeds: [], components, allowedMentions: { parse: [] } }); return true; }
+    const labs = (await pool.query(`SELECT COUNT(*) AS total,
+      COUNT(*) FILTER (WHERE status='pending') AS pending,
+      COUNT(*) FILTER (WHERE status='approved') AS approved,
+      COUNT(*) FILTER (WHERE status='approved' AND starts_at <= NOW() AND expires_at > NOW()) AS within_window,
+      COUNT(*) FILTER (WHERE status='approved' AND expires_at <= NOW()) AS elapsed_approved,
+      COUNT(*) FILTER (WHERE status='revoked') AS revoked,
+      COUNT(*) FILTER (WHERE status='expired') AS expired
+      FROM certification_lab_requests WHERE discord_user_id=$1`, [studentId])).rows[0];
+    const count = key => safe(labs?.[key] ?? '0', 30);
     embed.setTitle('Student access record').setDescription(`Discord ID: ${studentId}\nPermanent ID: ${safe(record.student_id)}\nStored status: ${safe(record.status)}\n\nRecorded declarations are not independent identity or age verification. This view does not grant lab access or issue a certificate.`).addFields(
       { name: 'Agreement acknowledgment', value: `Version: ${safe(record.agreement_version)}\nMethod: ${safe(record.signature_method)}\nAcknowledged: ${stamp(record.acknowledged_at)}\nLearner-confirmed reading: ${stamp(record.learner_confirmed_read_at)}` },
       { name: 'Comprehension record', value: `Check version: ${safe(record.comprehension_check_version)}\nPassed at: ${stamp(record.comprehension_passed_at)}`, inline: true },
       { name: 'Self-declared age eligibility', value: `Age 18+: ${record.age_eligible === true ? 'Yes' : record.age_eligible === false ? 'No' : 'Not recorded'}\nDeclaration version: ${safe(record.age_declaration_version)}\nDeclared at: ${stamp(record.age_declared_at)}`, inline: true },
       { name: 'Approval record', value: `Approved by: ${safe(record.approved_by)}\nApproved at: ${stamp(record.approved_at)}` },
       { name: 'Record chronology', value: `Created: ${stamp(record.created_at)}\nUpdated: ${stamp(record.updated_at)}` },
-      { name: 'Latest stored status reason', value: safe(record.status_reason, 500) }
+      { name: 'Latest stored status reason', value: safe(record.status_reason, 500) },
+      { name: 'This student — lab authorization records', value: `Total requests: ${count('total')}\nPending: ${count('pending')}\nApproved records: ${count('approved')}\nWithin recorded time window: ${count('within_window')}\nApproved but elapsed: ${count('elapsed_approved')}\nRevoked: ${count('revoked')}\nStored expired status: ${count('expired')}\nCounts describe stored authorizations, not running sessions or a full eligibility decision. Elapsed approved records remain approved until separately changed.` }
     );
     components.push(...buildAccessControls(studentId, record.status));
     if (record.status === 'pending') components.push(row(button(`cert:enrollment:review:${studentId}`, 'Review acknowledgment')));
