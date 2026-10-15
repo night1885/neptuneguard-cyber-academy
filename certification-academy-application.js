@@ -1,6 +1,7 @@
 import { Events } from 'discord.js';
 import { attachCertificationRuntime } from './certification-runtime.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
+import { withStudentEntry } from './certification-student-entry.js';
 
 export function createAcademyApplication({ client, pool, guildId, initializeDatabase, handleInteraction, env = process.env,
   signals = process, exit = code => process.exit(code), log = (...args) => console.error(...args),
@@ -30,7 +31,7 @@ export function createAcademyApplication({ client, pool, guildId, initializeData
     void task.catch(fail).finally(() => tasks.delete(task)).catch(() => {});
     return task;
   }
-  function onInteraction(interaction) { void track(() => handleInteraction(interaction)); }
+  function onInteraction(interaction) { void track(() => handleInteraction(withStudentEntry(interaction, guildId, certification.enabled === true && certification.ready === true))); }
   function onReady(readyClient) {
     void track(async () => {
       await initializeDatabase();
