@@ -2,10 +2,12 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createCertificationRouter as createExistingRouter } from './certification-router.js';
 import { adminSectionTarget, buildAdminNavigation } from './certification-admin-navigation.js';
 import { handleConsoleSettings } from './certification-console-settings.js';
+import { handleConsoleBrowser } from './certification-console-browser.js';
 
 export function createCertificationRouter(pool, config, guildId) {
   const route = createExistingRouter(pool, config, guildId);
   return async function routeWithAdminNavigation(interaction) {
+    if (await handleConsoleBrowser(interaction, pool, config, guildId)) return true;
     if (await handleConsoleSettings(interaction, config, guildId)) return true;
     const selection = interaction.isStringSelectMenu?.() && interaction.customId === 'cert:admin:section';
     let target = interaction.customId;
@@ -45,7 +47,9 @@ export function createCertificationRouter(pool, config, guildId) {
               return copy;
             });
             if (components.length < 5) components.push(new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('cert:console:settings').setLabel('Configuration').setStyle(ButtonStyle.Secondary)
+              new ButtonBuilder().setCustomId('cert:console:settings').setLabel('Configuration').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('cert:dir:search').setLabel('Search / filter students').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('cert:audit:0').setLabel('Audit history').setStyle(ButtonStyle.Secondary)
             ));
             payload = { ...payload, components };
           }
