@@ -45,7 +45,7 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
     );
     components.push(...buildAccessControls(studentId, record.status));
     if (record.status === 'pending') components.push(row(button(`cert:enrollment:review:${studentId}`, 'Review acknowledgment')));
-    components.push(row(button(`cert:student-audit:${studentId}:0`, 'Student audit timeline'), button('cert:dir:search', 'Search / filter students'), button('cert:labview:all:0', 'Lab records'), button(id, 'Refresh student')));
+    components.push(row(button(`cert:student-audit:${studentId}:0`, 'Student audit timeline'), button('cert:dir:search', 'Search / filter students'), button(`cert:labview:student:${studentId}:all:0`, 'This learner\'s labs'), button(id, 'Refresh student')));
   } else {
     const page = Number(timeline[2]);
     const result = await pool.query('SELECT event_id, actor_discord_user_id, action, created_at FROM certification_audit_events WHERE subject_discord_user_id=$1 ORDER BY created_at DESC, event_id DESC LIMIT 6 OFFSET $2', [studentId, page * 5]);
