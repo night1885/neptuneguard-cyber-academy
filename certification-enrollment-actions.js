@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
-import { hasCompleteAccountAcknowledgment } from './certification-account-acknowledgment.js';
+import { evaluateCourseAccessReadiness } from './certification-access-readiness.js';
 
 export async function handleEnrollmentAction(interaction, pool, config, guildId, service) {
   if (!interaction.isButton() || !interaction.customId.startsWith('cert:enrollment:')) return false;
@@ -15,10 +15,7 @@ export async function handleEnrollmentAction(interaction, pool, config, guildId,
   if (action === 'review') {
     const row = (await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1', [studentDiscordId])).rows[0];
     if (!row || row.status !== 'pending') { await reply('This request is not pending. Refresh the queue.'); return true; }
-    const complete = hasCompleteAccountAcknowledgment(row) &&
-      (!config.activeAgreementVersion || row.agreement_version === config.activeAgreementVersion) &&
-      (!config.activeAgreementSha256 || row.agreement_content_sha256 === config.activeAgreementSha256) &&
-      (!config.comprehensionCheck?.version || row.comprehension_check_version === config.comprehensionCheck.version);
+    const complete = evaluateCourseAccessReadiness(row, config).readyForApproval;
     const safe = value => String(value ?? 'Not supplied').replace(/[`*_~|<>]/g, '').slice(0, 100);
     const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle('Confirm enrollment approval')
       .setDescription(`Student Discord ID: ${studentDiscordId}\nAgreement: ${safe(row.agreement_version)}\nAcknowledgment method: ${safe(row.signature_method)}\nSelf-declared age 18+ eligibility: ${row.age_eligible === true ? 'Yes' : 'Missing or not eligible'}\nRequired records complete: ${complete ? 'Yes' : 'No'}\n\nNo legal name or uploaded identity document is required. Age eligibility and reading are self-declared, not independently proven. Approval activates course access and issues the permanent ID. It does not approve labs or award certification.`);
