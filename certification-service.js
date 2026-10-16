@@ -31,7 +31,8 @@ export function createCertificationService(pool, config) {
         return { studentId: enrollment.student_id, alreadyApproved: true };
       }
       if (enrollment.status !== 'pending') throw new Error('Only pending requests can be approved; reinstatement is separate');
-      const studentId = enrollment.student_id || `NG-PT-${randomUUID()}`;
+      if (enrollment.student_id != null && !hasStudentId(enrollment)) throw new Error('Pending permanent student ID is invalid; admin review required');
+      const studentId = enrollment.student_id ?? `NG-PT-${randomUUID()}`;
       await db.query(`UPDATE certification_enrollments SET status='approved', student_id=$2, approved_by=$3, approved_at=NOW(), status_reason=NULL, updated_at=NOW() WHERE discord_user_id=$1`, [studentDiscordId, studentId, actorId]);
       await db.query(`INSERT INTO certification_audit_events (actor_discord_user_id, subject_discord_user_id, action, details) VALUES ($1,$2,'enrollment_approved',$3::jsonb)`,
         [actorId, studentDiscordId, JSON.stringify({ studentId, agreementVersion: enrollment.agreement_version, acknowledgmentMethod: 'discord_account', ageDeclarationVersion: enrollment.age_declaration_version })]);

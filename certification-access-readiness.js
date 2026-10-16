@@ -27,6 +27,7 @@ export function evaluateCourseAccessReadiness(record, config) {
   if (!record.approved_by) blockers.push('Approver is missing.');
   if (!record.approved_at) blockers.push('Approval timestamp is missing.');
   const acknowledgmentBlockers = [];
+  if (record.status === 'pending' && record.student_id != null && (typeof record.student_id !== 'string' || !record.student_id.trim())) acknowledgmentBlockers.push('Pending permanent student ID is invalid; admin review required.');
   if (!hasCompleteAccountAcknowledgment(record)) {
     acknowledgmentBlockers.push('Required Discord-account acknowledgment records are incomplete or invalid.');
     acknowledgmentBlockers.push(...acknowledgmentDetails(record));
