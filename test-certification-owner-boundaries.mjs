@@ -40,7 +40,11 @@ for (const [label, id, modal = false] of actions) {
       assert.equal(await route(f.interaction), true);
       assert.equal(f.queries.length, 0); assert.equal(f.connects.length, 0);
       assert.equal(f.modals.length, 0); assert.equal(f.fieldReads, 0); assert.equal(f.replies.length, 1);
-      assert.match(f.replies[0].content, /owner|restricted/i);
+      if (id.startsWith('cert:access:')) {
+        assert.equal(f.replies[0].content, 'Admin authorization in the configured server is required.');
+      } else {
+        assert.match(f.replies[0].content, /owner|restricted/i);
+      }
       assert.equal(f.deferrals[0]?.flags ?? f.replies[0].flags, 64);
     });
   }
