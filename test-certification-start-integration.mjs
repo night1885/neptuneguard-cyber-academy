@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
-import { withStudentEntry } from './certification-student-entry.js';
+import { withStudentEntry, replyStudentStart } from './certification-student-entry.js';
 
 const source = await readFile(new URL('./index.js', import.meta.url), 'utf8');
 const start = source.indexOf('async function handleAcademyInteraction(interaction)');
@@ -24,6 +24,7 @@ async function exercise({ ready = true, verified = true, wrongGuild = false, pro
     async followUp(payload) { replies.push(payload); }
   };
   const handler = runInNewContext('(' + handlerSource + ')', {
+    replyStudentStart,
     config: { guildId }, MessageFlags: { Ephemeral: 64 },
     userHasVerifiedRole: async () => verified,
     ensureProfile: async () => { profiles++; if (profileFails) throw new Error('fixture profile failure'); },

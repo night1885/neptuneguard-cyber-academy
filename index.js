@@ -1,4 +1,5 @@
 import { createAcademyApplication } from './certification-academy-application.js';
+import { replyStudentStart } from './certification-student-entry.js';
 import { showBadgePage } from './badge-pages.js';
 import { getCourse } from './course-registry.js';
 import { buildLearnerReport } from './learner-report.js';
@@ -785,7 +786,7 @@ else if (interaction.customId.startsWith('linux-m1-')) await handleLinuxButton(i
     if (interaction.commandName === 'start') {
       await ensureProfile(interaction.user.id);
 
-      await interaction.editReply({
+      await replyStudentStart(interaction, {
         content: [
           '## Welcome to NeptuneGuard Cyber Academy',
           '',
