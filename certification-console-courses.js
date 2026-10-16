@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { COURSES } from './course-registry.js';
 const PREFIX = 'cert:admin:courses:';
-const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label.slice(0, 80)).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
+const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(disabled ? `cert:disabled:courses:${id}` : id).setLabel(label.slice(0, 80)).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 const row = buttons => new ActionRowBuilder().addComponents(buttons);
 const label = key => key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
 export function courseContentText(value, depth = 0) {
@@ -22,7 +22,7 @@ export async function handleConsoleCourses(interaction, config, guildId) {
   const moduleView = /^cert:admin:courses:module:(\d{1,5}):(\d{1,5}):(\d{1,5})$/.exec(id);
   const invalid = async () => { await respond({ content: 'Invalid course, module, or page. Reopen Course Overview from the Admin Dashboard.' }); return true; };
   if (!catalog && !courseView && !moduleView) return invalid();
-  const navigation = row([button('cert:admin:overview:0', 'Admin Dashboard'), button(`${PREFIX}0`, 'Course Overview')]);
+  const navigation = row([button('cert:admin:overview:0', 'Admin Dashboard'), ...(!catalog ? [button(`${PREFIX}0`, 'Course Overview')] : [])]);
   const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Admin Dashboard • Read-only curriculum • No progress, access, or lab changes' });
   let components = [navigation];
   if (catalog) {
