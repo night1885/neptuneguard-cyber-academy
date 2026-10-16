@@ -11,7 +11,7 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
   const id = interaction.customId || '';
   if (!interaction.isButton?.() || !(id.startsWith('cert:students:detail:') || id.startsWith('cert:student-audit:'))) return false;
   if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-    await interaction.reply({ content: 'Owner authorization in the configured server is required.', flags: 64, allowedMentions: { parse: [] } }); return true;
+    await interaction.reply({ content: 'Admin authorization in the configured server is required.', flags: 64, allowedMentions: { parse: [] } }); return true;
   }
   const detail = /^cert:students:detail:(\d{17,20})$/.exec(id);
   const timeline = /^cert:student-audit:(\d{17,20}):(\d{1,5})$/.exec(id);
@@ -21,7 +21,7 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
   const studentId = (detail || timeline)[1];
   await interaction.deferReply({ flags: 64 });
   const components = [buildAdminNavigation('students')];
-  const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Owner-only • Inspection is read-only • Separate confirmations for access changes' });
+  const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Admin-only • Inspection is read-only • Separate confirmations for access changes' });
   if (detail) {
     const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, agreement_content_sha256, acknowledgment_name, signature_reference, signature_method, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, age_eligible, age_declared_at, age_declaration_version, approved_by, approved_at, status_reason, created_at, updated_at FROM certification_enrollments WHERE discord_user_id=$1', [studentId]);
     const record = result.rows[0];
