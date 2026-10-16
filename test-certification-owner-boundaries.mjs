@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCertificationRouter } from './certification-router.js';
+import { createLabActionHandler } from './certification-lab-actions.js';
+import { readFile } from 'node:fs/promises';
 
 const owner = '1223123544301633567'; const learner = '1223123544301633568';
 const guild = '1339276399390887957'; const otherGuild = '1339276399390887956';
@@ -40,7 +42,7 @@ for (const [label, id, modal = false] of actions) {
       assert.equal(await route(f.interaction), true);
       assert.equal(f.queries.length, 0); assert.equal(f.connects.length, 0);
       assert.equal(f.modals.length, 0); assert.equal(f.fieldReads, 0); assert.equal(f.replies.length, 1);
-      if (id.startsWith('cert:access:')) {
+      if (/^cert:(access|enrollment|students):/.test(id)) {
         assert.equal(f.replies[0].content, 'Admin authorization in the configured server is required.');
       } else {
         assert.match(f.replies[0].content, /owner|restricted/i);
@@ -66,4 +68,25 @@ test('owner overview describes connected enrollment review without promising lab
   assert.match(description, /Review enrollment requests/); assert.match(description, /does not grant lab access or award a certificate/);
   assert.ok(!description.includes('approval actions are not connected yet'));
   assert.equal(f.queries.length, 1); assert.equal(f.connects.length, 0); assert.equal(f.deferrals[0].flags, 64);
+});
+test('lab action denial uses admin wording without reading fields or changing authorization', async () => {
+  for (const [, actor, guildId, enabled] of contexts) {
+    const f = fixture('cert:labact:deny:00000000-0000-4000-8000-000000000001', actor, guildId);
+    assert.equal(await createLabActionHandler(f.pool, { ...config, enabled }, guild)(f.interaction), true);
+    assert.equal(f.queries.length, 0); assert.equal(f.connects.length, 0); assert.equal(f.fieldReads, 0); assert.equal(f.modals.length, 0);
+    assert.equal(f.replies.length, 1); assert.equal(f.replies[0].content, 'Admin authorization in the configured server is required.');
+    assert.equal(f.replies[0].flags, 64); assert.deepEqual(f.replies[0].allowedMentions, { parse: [] });
+  }
+});
+test('audited UI modules retain ownerId checks and use admin labels', async () => {
+  for (const file of ['certification-enrollment-actions.js', 'certification-lab-actions.js', 'certification-router.js', 'certification-admin-router.js']) {
+    const source = await readFile(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.ok(source.includes('config.ownerId'), file);
+    assert.ok(source.includes('Admin authorization in the configured server is required.'), file);
+    assert.ok(!source.includes('Owner authorization in the configured server is required.'), file);
+    if (file === 'certification-enrollment-actions.js') {
+      assert.ok(source.includes('Hosted labs require a separate request and admin approval.'));
+      assert.ok(!source.includes('Hosted labs require a separate request and owner approval.'));
+    }
+  }
 });

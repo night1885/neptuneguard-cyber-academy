@@ -17,7 +17,7 @@ export function createLabActionHandler(pool, config, guildId, { now = Date.now, 
     if (!(interaction.isButton?.() || interaction.isModalSubmit?.()) || !id.startsWith('cert:labact:')) return false;
     const reply = content => interaction.reply({ content, flags: 64, allowedMentions: { parse: [] } });
     if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-      await reply('Owner authorization in the configured server is required.'); return true;
+      await reply('Admin authorization in the configured server is required.'); return true;
     }
     const timestamp = now();
     for (const [key, value] of pending) if (value.expiresAt <= timestamp) pending.delete(key);

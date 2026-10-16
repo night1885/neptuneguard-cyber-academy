@@ -25,7 +25,7 @@ export function createCertificationRouter(pool, config, guildId) {
     let target = interaction.customId;
     if (selection) {
       if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-        await interaction.reply({ content: 'Owner authorization in the configured server is required.', flags: 64, allowedMentions: { parse: [] } });
+        await interaction.reply({ content: 'Admin authorization in the configured server is required.', flags: 64, allowedMentions: { parse: [] } });
         return true;
       }
       target = interaction.values?.length === 1 ? adminSectionTarget(interaction.values[0]) : null;

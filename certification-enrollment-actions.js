@@ -6,7 +6,7 @@ export async function handleEnrollmentAction(interaction, pool, config, guildId,
   await interaction.deferReply({ flags: 64 });
   const reply = content => interaction.editReply({ content, embeds: [], components: [], allowedMentions: { parse: [] } });
   if (!config.enabled || interaction.user.id !== config.ownerId || interaction.guildId !== guildId) {
-    await reply('Owner authorization in the configured server is required.'); return true;
+    await reply('Admin authorization in the configured server is required.'); return true;
   }
   const match = /^cert:enrollment:(review|approve|cancel):(\d{17,20})$/.exec(interaction.customId);
   if (!match) { await reply('Invalid enrollment action.'); return true; }
@@ -30,7 +30,7 @@ export async function handleEnrollmentAction(interaction, pool, config, guildId,
   let delivered = false;
   try {
     const student = await interaction.client.users.fetch(studentDiscordId);
-    await student.send({ content: `Your NeptuneGuard certification enrollment has been approved.\nPermanent student ID: ${approval.studentId}\nCourse access is active. Hosted labs require a separate request and owner approval. This is enrollment, not a certificate award.`, allowedMentions: { parse: [] } });
+    await student.send({ content: `Your NeptuneGuard certification enrollment has been approved.\nPermanent student ID: ${approval.studentId}\nCourse access is active. Hosted labs require a separate request and admin approval. This is enrollment, not a certificate award.`, allowedMentions: { parse: [] } });
     delivered = true;
   } catch { delivered = false; }
   await reply(`Enrollment approved. Permanent student ID: ${approval.studentId}.\n${delivered ? 'Student notification delivered by DM.' : 'DM delivery failed. Enrollment remains approved; arrange private ID delivery.'}`);
