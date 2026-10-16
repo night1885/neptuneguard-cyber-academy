@@ -20,7 +20,7 @@ for (const options of [{ actor: '1223123544301633568' }, { guildId: null }, { gu
 }
 test('disabled browser denies access before queries', async () => {
   const f = fixture(); await handleConsoleBrowser(f.interaction, f.pool, { ...config, enabled: false }, guild);
-  assert.equal(f.queries.length, 0); assert.match(f.replies[0].content, /Owner authorization/);
+  assert.equal(f.queries.length, 0); assert.match(f.replies[0].content, /Admin authorization/);
 });
 test('search modal opens without database access', async () => {
   const f = fixture({ id: 'cert:dir:search' }); await handleConsoleBrowser(f.interaction, f.pool, config, guild);

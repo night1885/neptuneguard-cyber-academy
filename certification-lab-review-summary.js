@@ -51,6 +51,6 @@ export function buildLabReviewSummary(request, enrollment, config, { now = Date.
       { name: 'Recorded authorization window', value: window },
       { name: 'Not checked by this panel', value: 'Approved lab catalog, scope permissions, current lab-rules policy, provider health, and running-session status. Stored scope and private notes are not displayed. Approval remains unavailable here.' }
     ],
-    footer: { text: 'Owner-only • Read-only • No approval • No provider calls' }
+    footer: { text: 'Admin-only • Read-only • No approval • No provider calls' }
   };
 }

@@ -8,7 +8,7 @@ export async function handleLabReview(interaction, pool, config, guildId) {
   if (!interaction.isButton?.() || !id.startsWith('cert:labview:review:')) return false;
   const allowedMentions = { parse: [] };
   if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-    await interaction.reply({ content: 'Owner authorization in the configured server is required.', flags: 64, allowedMentions }); return true;
+    await interaction.reply({ content: 'Admin authorization in the configured server is required.', flags: 64, allowedMentions }); return true;
   }
   const match = new RegExp(`^cert:labview:review:(${uuid})$`).exec(id);
   if (!match) {
