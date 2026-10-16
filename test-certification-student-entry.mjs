@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { withStudentEntry } from './certification-student-entry.js';
+import { withStudentEntry, replyStudentStart } from './certification-student-entry.js';
 const guild = '100000000000000003';
 const welcome = { content: '## Welcome to NeptuneGuard Cyber Academy\n\nYour learner profile is ready.' };
 function fixture(overrides = {}) {
@@ -9,7 +9,7 @@ function fixture(overrides = {}) {
   return { interaction, replies };
 }
 test('successful start offers initial console and protected panel without modifying input', async () => {
-  const f = fixture(); await withStudentEntry(f.interaction, guild, true).editReply(welcome);
+  const f = fixture(); await replyStudentStart(withStudentEntry(f.interaction, guild, true), welcome);
   assert.equal(f.replies[0].content, welcome.content); assert.equal(welcome.components, undefined);
   assert.deepEqual(f.replies[0].components[0].toJSON().components.map(c => c.custom_id), ['cert:initial:home', 'cert:learner:home']);
   assert.deepEqual(f.replies[0].allowedMentions, { parse: [] });

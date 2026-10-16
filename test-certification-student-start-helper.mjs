@@ -40,8 +40,9 @@ test('unready, wrong-server and unrelated interactions do not gain controls', as
     assert.equal(f.replies[0], payload);
   }
 });
-test('legacy successful start remains compatible during migration', async () => {
-  const f = fixture();
-  await withStudentEntry(f.interaction, guild, true).editReply({ content: '## Welcome to NeptuneGuard Cyber Academy\nYour learner profile is ready.' });
-  assertNavigation(f.replies[0]);
+test('ordinary legacy welcome is not decorated without explicit success', async () => {
+  const f = fixture(), payload = { content: '## Welcome to NeptuneGuard Cyber Academy\nYour learner profile is ready.' };
+  await withStudentEntry(f.interaction, guild, true).editReply(payload);
+  assert.equal(f.replies[0], payload);
+  assert.equal(f.replies[0].components, undefined);
 });
