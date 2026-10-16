@@ -50,7 +50,7 @@ test('concurrent confirmation clicks consume one token before awaiting work', as
 });
 test('non-owner cannot consume owner confirmation', async () => {
   const f = fixture(); const { id } = await f.issue(); const denied = f.interaction(id, false, learner);
-  await f.handler(denied); assert.match(denied.replies[0].content, /Owner authorization/); assert.equal(f.connects, 0);
+  await f.handler(denied); assert.match(denied.replies[0].content, /Admin authorization/); assert.equal(f.connects, 0);
   await f.handler(f.interaction(id)); assert.equal(f.connects, 1);
 });
 test('cancel invalidates the token without changing access', async () => {
