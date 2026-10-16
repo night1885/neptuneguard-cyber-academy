@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { validateAgeDeclaration } from './certification-age-declaration.js';
 import { hasCompleteAccountAcknowledgment } from './certification-account-acknowledgment.js';
+import { createRegistrationInvitationReader } from './certification-registration-invitation.js';
 
 export function createCertificationSubmission(pool, config) {
   const enabled = config.enabled === true && config.enrollmentSubmissionEnabled === true;
@@ -13,8 +14,8 @@ export function createCertificationSubmission(pool, config) {
     typeof checkVersion === 'string' && checkVersion.length > 0 && checkVersion.length <= 100 &&
     key.length > 0 && key.length <= 3 && key.every(value => typeof value === 'string' && value.length > 0 && value.length <= 100);
 
-  async function submitEnrollment(studentDiscordId, submission) {
-    if (!enabled) throw new Error('Enrollment submission is disabled');
+  async function submit(studentDiscordId, submission, invitedOnly) {
+    if (invitedOnly ? config.enabled !== true : !enabled) throw new Error('Enrollment submission is disabled');
     if (!configured) throw new Error('Approved agreement and comprehension configuration required');
     if (typeof studentDiscordId !== 'string' || !/^\d{17,20}$/.test(studentDiscordId)) throw new Error('Invalid student Discord ID');
     if (!submission || typeof submission !== 'object' || Array.isArray(submission) ||
@@ -36,9 +37,10 @@ export function createCertificationSubmission(pool, config) {
       await db.query('BEGIN');
       const agreement = (await db.query('SELECT content, content_sha256 FROM certification_agreements WHERE version=$1 FOR SHARE', [version])).rows[0];
       if (!agreement || typeof agreement.content !== 'string' || agreement.content_sha256 !== hash || createHash('sha256').update(agreement.content, 'utf8').digest('hex') !== hash) throw new Error('Approved agreement content is unavailable or changed');
-      await db.query(`INSERT INTO certification_enrollments (discord_user_id, status) VALUES ($1,'awaiting_acknowledgment') ON CONFLICT (discord_user_id) DO NOTHING`, [studentDiscordId]);
+      if (!invitedOnly) await db.query(`INSERT INTO certification_enrollments (discord_user_id, status) VALUES ($1,'awaiting_acknowledgment') ON CONFLICT (discord_user_id) DO NOTHING`, [studentDiscordId]);
       const row = (await db.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1 FOR UPDATE', [studentDiscordId])).rows[0];
       if (!row) throw new Error('Enrollment record unavailable');
+      if (invitedOnly && !await createRegistrationInvitationReader(db, config).hasPendingInvitation(studentDiscordId)) throw new Error('Pending admin registration invitation required');
       if (row.status === 'pending') {
         if (!hasCompleteAccountAcknowledgment(row) || row.agreement_version !== version || row.agreement_content_sha256 !== hash || row.comprehension_check_version !== checkVersion) throw new Error('Existing pending request requires owner review');
         await db.query('COMMIT');
@@ -61,5 +63,8 @@ export function createCertificationSubmission(pool, config) {
       throw error;
     } finally { db.release(discard); }
   }
-  return Object.freeze({ submitEnrollment });
+  return Object.freeze({
+    submitEnrollment: (studentDiscordId, submission) => submit(studentDiscordId, submission, false),
+    submitInvitedEnrollment: (studentDiscordId, submission) => submit(studentDiscordId, submission, true)
+  });
 }
