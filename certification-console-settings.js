@@ -21,7 +21,7 @@ export async function handleConsoleSettings(interaction, config, guildId) {
         { name: 'Operational boundaries', value: 'Enrollment approval does not grant lab access or issue a certificate. Revoking lab authorization does not terminate a running provider session. This screen does not test database credentials or provider health.' }
       ], footer: { text: 'Admin-only • Read-only • No environment changes' } }],
     components: [{ type: 1, components: [
-      { type: 2, style: 2, custom_id: 'cert:admin:overview:0', label: 'Admin Dashboard' },
+      { type: 2, style: 2, custom_id: 'cert:admin:overview:0', label: 'Overview' },
       { type: 2, style: 2, custom_id: 'cert:console:settings', label: 'Refresh configuration' },
       { type: 2, style: 2, custom_id: 'cert:admin:courses:0', label: 'Course Overview' }
     ] }], allowedMentions: { parse: [] }
