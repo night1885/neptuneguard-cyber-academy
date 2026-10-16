@@ -4,9 +4,9 @@ import { observeSubmissionOperation } from './certification-submission-deadline.
 import { handleEnrollmentStatus } from './certification-enrollment-status.js';
 import { createStatusReadGuard } from './certification-status-read-guard.js';
 
-export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000 } = {}) {
+export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000, invitedOnly = false } = {}) {
   if (!Number.isInteger(responseTimeoutMs) || responseTimeoutMs < 1 || responseTimeoutMs > 60000) throw new Error('Invalid response deadline');
-  const handler = createCertificationSubmissionHandler(pool, config, guildId);
+  const handler = createCertificationSubmissionHandler(pool, config, guildId, { invitedOnly });
   const guard = createSubmissionAttemptGuard();
   const statusGuard = createStatusReadGuard();
   return async function guardedSubmission(interaction) {
@@ -15,7 +15,7 @@ export function createGuardedSubmissionHandler(pool, config, guildId, { response
       const guardedPool = { query: (...args) => statusGuard.run(interaction.user?.id, () => pool.query(...args)) };
       return handleEnrollmentStatus(interaction, guardedPool, config, guildId, responseTimeoutMs);
     }
-    if (config.enabled !== true || config.enrollmentSubmissionEnabled !== true ||
+    if (config.enabled !== true || (!invitedOnly && config.enrollmentSubmissionEnabled !== true) ||
         interaction.guildId !== guildId || !/^\d{17,20}$/.test(interaction.user?.id || '')) return handler(interaction);
     const match = /^cert:submit:(previous|next|form|send|cancel):([a-f0-9-]{36})$/.exec(interaction.customId);
     let action;
