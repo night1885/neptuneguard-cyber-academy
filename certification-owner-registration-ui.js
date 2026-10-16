@@ -12,7 +12,7 @@ export function createOwnerRegistrationHandler(pool, config, guildId, { now = Da
     if (!(interaction.isButton?.() || interaction.isModalSubmit?.()) || !id.startsWith('cert:register:')) return false;
     const reply = content => interaction.reply({ content, flags: 64, allowedMentions: { parse: [] } });
     if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-      await reply('Owner authorization in the configured server is required.'); return true;
+      await reply('Admin authorization in the configured server is required.'); return true;
     }
     const timestamp = now();
     for (const [token, record] of pending) if (record.expiresAt <= timestamp) pending.delete(token);
@@ -38,7 +38,7 @@ export function createOwnerRegistrationHandler(pool, config, guildId, { now = Da
     if (match[1] === 'cancel') { await reply('Registration canceled. No record changed.'); return true; }
     await interaction.deferReply({ flags: 64 });
     const result = await service.register(record.actorId, record.studentId);
-    await interaction.editReply({ content: result.created ? `Registered Discord user ${record.studentId}; awaiting learner acknowledgment. Course access is not active.` : `A record already exists for Discord user ${record.studentId}. No record or access was changed.`, allowedMentions: { parse: [] }, components: [row(button(`cert:students:detail:${record.studentId}`, 'Open student record'))] });
+    await interaction.editReply({ content: result.created ? `Registered Discord user ${record.studentId}; awaiting learner acknowledgment. Course access is not active.\n\nNext step: ask the learner to run /start in this server and open Registration / application console. With the agreement manifest configured, eligible admin-registered learners can complete invited registration while general enrollment remains closed. The learner must complete their own acknowledgment and declarations, then await a separate admin decision. No DM was sent.` : `A record already exists for Discord user ${record.studentId}. No record or access was changed.`, allowedMentions: { parse: [] }, components: [row(button(`cert:students:detail:${record.studentId}`, 'Open student record'))] });
     return true;
   };
 }

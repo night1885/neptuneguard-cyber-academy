@@ -25,7 +25,7 @@ test('unauthorized actor and wrong server never connect or open a modal', async 
   for (const options of [{ actor: student }, { server: '444444444444444444' }]) {
     const i = interaction('cert:register:open', options);
     await f.handle(i);
-    assert.match(i.replies[0].content, /Owner authorization/);
+    assert.match(i.replies[0].content, /Admin authorization/);
   }
   assert.equal(f.queries.length, 0);
 });
@@ -83,4 +83,22 @@ test('confirmation uses bound student ID and cannot be replayed', async () => {
   await f.handle(replay);
   assert.match(replay.replies[0].content, /expired/);
   assert.equal(f.queries.length, count);
+});
+
+test('successful registration explains the learner next step without sending a DM or granting access', async () => {
+  const f = fixture(), id = await prepare(f), confirmed = interaction(id);
+  confirmed.client = { users: { fetch() { assert.fail('Registration must not send learner messages'); } } };
+  await f.handle(confirmed);
+  const payload = confirmed.replies.at(-1);
+  assert.match(payload.content, /run \/start in this server/);
+  assert.match(payload.content, /Registration \/ application console/);
+  assert.match(payload.content, /With the agreement manifest configured/);
+  assert.match(payload.content, /separate admin decision/);
+  assert.match(payload.content, /No DM was sent/);
+  assert.deepEqual(payload.allowedMentions, { parse: [] });
+  assert.equal(payload.components[0].toJSON().components[0].custom_id, `cert:students:detail:${student}`);
+  const audit = f.queries.find(query => query.sql.includes('INSERT INTO certification_audit_events'));
+  assert.match(audit.sql, /student_registered_by_owner/);
+  assert.equal(JSON.parse(audit.values[2]).accessGranted, false);
+  assert.ok(!f.queries.some(query => /^UPDATE/.test(query.sql)));
 });
