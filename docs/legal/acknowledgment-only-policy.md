@@ -2,16 +2,12 @@
 
 Status: SUPERSEDED implementation proposal; not a current learner agreement, collection instruction, or activation authorization.
 
-## Policy history
+This intermediate decision removed signed-document uploads but still proposed typed full-name acknowledgment. The later limited-data-enrollment-policy.md excludes legal names, signed-document uploads, government-ID copies, recordings, and unnecessary details from enrollment while permitting necessary Discord-linked registration/access records. Do not use this historical proposal to restore typed-name collection, signed uploads, retired document-retention schedules, or unrelated tracking.
 
-This intermediate decision removed signed-document uploads and retired earlier signed-document storage/retention proposals, but still proposed typed full-name acknowledgment. The later clarification in docs/legal/limited-data-enrollment-policy.md, dated October 17, 2026, permits necessary Discord-linked registration/access records while excluding legal names, signed-document uploads, government-ID copies, recordings, and unnecessary personal details from the enrollment workflow.
+The operator's approved 18+ self-declaration, retention periods, completion/closure definitions, and deadline rules are recorded in eligibility-retention-decisions.md. Those choices are no longer undecided. Automated completion/deletion enforcement and provider/backup behavior still require implementation and verification. Existing records have not been deleted or converted.
 
-The limited-data policy controls where this historical proposal conflicts with it. Do not use this file to require a typed name, request signed uploads, restore a document-retention schedule, or infer permission for unrelated learner tracking. Existing historical data has not been deleted or converted.
+See learner-agreement-draft.md, DRAFT-3, and privacy-notice-draft.md for reconciled drafts awaiting final review and approval. Earlier DRAFT-1/DRAFT-2 proposals must not be published for new acknowledgment; DRAFT-3 is not approved for publication either.
 
-## Current draft and implementation boundaries
+The staged workflow uses Discord-account acknowledgment, learner-confirmed reading, a comprehension check, the approved age-18-or-older declaration, separate admin approval, and permanent-ID issuance after approval. Reading and eligibility are not independently verified. Enrollment, lab authorization, and certificates remain separate.
 
-See learner-agreement-draft.md, DRAFT-2, for reconciled text awaiting operator and legal review. DRAFT-1 is obsolete and must not be published for new acknowledgment. DRAFT-2 is not yet approved for publication either.
-
-The staged implementation uses Discord-account acknowledgment, learner-confirmed reading, a comprehension check, the existing age-18-or-older self-declaration, separate admin approval, and permanent-ID issuance after approval. The final age-field decision and retention/privacy procedures remain unresolved in the current policy; this historical file does not decide them. Reading and eligibility are not independently verified.
-
-Enrollment, lab authorization, and certificates remain separate. Repository changes do not prove production activation or legal compliance. Database publication, environment updates, migrations, deletion, notifications, Discord publication, merge, and deployment require their own approved scope.
+Repository documentation does not establish legal compliance or production activation. Database publication, environment updates, migrations, deletion, notifications, Discord publication, merge, and deployment require their own approved scope.
