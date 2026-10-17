@@ -76,7 +76,7 @@ test('SDK options disable user and message caches without enabling member/conten
   try {
     assert.deepEqual(options.intents, [GatewayIntentBits.Guilds]);
     client.users.cache.set(student, { id: student }); assert.equal(client.users.cache.size, 0);
-    const messages = options.makeCache(MessageManager); messages.set('fixture', {}); assert.equal(messages.size, 0);
+    const messages = options.makeCache(MessageManager, undefined, MessageManager); messages.set('fixture', {}); assert.equal(messages.size, 0);
   } finally { await client.destroy(); }
 });
 test('events and shutdown are isolated and application logs omit interaction/error details', async () => {
