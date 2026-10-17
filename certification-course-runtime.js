@@ -1,5 +1,5 @@
 import { COURSE_SECTION_CATALOG } from './certification-course-sections.js';
-import { createReadyCourseNavigation } from './certification-course-readiness.js';
+import { createReadyManagedCourseNavigation } from './certification-course-admin.js';
 import { createCertificationRouter } from './certification-admin-router.js';
 import { createStatusReadGuard } from './certification-status-read-guard.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
@@ -13,7 +13,7 @@ export function readCourseRuntimeOptions(env = {}) {
   return Object.freeze({ enabled: true, verifiedRoleId: env.VERIFIED_ROLE_ID });
 }
 export function createCourseRuntimeRouter(pool, config, guildId, { verifiedRoleId, now = Date.now,
-  createBaseRouter = createCertificationRouter, createNavigation = createReadyCourseNavigation } = {}) {
+  createBaseRouter = createCertificationRouter, createNavigation = createReadyManagedCourseNavigation } = {}) {
   if (config?.enabled !== true || !validId(config.ownerId) || !validId(guildId) || !validId(verifiedRoleId) ||
       [now, createBaseRouter, createNavigation].some(value => typeof value !== 'function')) throw new Error('Explicit enabled course runtime context required');
   const base = createBaseRouter(pool, config, guildId);
@@ -33,6 +33,8 @@ export function createCourseRuntimeRouter(pool, config, guildId, { verifiedRoleI
   const row = buttons => ({ type: 1, components: buttons });
   const route = async interaction => {
     if (disposed || !navigation) { await replyRetentionHold(interaction); return true; }
+    if (typeof navigation.handleAdmin === 'function' && await navigation.handleAdmin(interaction)) return true;
+    if (typeof navigation.decorateAdminInteraction === 'function') interaction = navigation.decorateAdminInteraction(interaction);
     const id = interaction.customId || '', catalog = /^cert:course:catalog:([0-9]{1,4})$/.exec(id);
     if (id.startsWith('cert:course:catalog:')) {
       if (!catalog || !context(interaction) || !interaction.isButton?.()) { await respond(interaction, { content: 'Open your own course catalog in the configured server.' }); return true; }
