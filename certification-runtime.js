@@ -6,15 +6,24 @@ import { createCertificationDatabasePool } from './certification-database-pool.j
 import { loadCertificationDatabaseConnection } from './certification-database-config.js';
 import { createCertificationService } from './certification-service.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
+import { createClosureRuntimeRouter, readApplicationClosureFlag } from './certification-application-closure-runtime.js';
+import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
 
-export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
+export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter } = {}) {
   const config = loadCertificationConfig(env);
+  const closureEnabled = readApplicationClosureFlag(env);
+  const courses = readCourseRuntimeOptions(env);
+  if (closureEnabled && !config.enabled) throw new Error('Application closure requires enabled certification');
+  if (courses.enabled && (!config.enabled || !config.activeAgreementVersion)) throw new Error('Course runtime requires enabled certification and an explicit current agreement manifest');
   if (!config.enabled) return { enabled: false, detach() {} };
   const database = createPool(loadCertificationDatabaseConnection(env));
   const service = createCertificationService(database, config);
   let route;
-  try { route = createCertificationRouter(database, config, guildId); }
-  catch (error) {
+  try {
+    const baseFactory = closureEnabled ? (pool, settings, guild) => createClosureRouter(pool, settings, guild, { createBaseRouter: createRouter }) : createRouter;
+    route = courses.enabled ? createCourseRouter(database, config, guildId, { verifiedRoleId: courses.verifiedRoleId, createBaseRouter: baseFactory }) : baseFactory(database, config, guildId);
+    if (typeof route !== 'function' || ((closureEnabled || courses.enabled) && typeof route.initialize !== 'function')) throw new Error('Certification router and required initialization hook unavailable');
+  } catch (error) {
     void database.end().catch(() => {});
     throw error;
   }
@@ -28,6 +37,8 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       ready = false;
       await validateCertificationSchema(database);
       await validateActiveEnrollmentAgreement(database, config);
+      if (typeof route.initialize === 'function') await route.initialize();
+      if (detached) return;
       const guild = await client.guilds.fetch(guildId);
       await guild.members.fetch(config.ownerId);
       const channel = await client.channels.fetch(config.adminChannelId);
@@ -65,18 +76,25 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   async function handleInteraction(interaction) {
+    const respond = content => {
+      const payload = { content, embeds: [], components: [], allowedMentions: { parse: [] } };
+      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
+    };
     try {
-      await replyRetentionHold(interaction);
-    } catch (error) {
-      console.error('Certification hold reply failed:', { name: error?.name, code: error?.code });
+      if (!ready || detached) { await replyRetentionHold(interaction); return; }
+      if (!await route(interaction)) await respond('This action is unavailable. Reopen the Admin Dashboard or your student panel.');
+    } catch {
+      console.error('Certification interaction failed.');
+      try { await respond('This action could not be completed. Reopen the dashboard or student panel and check the current status before retrying.'); }
+      catch { console.error('Certification error reply failed.'); }
     }
   }
 
   function onInteraction(interaction) {
     if (detached || !(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.()) || !interaction.customId?.startsWith('cert:')) return;
     const task = handleInteraction(interaction); active.add(task);
-    void task.finally(() => active.delete(task)).catch(error => {
-      console.error('Certification reply failed:', { name: error?.name, code: error?.code });
+    void task.finally(() => active.delete(task)).catch(() => {
+      console.error('Certification reply failed.');
     });
   }
 
@@ -88,10 +106,14 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       detached = true; ready = false;
       client.off(Events.InteractionCreate, onInteraction);
       client.off(Events.ClientReady, initialize);
-      if (!closing) closing = (async () => {
-        await Promise.allSettled([...active, ...(initializing ? [initializing] : [])]);
-        await database.end();
-      })();
+      if (!closing) {
+        try { if (typeof route.dispose === 'function') route.dispose(); }
+        catch { console.error('Certification route shutdown requires attention.'); }
+        closing = (async () => {
+          await Promise.allSettled([...active, ...(initializing ? [initializing] : [])]);
+          await database.end();
+        })();
+      }
       return closing;
     }
   };

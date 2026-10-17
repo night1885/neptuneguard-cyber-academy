@@ -102,7 +102,7 @@ test('application retention hold overrides course admission and start but leaves
     await application.start('fixture-only');
     for (const [kind, id] of [['command', 'start'], ['command', 'begin'], ['command', 'continue'], ['button', 'linux-m1-quiz'], ['button', 'academy:linux-administration:1:lab-complete']]) {
       const x = f.interaction(kind, id); client.emit('interactionCreate', x.i); await tick();
-      assert.equal(x.replies.length, 1); assert.match(x.replies[0].content, /no-retention redesign/); assert.equal(x.deferrals.length, 0);
+      assert.equal(x.replies.length, 1); assert.match(x.replies[0].content, /dashboard and registration integration checks/); assert.equal(x.deferrals.length, 0);
     }
     assert.equal(handled.length, 0); assert.equal(f.queries.length, 0);
     const catalog = f.interaction('command', 'catalog'); client.emit('interactionCreate', catalog.i); await tick();

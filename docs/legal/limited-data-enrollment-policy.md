@@ -1,42 +1,41 @@
-# Current learner-information policy — zero retention
+# Current learner-information policy — limited registration and access records
 
-Status: user-directed requirement, clarified October 17, 2026. Policy settled; implementation is not yet compliant. This is not a published learner agreement, legal-compliance certification, deletion record, or deployment authorization.
+Status: user-approved requirements and policy decisions recorded October 17, 2026. This supersedes this file's earlier interpretation of no retention as a prohibition on all learner-linked records. It is not a published agreement, legal-compliance certification, deletion record, or production activation authorization.
 
-## Superseding instruction
+## Clarified meaning and approved eligibility
 
-Do not retain learner information. Do not reinterpret this instruction as merely excluding legal names or uploaded identity documents, and do not invent a retention period.
+The user meant that the academy must not request or retain government identification documents. Necessary Discord-linked registration and access records are permitted. Do not describe the academy as retaining no learner information.
 
-This supersedes this file's previous permission to retain Discord-linked profiles, course progress, quiz results, XP, badges, permanent student IDs, enrollment/access/approval status, acknowledgment/age timestamps, and learner-linked audit records. It also supersedes conflicting retention proposals in acknowledgment-only-policy.md, learner-agreement-draft.md, and historical rollout/security documentation. Those documents are historical inputs, not current authorization to retain information or activate enrollment.
+The minimum record includes the learner's Discord user ID, application/approval status, eligibility and agreement acknowledgment status, a unique academy access ID issued after approval, and timestamps needed for the approved workflow.
 
-Do not collect or retain legal names, actual ages, birth dates, addresses, email addresses, identity-document copies, signed-document uploads, or video recordings through enrollment. Prior document-storage and document-retention proposals remain retired.
+The user expressly approved the existing age-18-or-older Yes/No self-declaration. Learners must be 18 or older and personally answer Yes. Do not collect actual age in years, birth dates, government ID, legal names, signed documents, or video through enrollment. This is self-reported eligibility, not independently verified age or identity. This decision resolves the former actual-age-versus-eligibility question; it does not approve minor enrollment or a guardian-consent workflow.
 
-Do not relocate learner records into Discord roles/messages, client-side tokens, exports, or another service and call that zero retention. Any proposed alternative must disclose what information exists, where it exists, who controls it, and whether it persists; it requires explicit review rather than an assumed exception.
+Do not request or retain government-ID images, identity-document copies, signed-document uploads, or video recordings through enrollment. Do not add legal names, addresses, email addresses, birth dates, or other unnecessary personal details. Do not infer permission for unrelated progress, quiz, XP, badge, activity, or provider tracking from permission for minimal registration/access records. Review any additional retained fields explicitly.
 
-Static curriculum, generic agreement text, and non-learner-specific configuration are separate from learner records. This instruction does not require deleting the course materials or source code.
+## Approved retention decisions
 
-## Existing policy decisions not silently waived
+- Approved enrollment/access records: retain until the student finishes the course. The user confirmed that course completion ends access and triggers deletion of the associated enrollment/access record.
+- Denied, withdrawn, or abandoned applications: delete three business days after application closure.
+- Administrative audit events: delete three calendar months after each event occurs.
 
-The minimum enrollment age remains 18, expressed through a Yes/No self-declaration rather than independent age verification. General class authorization, lab-specific authorization, and certificate awards remain separate. Registration or a declaration alone grants no access.
+These are approved policy intentions, not proof of automatic enforcement or erasure. Audit history follows its own approved schedule and may therefore remain after enrollment/access deletion. No schedule for unrelated lab, incident, legacy progress, or provider records is created here. See eligibility-retention-decisions.md for implementation boundaries and outstanding definitions.
 
-The user also requested admin-approved access for all existing academy courses. The currently implemented approval gate depends on retained enrollment records. That conflict must be resolved in an explicitly reviewed design; this document does not waive approval, admit learners automatically, or claim that the current gate implements zero retention.
+The completion signal, shared-record/multiple-course behavior, business-day timezone and holiday calendar, deletion execution/retry rules, related-record dependencies, applicable preservation handling, and provider/backup behavior require review before automation. Do not silently invent those details or claim that existing records have been deleted.
 
-## Implementation gap and release hold
+## Dashboard and registration requirements
 
-The current application still writes learner profiles, path selection, progress, quiz outcomes, XP, badges, enrollment/approval metadata, permanent IDs, lab records, and learner-linked audit events. The policy correction does not stop those writes or erase existing data.
+Preserve the original Admin Dashboard as the main administrative interface. Integrate curriculum browsing and future admin tools through its tabs, dropdowns, buttons, or subsections, with in-place private navigation where appropriate. Admin entry and navigation must not require /start, /catalog, or another slash command. Student-facing entry remains separate and connected to the same application records. Publishing persistent entry buttons requires separately resolved locations and approval.
 
-Permanent IDs, saved progress/badges, historical learner reports, and remembered account-specific approval/revocation cannot remain in their current database-backed form under this requirement. Removal or redesign must be presented explicitly; no feature is removed by this documentation commit.
+Support both admin-initiated registration and student-initiated applications. A student must be able to complete an admin-created registration. Both paths use the same record and review process, with duplicate prevention. Admin registration must not fabricate learner acknowledgment, reading confirmation, comprehension answers, or eligibility declarations.
 
-Do not deploy or activate the current retained-record enrollment/course design as a zero-retention release. Do not present an agreement promising no retained information until implementation and operational verification support that statement.
+Registration or declaration alone grants no access. Admin approval precedes issuance of the unique academy ID. Learners must provide their assigned ID each time they log in to a section. Bind access to the correct Discord account, check current authorization, and reject pending, denied, suspended, or revoked access. Staged section-login code and tests do not establish live activation or full curriculum coverage. General class authorization, lab authorization, and certificate decisions remain separate.
 
-## Required work
+## Agreement reconciliation and release boundaries
 
-1. Inventory and prepare removal or redesign of learner-record write paths, including automatic /start profile creation, /begin path selection, lesson/quiz completion and rewards, registration, acknowledgment, approval, lab requests, and audit creation.
-2. Review affected interfaces and authorization together. Disabling storage must not silently turn protected courses into unrestricted access or falsely report saved progress, permanent IDs, approval, or completion.
-3. Review process-local sessions, application logs, exports, Discord messages, provider logs, backups, and recoverable copies. Their behavior has not been established as zero retention. Temporary processing necessary to handle an interaction must not be represented as no processing or no third-party data handling.
-4. Prepare a separately approved cleanup procedure for existing records and copies, with exact targets, dependencies, operational effects, and verification. Stopping new writes is not proof of deletion. Do not infer a legal preservation exception, deletion completion, or backup-erasure capability from this policy statement.
-5. Update learner-facing agreement/privacy language and deployment guidance to the verified implementation. Clearly distinguish Academy-controlled storage from platform/provider behavior that has not been independently verified.
-6. Recheck automated tests, independent review, acceptance scope, and exact-head deployment readiness after the redesign.
+The approved eligibility and retention decisions here supersede unresolved-policy statements in earlier agreement drafts and historical policy notes. They do not approve those drafts as final learner terms. Incorporate the decisions into the next agreement/privacy revision and obtain approval of the exact publication text before storing an agreement or configuring its manifest.
 
-## Action boundaries
+The original handlers, startup, retention holds, data fields, agreement/privacy text, and deployment guidance require reconciliation with these requirements. The smaller instructor-only application is not the intended replacement for the original Admin Dashboard or end-user workflow. Restoring startup alone is not proof of functional or compliant integration.
 
-This documentation change authorizes no application-code change, feature removal, database query of learner records, deletion, migration, environment/permission update, student notification, Discord publication, merge, deployment, or enrollment activation. Keep PR #11 in draft. No zero-retention implementation or cleanup success is claimed.
+Existing records have not been deleted by this policy update. Do not delete records, migrate schemas, query learner records, notify students, publish Discord messages or commands, change environment variables or permissions, merge, deploy, or activate enrollment merely because this document changes. Each operational action requires its own approved scope.
+
+Test both registration paths, learner completion, admin review, ID issuance, duplicate/repeated actions, section login, authorization changes, private navigation, retention deadlines, and failure handling before claiming end-to-end completion. Acknowledge unresolved platform/provider logging, backups, recoverable copies, and deletion behavior rather than promising zero retention.

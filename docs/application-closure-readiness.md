@@ -1,0 +1,15 @@
+# Application closure readiness — staged gate
+
+Status: repository preparation only. No live routes, migrations, grants, closures, deletions, environment changes, merge, deployment, or activation are performed by this change.
+
+validateApplicationClosureReadiness uses one checked-out connection and a read-only transaction. It checks enrollment/audit table presence in the same schema, required enrollment columns, nullable explicit-value closure column definitions/types, the named validated CHECK constraint, and the enabled unconditional BEFORE UPDATE row trigger bound to the expected local zero-argument invoker function. It requires origin replication mode.
+
+Privilege checks require a direct restricted login without membership in an elevated role, no ownership of the enrollment/audit tables, no CREATE in their schema, SELECT/UPDATE for the columns used by closure, INSERT for audit columns, and USAGE on the audit sequence. Enrollment DELETE/TRUNCATE/TRIGGER and audit UPDATE/DELETE/TRUNCATE/TRIGGER privileges are rejected. The checker grants nothing and changes no application data or catalog objects.
+
+createReadyCertificationApplicationClosure requires enabled configuration and a valid configured owner ID, runs readiness, then returns the existing closure service. Future closure-route composition must use this gated factory in addition to existing base schema, connection/TLS, and configuration checks. This change does not replace the global startup validator or attach the factory to live routes.
+
+These are point-in-time catalog/permission checks, not complete verification of constraint expressions or function bodies. The migration and safeguards still require review and behavioral tests; a malicious database owner could substitute a same-named object. Readiness is not a guarantee against later privileged DDL, privilege changes, connection configuration drift, or every indirect execution path. The closure transaction retains its own authorization and schema checks.
+
+Unit tests cover read-only operation, failure/cleanup, and factory gating. Disposable PostgreSQL 16/18 tests cover real restricted login, rejected privileged login, missing migration, disabled trigger, unvalidated constraint, automatic closure defaults, missing audit/sequence permission, and excess deletion permission. Tests create/drop only isolated test schemas/roles in an explicitly configured loopback certification_test database. Missing test configuration causes integration tests to skip; passing results are not claimed until CI executes.
+
+The earlier application-closure implementation notes correctly identify that the global 001-005 startup validator alone is insufficient. This staged additional gate addresses closure-specific catalog/privilege readiness, but integration into route startup and target-environment acceptance are still required. Owner confirmation UI, course completion/shared records, deletion enforcement, audit expiry, provider/backup handling, final documents, and deployment remain separate work.
