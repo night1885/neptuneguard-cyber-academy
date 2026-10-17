@@ -1,29 +1,35 @@
-# Application closure implementation — staged schema only
+# Application closure implementation — staged schema and service
 
-Status: proposed repository preparation. No migration has been applied to a live database by this change. No live application is closed or deleted, and no runtime route, button, or scheduler is added.
+Status: repository preparation only. No migration is applied to a live database, no live application is closed/deleted, and no runtime route, button, or scheduler is installed by this change.
 
-## Scope
+## Schema
 
-Migration 006 adds nullable application_closed_at, application_closed_by, and application_closed_as fields to certification_enrollments after migrations 001-005. Existing records receive no closure timestamp. A denied status alone is not an explicit closure, and no inactivity timeout is inferred.
+Migration 006 adds nullable application_closed_at, application_closed_by, and application_closed_as fields after migrations 001-005. Existing records receive no closure time; a denied status alone is not explicit closure. No inactivity timer is inferred.
 
-A complete closure requires all three fields, a denied/withdrawn/abandoned category, a Discord actor ID with valid syntax, the existing non-authorizing denied status, and no issued student ID. Recorded closure fields cannot be reset/replaced. A closed row cannot become pending/approved or acquire a student ID without violating the proposed checks. No reopening/correction procedure is added. Issued-ID and formerly approved cases require separate design/review; this stage does not guess their retention treatment.
+A closure requires complete metadata, a denied/withdrawn/abandoned category, valid Discord actor-ID syntax, the non-authorizing denied status, and no student ID. Recorded closure fields cannot be reset/replaced. Closed rows cannot become pending/approved or acquire student IDs under the proposed checks. No reopening/correction procedure is added.
 
-The denied status is an internal compatibility representation, not a claim that withdrawn or abandoned learners were denied. Future presentation must show application_closed_as and distinguish explicit closure from denial without closure. These nullable fields do not automatically convert historical denials.
+The denied status is an internal compatibility representation. Future UI must distinguish withdrawn/abandoned categories and denial without explicit closure. Historical denials are not automatically converted.
 
-Actor-ID syntax is not authorization. A future closure service must verify the configured academy owner, validate input, lock the enrollment row, record the closure and corresponding audit event in one transaction, roll back on failure, and handle retries without changing the original deadline. Existing approval/submission routes and schema-readiness checks require integration tests against migration 006 before deployment.
+## Owner-authorized transaction
 
-## Precision and deadline
+certification-application-closure.js exports a staged service requiring enabled certification, the configured owner actor, valid subject ID, and an explicit supported category. It does not import environment variables or connect itself to production routes. Actor-ID syntax alone does not prove authorization.
 
-Explicit closure timestamps must use millisecond precision in the calculator's supported UTC input-year range, 1970-9998. Reject sub-millisecond values rather than silently truncating database timestamps into an earlier deadline. The future service must set an explicit timestamp and must not rely on a PostgreSQL NOW() value having millisecond precision.
+The service locks the enrollment row, checks closure columns before writes, and permits new closure only from awaiting_acknowledgment, pending, or denied with no issued ID or previous approval metadata. Issued-ID/formerly approved cases require separate design/review; no retention treatment is guessed.
 
-Pass the recorded timestamp to applicationDeletionEligibleAt. It uses the approved America/New_York, next-three-Monday-Friday rule, excludes the closure date, and does not exclude holidays. Eligibility is the first instant after the third counted local date. No eligibility timestamp is stored or executed by this migration.
+A new closure sets the denied status, records closure fields, and inserts a minimal application_closed audit event in the same transaction. It preserves existing denial reason text and does not modify labs. Audit failure rolls the transaction back; rollback failure discards the connection. No deletion occurs.
 
-## Tests and operational boundaries
+Same-category retries return the stored closure and original computed deadline without rereading the clock or creating another audit event. Conflicting categories are rejected. Database row locking serializes competing closure requests. The clock dependency is trusted server/test configuration, never an untrusted request timestamp.
 
-The dedicated integration test runs only with an explicit loopback certification_test database, rejects URL overrides, verifies the actual database/search path, uses a random isolated schema, and cleans that schema up. The PostgreSQL 16/18 CI matrix includes it. Without the test URL, the integration test is skipped; a skipped test is not a passing database acceptance test.
+## Precision and eligibility
 
-Tests exercise preservation of existing enrollment, lab, and audit rows; migration reapplication; three closure categories; precision and incomplete/invalid metadata; and resistance to closure reset/reopening. No passing result is claimed before CI executes.
+Closure timestamps use explicit millisecond precision within the pure calculator's supported UTC input years, 1970-9998. The schema rejects sub-millisecond values rather than silently moving a deadline earlier. The service uses its trusted clock rather than assuming PostgreSQL NOW() has millisecond precision; the closure audit event uses that same explicit timestamp.
 
-No grants, cascades, or deletion routines are introduced. Lab foreign keys remain unchanged. Per-course completion/shared-enrollment handling, authorized closure actions/UI, deadline selection, dry-run review, restricted deletion permissions, dependency handling, scheduling/retries/alerts, audit expiry, and provider/backup verification remain outstanding. Full retention enforcement is not implemented by this stage.
+applicationDeletionEligibleAt applies the approved America/New_York, next-three-Monday-Friday rule, excluding the closure date but not holidays. It returns the first instant after the third counted local date. The service returns eligibility as information; it does not store a deletion job or guarantee execution at that instant.
 
-Commit approval is not approval to apply this migration, publish agreements, change environment settings, notify learners, merge, deploy, or activate enrollment.
+## Tests and remaining gates
+
+Schema tests and service transaction tests run in the PostgreSQL 16/18 CI matrix. Integration tests require an explicit loopback certification_test database, reject URL overrides, verify actual database/search path, and create/drop random isolated schemas. Without the test URL those integration groups skip; that is not database acceptance. Service unit tests run without a database. No new passing results are claimed before CI executes.
+
+Tests cover pre-connection authorization/input rejection, lock/update/audit order, retries/conflicts, invalid stored state, rollback/connection cleanup, concurrent identical/conflicting closures, real audit-failure rollback/retry, and preservation of enrollment/lab rows. Approval-versus-closure races, existing submission/registration behavior after closure, schema-readiness integration, and restricted-role coverage still require verification before deployment.
+
+Live owner confirmation UI/routes, per-course completion/shared-record handling, deletion selection and dry-run review, dependency handling, permissions, scheduling/retries/alerts, audit expiry, and provider/backup handling remain outstanding. No grants, cascades, environment updates, notifications, agreement publication, merge, deployment, or activation are included.
