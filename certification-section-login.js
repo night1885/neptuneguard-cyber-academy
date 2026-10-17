@@ -3,10 +3,10 @@ import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from
 import { createSectionIdentityVerifier } from './certification-section-identity.js';
 import { createStatusReadGuard } from './certification-status-read-guard.js';
 
-export function createSectionLoginHandler(pool, config, guildId, { sections, onVerified, now = Date.now, ttlMs = 300000, maxPending = 1000 } = {}) {
+export function createSectionLoginHandler(pool, config, guildId, { sections, onVerified, now = Date.now, ttlMs = 300000, maxPending = 1000, authorizeCourseSection } = {}) {
   if (typeof onVerified !== 'function' || typeof now !== 'function' || !Number.isSafeInteger(ttlMs) || ttlMs < 1000 || ttlMs > 300000 ||
       !Number.isSafeInteger(maxPending) || maxPending < 1 || maxPending > 1000) throw new Error('Invalid section login configuration');
-  const verifier = createSectionIdentityVerifier(pool, config, guildId, { sections, readLimits: { now } });
+  const verifier = createSectionIdentityVerifier(pool, config, guildId, { sections, readLimits: { now }, authorizeCourseSection });
   const allowed = new Set(sections), pending = new Map(), openings = createStatusReadGuard({ now });
   return async function handleSectionLogin(interaction) {
     const id = interaction.customId || '';
