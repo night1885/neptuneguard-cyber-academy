@@ -3,6 +3,7 @@ import { attachCertificationRuntime } from './certification-runtime.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
 import { withStudentEntry } from './certification-student-entry.js';
 import { createAcademyCourseGate } from './certification-academy-course-gate.js';
+import { pauseRetainingAcademyInteraction } from './certification-retention-hold.js';
 
 export function createAcademyApplication({ client, pool, guildId, initializeDatabase, handleInteraction, env = process.env,
   signals = process, exit = code => process.exit(code), log = (...args) => console.error(...args),
@@ -35,6 +36,7 @@ export function createAcademyApplication({ client, pool, guildId, initializeData
   }
   function onInteraction(interaction) {
     void track(async () => {
+      if (await pauseRetainingAcademyInteraction(interaction)) return;
       const admitted = await gateCourse(interaction);
       if (admitted) await handleInteraction(withStudentEntry(admitted, guildId, certification.enabled === true && certification.ready === true));
     });

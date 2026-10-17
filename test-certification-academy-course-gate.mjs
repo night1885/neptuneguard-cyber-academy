@@ -30,6 +30,7 @@ function fixture(options = {}) {
         return { id: student, roles: { cache: { has: roleId => roleId === role && options.verified !== false } } };
       } } }, deferred: false, replied: false,
       async deferReply(payload) { assert.equal(this, i); assert.equal(payload.flags, 64); this.deferred = true; deferrals.push(payload); },
+      async reply(payload) { assert.equal(this, i); this.replied = true; replies.push(payload); },
       async editReply(payload) { assert.equal(this, i); replies.push(payload); }, ...changes };
     return { i, replies, deferrals };
   }
@@ -88,23 +89,24 @@ test('onboarding, status and historical-report routes remain outside the course 
   }
   assert.equal(f.queries.length, 0);
 });
-test('application wiring blocks denied courses, admits approved courses once, and preserves start', async () => {
-  const f = fixture({ record: { ...approved(), status: 'pending' } });
+test('application retention hold overrides course admission and start but leaves catalog available', async () => {
+  const f = fixture();
   const client = new EventEmitter(), signals = new EventEmitter(), handled = [], exits = [];
   client.login = async () => {}; client.destroy = () => {};
   const application = createAcademyApplication({ client, signals, guildId: guild, env: { VERIFIED_ROLE_ID: role },
-    pool: { async end() {}, query() { assert.fail('Gate must not query the academy database'); } },
+    pool: { async end() {}, query() { assert.fail('Held workflows must not query academy records'); } },
     initializeDatabase: async () => {}, attachRuntime: () => f.runtime, exit: code => exits.push(code), log() {},
     async handleInteraction(i) { handled.push(i.commandName || i.customId); await i.deferReply({ flags: 64 }); } });
   const tick = () => new Promise(resolve => setImmediate(resolve));
   try {
     await application.start('fixture-only');
-    const denied = f.interaction(); client.emit('interactionCreate', denied.i); await tick();
-    assert.equal(handled.length, 0); assert.equal(denied.replies.length, 1);
-    f.setRecord(approved()); const allowed = f.interaction('button', 'linux-m1-quiz');
-    client.emit('interactionCreate', allowed.i); await tick(); assert.deepEqual(handled, ['linux-m1-quiz']); assert.equal(allowed.deferrals.length, 1);
-    const start = f.interaction('command', 'start'); client.emit('interactionCreate', start.i); await tick();
-    assert.deepEqual(handled, ['linux-m1-quiz', 'start']); assert.equal(start.deferrals.length, 1);
+    for (const [kind, id] of [['command', 'start'], ['command', 'begin'], ['command', 'continue'], ['button', 'linux-m1-quiz'], ['button', 'academy:linux-administration:1:lab-complete']]) {
+      const x = f.interaction(kind, id); client.emit('interactionCreate', x.i); await tick();
+      assert.equal(x.replies.length, 1); assert.match(x.replies[0].content, /no-retention redesign/); assert.equal(x.deferrals.length, 0);
+    }
+    assert.equal(handled.length, 0); assert.equal(f.queries.length, 0);
+    const catalog = f.interaction('command', 'catalog'); client.emit('interactionCreate', catalog.i); await tick();
+    assert.deepEqual(handled, ['catalog']); assert.equal(catalog.deferrals.length, 1);
   } finally { await application.shutdown(); }
   assert.deepEqual(exits, [0]);
 });

@@ -5,6 +5,7 @@ import { validateCertificationSchema, validateActiveEnrollmentAgreement } from '
 import { createCertificationDatabasePool } from './certification-database-pool.js';
 import { loadCertificationDatabaseConnection } from './certification-database-config.js';
 import { createCertificationService } from './certification-service.js';
+import { replyRetentionHold } from './certification-retention-hold.js';
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
   const config = loadCertificationConfig(env);
@@ -65,16 +66,9 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
 
   async function handleInteraction(interaction) {
     try {
-      if (!ready) {
-        await interaction.reply({ content: 'Certification is temporarily unavailable pending startup checks.', flags: 64 });
-        return;
-      }
-      await route(interaction);
+      await replyRetentionHold(interaction);
     } catch (error) {
-      console.error('Certification interaction failed:', { name: error?.name, code: error?.code });
-      const payload = { content: 'Certification action failed. Refresh the dashboard before retrying.', components: [], embeds: [], allowedMentions: { parse: [] } };
-      if (interaction.deferred || interaction.replied) await interaction.editReply(payload).catch(() => {});
-      else await interaction.reply({ ...payload, flags: 64 }).catch(() => {});
+      console.error('Certification hold reply failed:', { name: error?.name, code: error?.code });
     }
   }
 
