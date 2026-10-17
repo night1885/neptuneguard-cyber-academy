@@ -22,14 +22,16 @@ export function createInstructorApplication({ client, guildId, adminId, signals 
     async drainAcademy() { await Promise.allSettled([...active]); }, async detachCertification() {}, async closeAcademyPool() {},
     destroyClient: () => client.destroy()
   });
-  const home = () => ({ content: '', embeds: [{ title: 'NeptuneGuard — Instructor curriculum', color: 0x3498db,
+  const home = () => ({ content: '', embeds: [{ author: { name: 'NeptuneGuard — Admin Dashboard' }, title: 'NeptuneGuard — Instructor curriculum', color: 0x3498db,
     description: 'Admin-only, read-only teaching material. No learner accounts, registration, permanent student IDs, saved progress, badges, or remembered learner approvals are provided by this mode. Course material is not lab authorization or a certificate award.' }],
-    components: [{ type: 1, components: [{ type: 2, style: 1, custom_id: 'cert:admin:courses:0', label: 'Browse teaching material' }] }] });
+    components: [{ type: 1, components: [{ type: 2, style: 1, custom_id: 'cert:admin:courses:0', label: 'Course Overview' }] }] });
   async function handle(interaction) {
     if (!(interaction.isChatInputCommand?.() || interaction.isButton?.() || interaction.isModalSubmit?.() || interaction.isStringSelectMenu?.())) return false;
-    const respond = payload => {
+    const privatePanel = () => interaction.isButton?.() && interaction.message?.flags?.has?.(64) === true;
+    const respond = (payload, updatePanel = false) => {
       const safe = { content: '', embeds: [], components: [], ...payload, allowedMentions: { parse: [] } };
-      return interaction.deferred || interaction.replied ? interaction.editReply(safe) : interaction.reply({ ...safe, flags: 64 });
+      if (interaction.deferred || interaction.replied) return interaction.editReply(safe);
+      return updatePanel ? interaction.update(safe) : interaction.reply({ ...safe, flags: 64 });
     };
     try {
       if (interaction.guildId !== guildId || interaction.user?.id !== adminId) {
@@ -37,10 +39,16 @@ export function createInstructorApplication({ client, guildId, adminId, signals 
       }
       if ((interaction.isChatInputCommand?.() && ['start', 'catalog'].includes(interaction.commandName)) ||
           (interaction.isButton?.() && interaction.customId === 'cert:admin:overview:0')) {
-        await respond(home()); return true;
+        await respond(home(), privatePanel()); return true;
       }
       if (interaction.isButton?.() && interaction.customId?.startsWith('cert:admin:courses:')) {
-        return await handleConsoleCourses(interaction, { enabled: true, ownerId: adminId }, guildId);
+        // Adapt only authorized private panels; preserve the shared renderer's default reply behavior.
+        const courseInteraction = privatePanel() ? {
+          customId: interaction.customId, user: interaction.user, guildId: interaction.guildId,
+          isButton: () => true, deferReply: () => interaction.deferUpdate(),
+          editReply: payload => interaction.editReply(payload)
+        } : interaction;
+        return await handleConsoleCourses(courseInteraction, { enabled: true, ownerId: adminId }, guildId);
       }
       await respond({ content: 'This instructor-only release does not provide student registration, enrollment decisions, saved learner reports, progression, lab authorization, or certificate issuance. Use /start or /catalog to browse teaching material. Existing records have not been deleted.' });
       return true;
