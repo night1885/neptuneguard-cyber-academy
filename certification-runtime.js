@@ -4,11 +4,13 @@ import { createCertificationRouter } from './certification-admin-router.js';
 import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
 import { createCertificationDatabasePool } from './certification-database-pool.js';
 import { loadCertificationDatabaseConnection } from './certification-database-config.js';
+import { createCertificationService } from './certification-service.js';
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
   const config = loadCertificationConfig(env);
   if (!config.enabled) return { enabled: false, detach() {} };
   const database = createPool(loadCertificationDatabaseConnection(env));
+  const service = createCertificationService(database, config);
   let route;
   try { route = createCertificationRouter(database, config, guildId); }
   catch (error) {
@@ -51,6 +53,16 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     } finally { initializing = null; }
   }
 
+  async function getCourseAuthorization(studentDiscordId) {
+    if (!ready || detached) return null;
+    const task = service.getCourseAuthorization(studentDiscordId);
+    active.add(task);
+    try {
+      const authorization = await task;
+      return ready && !detached ? authorization : null;
+    } finally { active.delete(task); }
+  }
+
   async function handleInteraction(interaction) {
     try {
       if (!ready) {
@@ -77,7 +89,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   client.on(Events.InteractionCreate, onInteraction);
   client.once(Events.ClientReady, initialize);
   if (client.isReady()) void initialize();
-  return { enabled: true, get ready() { return ready; },
+  return { enabled: true, get ready() { return ready; }, getCourseAuthorization,
     detach() {
       detached = true; ready = false;
       client.off(Events.InteractionCreate, onInteraction);

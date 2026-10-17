@@ -2,6 +2,7 @@ import { Events } from 'discord.js';
 import { attachCertificationRuntime } from './certification-runtime.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
 import { withStudentEntry } from './certification-student-entry.js';
+import { createAcademyCourseGate } from './certification-academy-course-gate.js';
 
 export function createAcademyApplication({ client, pool, guildId, initializeDatabase, handleInteraction, env = process.env,
   signals = process, exit = code => process.exit(code), log = (...args) => console.error(...args),
@@ -24,6 +25,7 @@ export function createAcademyApplication({ client, pool, guildId, initializeData
     closeAcademyPool: () => pool.end(), destroyClient: () => client.destroy()
   });
   certification = attachRuntime(client, pool, guildId, env);
+  const gateCourse = createAcademyCourseGate({ certification, guildId, verifiedRoleId: env.VERIFIED_ROLE_ID });
   function fail(error) { failed = true; report('Academy startup or handler failed:', error); void shutdown.shutdown(); }
   function track(work) {
     if (stopping) return Promise.resolve();
@@ -31,7 +33,12 @@ export function createAcademyApplication({ client, pool, guildId, initializeData
     void task.catch(fail).finally(() => tasks.delete(task)).catch(() => {});
     return task;
   }
-  function onInteraction(interaction) { void track(() => handleInteraction(withStudentEntry(interaction, guildId, certification.enabled === true && certification.ready === true))); }
+  function onInteraction(interaction) {
+    void track(async () => {
+      const admitted = await gateCourse(interaction);
+      if (admitted) await handleInteraction(withStudentEntry(admitted, guildId, certification.enabled === true && certification.ready === true));
+    });
+  }
   function onReady(readyClient) {
     void track(async () => {
       await initializeDatabase();
