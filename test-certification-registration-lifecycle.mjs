@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createCertificationRouter } from './certification-admin-router.js';
+import { createRestorationRouter } from './certification-restoration-router.js';
 import { createCertificationService } from './certification-service.js';
 import { PENDING_REGISTRATION_INVITATION_SQL } from './certification-registration-invitation.js';
 const owner = '111111111111111111', student = '222222222222222222', guildId = '333333333333333333';
 const content = 'Disposable registration lifecycle agreement.', hash = createHash('sha256').update(content).digest('hex');
 const json = value => typeof value?.toJSON === 'function' ? value.toJSON() : value;
 const controls = payload => (payload.components || []).flatMap(row => json(row).components);
-function fixture({ invited = false, blockedDM = false } = {}) {
+function fixture({ invited = false, blockedDM = false, routerFactory = createRestorationRouter } = {}) {
   let row = null, audits = [], snapshot = null, connections = 0, releases = 0;
   const queries = [], notifications = [];
   const config = { enabled: true, ownerId: owner, enrollmentSubmissionEnabled: !invited, activeAgreementVersion: 'v1', activeAgreementSha256: hash,
@@ -52,13 +53,13 @@ function fixture({ invited = false, blockedDM = false } = {}) {
     assert.fail(`Unexpected lifecycle SQL: ${sql}`);
   }
   const pool = { query, async connect() { connections++; return { query, release(discard) { assert.equal(discard, false); releases++; } }; } };
-  const route = createCertificationRouter(pool, config, guildId), service = createCertificationService(pool, config);
+  const route = routerFactory(pool, config, guildId), service = createCertificationService(pool, config);
   async function run(customId, options = {}) {
     const replies = [], modals = [];
     const interaction = { customId, user: { id: options.actor || student }, guildId: options.server === undefined ? guildId : options.server, deferred: false, replied: false,
       isButton: () => !options.modal, isModalSubmit: () => Boolean(options.modal), isStringSelectMenu: () => false,
       fields: { getTextInputValue(key) {
-        const fields = { discord_user_id: student, age: 'Yes', read: 'AGREE', answer0: options.wrongAnswer ? 'WRONG' : 'A' };
+        const fields = { discord_user_id: student, student_id: row?.student_id, age: 'Yes', read: 'AGREE', answer0: options.wrongAnswer ? 'WRONG' : 'A' };
         assert.ok(Object.hasOwn(fields, key)); return fields[key];
       } },
       client: { users: { async fetch(id) {
@@ -90,30 +91,44 @@ async function acknowledge(f, invited, wrongAnswer = false) {
   const opened = await f.run(form.custom_id); assert.equal(opened.modals.length, 1);
   return f.run(opened.modals[0].custom_id, { modal: true, wrongAnswer });
 }
-for (const invited of [false, true]) {
-  test(`${invited ? 'admin-invited' : 'self-application'} lifecycle requires acknowledgment and separate approval before issuing one permanent ID`, async () => {
-    const f = fixture({ invited });
-    if (invited) await registerByOwner(f);
-    assert.equal(await f.service.getCourseAuthorization(student), null);
-    const submitted = await acknowledge(f, invited); assert.match(submitted.replies.at(-1).content, /request submitted/);
-    assert.equal(f.row.status, 'pending'); assert.equal(f.row.student_id, null); assert.equal(f.notifications.length, 0);
-    assert.equal(await f.service.getCourseAuthorization(student), null);
-    const review = await f.run(`cert:enrollment:review:${student}`, { actor: owner });
-    const approval = controls(review.replies[0]).find(control => control.custom_id === `cert:enrollment:approve:${student}`);
-    assert.ok(approval); assert.equal(approval.disabled, false); assert.equal(f.row.student_id, null);
-    const approved = await f.run(approval.custom_id, { actor: owner }); assert.match(approved.replies.at(-1).content, /Enrollment approved/);
-    const permanentId = f.row.student_id; assert.match(permanentId, /^NG-PT-[a-f0-9-]{36}$/); assert.equal(f.row.status, 'approved');
-    assert.deepEqual(await f.service.getCourseAuthorization(student), { student_id: permanentId });
-    assert.equal(f.notifications.length, 1); assert.deepEqual(f.notifications[0].allowedMentions, { parse: [] });
-    assert.ok(f.notifications[0].content.includes(permanentId));
-    const panel = await f.run('cert:learner:home'); assert.equal(panel.replies[0].embeds[0].title, 'NeptuneGuard — Student home');
-    assert.equal(panel.replies[0].embeds[0].fields.find(field => field.name === 'Student ID').value, permanentId);
-    const audits = f.audits.length, writes = f.queries.filter(query => /^(INSERT|UPDATE)/.test(query.sql)).length;
-    const repeated = await f.run(approval.custom_id, { actor: owner }); assert.match(repeated.replies.at(-1).content, /Already approved/);
-    assert.equal(f.row.student_id, permanentId); assert.equal(f.notifications.length, 1); assert.equal(f.audits.length, audits);
-    assert.equal(f.queries.filter(query => /^(INSERT|UPDATE)/.test(query.sql)).length, writes);
-    assert.equal(f.audits.filter(audit => audit.action === 'enrollment_approved').length, 1); f.assertReleased();
-  });
+for (const [mode, routerFactory] of [['original', createCertificationRouter], ['restoration', createRestorationRouter]]) {
+  for (const invited of [false, true]) {
+    test(`${mode} ${invited ? 'admin-invited' : 'self-application'} lifecycle requires acknowledgment and separate approval before issuing one permanent ID`, async () => {
+      const f = fixture({ invited, routerFactory });
+      if (invited) await registerByOwner(f);
+      assert.equal(await f.service.getCourseAuthorization(student), null);
+      const submitted = await acknowledge(f, invited); assert.match(submitted.replies.at(-1).content, /request submitted/);
+      assert.equal(f.row.status, 'pending'); assert.equal(f.row.student_id, null); assert.equal(f.notifications.length, 0);
+      assert.equal(await f.service.getCourseAuthorization(student), null);
+      const review = await f.run(`cert:enrollment:review:${student}`, { actor: owner });
+      const approval = controls(review.replies[0]).find(control => control.custom_id === `cert:enrollment:approve:${student}`);
+      assert.ok(approval); assert.equal(approval.disabled, false); assert.equal(f.row.student_id, null);
+      const approved = await f.run(approval.custom_id, { actor: owner }); assert.match(approved.replies.at(-1).content, /Enrollment approved/);
+      const permanentId = f.row.student_id; assert.match(permanentId, /^NG-PT-[a-f0-9-]{36}$/); assert.equal(f.row.status, 'approved');
+      assert.deepEqual(await f.service.getCourseAuthorization(student), { student_id: permanentId });
+      assert.equal(f.notifications.length, 1); assert.deepEqual(f.notifications[0].allowedMentions, { parse: [] });
+      assert.ok(f.notifications[0].content.includes(permanentId));
+      const panel = await f.run('cert:learner:home'); assert.equal(panel.replies[0].embeds[0].title, 'NeptuneGuard — Student home');
+      assert.equal(panel.replies[0].embeds[0].fields.find(field => field.name === 'Student ID').value, permanentId);
+      if (mode === 'restoration') {
+        const contents = await f.run('cert:contents');
+        const entry = controls(contents.replies[0]).find(control => control.custom_id === 'cert:section:open:training-readiness'); assert.ok(entry);
+        const login = await f.run(entry.custom_id); assert.equal(login.modals.length, 1);
+        const lesson = await f.run(login.modals[0].custom_id, { modal: true });
+        assert.match(json(lesson.replies[0].embeds[0]).title, /Training readiness — 1\/3/);
+        const next = controls(lesson.replies[0]).find(control => /:lesson:1$/.test(control.custom_id)); assert.ok(next);
+        const reads = f.queries.length, second = await f.run(next.custom_id);
+        assert.match(json(second.replies[0].embeds[0]).title, /2\/3/); assert.equal(f.queries.length, reads + 1);
+        assert.ok(!controls(second.replies[0]).some(control => /^cert:(lesson|help):/.test(control.custom_id)));
+        assert.equal(f.row.student_id, permanentId);
+      }
+      const audits = f.audits.length, writes = f.queries.filter(query => /^(INSERT|UPDATE)/.test(query.sql)).length;
+      const repeated = await f.run(approval.custom_id, { actor: owner }); assert.match(repeated.replies.at(-1).content, /Already approved/);
+      assert.equal(f.row.student_id, permanentId); assert.equal(f.notifications.length, 1); assert.equal(f.audits.length, audits);
+      assert.equal(f.queries.filter(query => /^(INSERT|UPDATE)/.test(query.sql)).length, writes);
+      assert.equal(f.audits.filter(audit => audit.action === 'enrollment_approved').length, 1); f.assertReleased();
+    });
+  }
 }
 for (const options of [{ actor: student }, { actor: owner, server: null }, { actor: owner, server: '444444444444444444' }]) {
   test(`approval rejects unauthorized context without database access ${JSON.stringify(options)}`, async () => {
