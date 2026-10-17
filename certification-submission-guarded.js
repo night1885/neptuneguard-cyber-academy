@@ -42,7 +42,7 @@ export function createGuardedSubmissionHandler(pool, config, guildId, { response
     const processing = guard.run(interaction.user.id, action, () => handler(guardedInteraction));
     const observed = await observeSubmissionOperation(processing, async () => {
       expired = true;
-      await notify('This enrollment action is taking longer than expected. Its outcome is not confirmed. Do not resubmit yet; ask the owner to check your enrollment status. This response timeout does not cancel database work or grant access.');
+      await notify('This enrollment action is taking longer than expected. Its outcome is not confirmed. Do not resubmit yet; ask the admin to check your enrollment status. This response timeout does not cancel database work or grant access.');
     }, responseTimeoutMs);
     if (observed.timedOut) return true;
     const result = observed.value;

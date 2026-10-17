@@ -56,7 +56,7 @@ export function createCertificationSubmissionHandler(pool, config, guildId, { in
         }
         if (!unchanged() || sessions.size >= 100) { await respond({ content: 'Enrollment configuration changed or the service is busy. Start again later.' }); return true; }
         for (const [token, record] of sessions) if (record.actorId === interaction.user.id) sessions.delete(token);
-        const text = `${row.content}\n\nComprehension questions (${checkVersion})\n${prompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${AGE_DECLARATION_QUESTION} Answer Yes or No in the form. Only Yes permits enrollment. Type AGREE to state that you have read and agree to this agreement using your Discord account. Do not enter your name, birth date, contact details, or identity-document information. This is self-declared eligibility, not independent verification. Submission requests owner approval only; it grants no course or lab access.`;
+        const text = `${row.content}\n\nComprehension questions (${checkVersion})\n${prompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${AGE_DECLARATION_QUESTION} Answer Yes or No in the form. Only Yes permits enrollment. Type AGREE to state that you have read and agree to this agreement using your Discord account. Do not enter your name, birth date, contact details, or identity-document information. This is self-declared eligibility, not independent verification. Submission requests admin approval only; it grants no course or lab access.`;
         const pages = []; for (let i = 0; i < text.length; i += 1700) pages.push(text.slice(i, i + 1700));
         const token = randomUUID();
         const record = { actorId: interaction.user.id, guildId, pages, page: 0, stage: 'reading', expiresAt: Date.now() + 900000 };
@@ -93,13 +93,13 @@ export function createCertificationSubmissionHandler(pool, config, guildId, { in
           agreementVersion: version, agreementSha256: hash, comprehensionCheckVersion: checkVersion,
           answers: prompts.map((_, i) => interaction.fields.getTextInputValue(`answer${i}`))
         });
-        await respond({ content: `${result.alreadySubmitted ? 'Your matching request is already pending.' : 'Enrollment request submitted for owner review.'} No student ID, course access, lab permission, or certificate was issued by this submission.` }); return true;
+        await respond({ content: `${result.alreadySubmitted ? 'Your matching request is already pending.' : 'Enrollment request submitted for admin review.'} No student ID, course access, lab permission, or certificate was issued by this submission.` }); return true;
       }
       await respond({ content: 'Invalid session action. Start again if the form is no longer available.' }); return true;
     } catch {
       const token = /^cert:submit:[a-z]+:([a-f0-9-]{36})$/.exec(interaction.customId)?.[1];
       if (token) sessions.delete(token);
-      await respond({ content: 'The submission could not be completed. If you already submitted, check with the owner before retrying. Otherwise start again and confirm the agreement, age eligibility, and answers. No automatic access is granted.' });
+      await respond({ content: 'The submission could not be completed. If you already submitted, check with the admin before retrying. Otherwise start again and confirm the agreement, age eligibility, and answers. No automatic access is granted.' });
       return true;
     }
   };
