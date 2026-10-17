@@ -65,18 +65,25 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   async function handleInteraction(interaction) {
+    const respond = content => {
+      const payload = { content, embeds: [], components: [], allowedMentions: { parse: [] } };
+      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
+    };
     try {
-      await replyRetentionHold(interaction);
-    } catch (error) {
-      console.error('Certification hold reply failed:', { name: error?.name, code: error?.code });
+      if (!ready || detached) { await replyRetentionHold(interaction); return; }
+      if (!await route(interaction)) await respond('This action is unavailable. Reopen the Admin Dashboard or your student panel.');
+    } catch {
+      console.error('Certification interaction failed.');
+      try { await respond('This action could not be completed. Reopen the dashboard or student panel and check the current status before retrying.'); }
+      catch { console.error('Certification error reply failed.'); }
     }
   }
 
   function onInteraction(interaction) {
     if (detached || !(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.()) || !interaction.customId?.startsWith('cert:')) return;
     const task = handleInteraction(interaction); active.add(task);
-    void task.finally(() => active.delete(task)).catch(error => {
-      console.error('Certification reply failed:', { name: error?.name, code: error?.code });
+    void task.finally(() => active.delete(task)).catch(() => {
+      console.error('Certification reply failed.');
     });
   }
 
