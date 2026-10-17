@@ -3,6 +3,9 @@ const statusNames = 'all|awaiting_acknowledgment|pending|approved|denied|suspend
 const uuid = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}';
 const routes = [
   /^cert:admin:(overview|enrollments|labs):\d{1,6}$/,
+  /^cert:admin:courses:\d{1,5}$/,
+  /^cert:admin:courses:course:\d{1,5}:\d{1,5}$/,
+  /^cert:admin:courses:module:\d{1,5}:\d{1,5}:\d{1,5}$/,
   /^cert:students:(list:\d{1,6}|detail:\d{17,20})$/,
   /^cert:student-audit:\d{17,20}:\d{1,5}$/,
   /^cert:console:settings$/,
