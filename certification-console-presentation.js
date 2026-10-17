@@ -24,6 +24,7 @@ export function consoleViewId(interaction) {
   if (interaction.isStringSelectMenu?.() && id === 'cert:admin:section') {
     const section = interaction.values?.length === 1 ? interaction.values[0] : null;
     if (section === 'students') return 'cert:students:list:0';
+    if (section === 'courses') return 'cert:admin:courses:0';
     return ['overview', 'enrollments', 'labs'].includes(section) ? `cert:admin:${section}:0` : null;
   }
   if (interaction.isModalSubmit?.()) return id === 'cert:dir:search' ? id : null;
