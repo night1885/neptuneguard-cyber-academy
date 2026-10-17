@@ -1,98 +1,89 @@
 # NeptuneGuard Cyber Academy — Learner Agreement Draft
 
-Status: DRAFT — not approved for signing, publication, or enrollment activation.
-Version: DRAFT-1.
-Operator: neptuneguard.
-Operator location: Massachusetts, United States.
+Status: DRAFT — not approved for acknowledgment, database publication, or enrollment activation.
+Version: DRAFT-2.
+Prepared: October 17, 2026.
+Operator: neptuneguard, Massachusetts, United States; final legal operator details require confirmation.
 Academy contact: eadred@neptuneguard.com.
 Effective date: Not set.
 
-This document records proposed terms and user-specified policies. It does not certify legal compliance or represent that storage, signing, deletion, or other controls are implemented. Obtain Massachusetts legal review before use.
+This revision reconciles the retired DRAFT-1 signing/document requirements with docs/legal/limited-data-enrollment-policy.md. It is proposed text for operator and Massachusetts legal review, not a compliance certification or a representation that the restoration is live. DRAFT-1 must not be used for new acknowledgment. Existing records are not deleted or converted by this revision.
 
-## 1. Purpose and separate approvals
-The Academy provides cybersecurity education and controlled training. Enrollment, lab authorization, and certificate awards are separate decisions. A permanent student ID identifies an enrollment record, not a professional license or earned certificate. This agreement does not authorize testing of any system.
+## 1. Education and separate approvals
 
-## 2. Required enrollment records
-The learner must read the approved agreement version, enter their full name in a typed acknowledgment, upload a signed copy of the same version, confirm that they have read it, pass the required comprehension check, and receive explicit approval from the designated Academy approver. Both typed acknowledgment and signed upload are required. Neither submission alone grants access. Names and agreement versions must match. Another person's signature or a falsified record is prohibited. Unsigned, incomplete, mismatched, or unreadable uploads do not satisfy the requirement.
+The Academy provides cybersecurity education and controlled training. Enrollment approval, authorization for a particular lab, and certificate awards are separate decisions. A permanent academy student ID identifies an approved enrollment; it is not a professional license, certificate, or permission to test systems. Course material and this agreement do not themselves authorize any testing.
 
-## 3. Electronic acknowledgment
-Before submission, the learner will be shown the approved agreement, asked to affirm their intent to acknowledge it electronically, and given a way to obtain a copy. Records will be associated with the learner account, agreement version, submission timestamps, and signing record. A typed name or upload is not conclusive proof of identity or signature authenticity. The final consent, attribution, and record-copy process requires legal and implementation review.
+## 2. Eligibility — proposed clause requiring an explicit operator decision
 
-Proposed form statement: I have read NeptuneGuard Learner Agreement version [VERSION]. I agree to its training rules and understand that enrollment approval does not authorize lab activity. I have submitted a signed copy of the same version. I intend my typed full name to record my acknowledgment.
+Proposed for consistency with the existing implementation: learners must be 18 or older and personally answer Yes to the age-18-or-older declaration. This is self-declared eligibility, not independently verified age or identity. The workflow does not collect a birth date, actual age in years, government identification, guardian documents, or video.
 
-The application must verify an accepted upload record rather than treat this statement as proof of upload or signature authenticity.
+The latest policy leaves actual age versus this Yes/No field unresolved. The operator must expressly approve or revise this clause before publication. Do not activate minor enrollment or represent a guardian-consent process as implemented. A different eligibility decision requires corresponding implementation, privacy, and legal review.
+
+## 3. Proposed registration and account acknowledgment
+
+Registration may begin with an admin-created record or a learner application. The learner must personally read the identified approved agreement version, explicitly acknowledge it through their Discord account, confirm reading, complete the approved comprehension check, make the required eligibility declaration, and submit for a separate admin decision. An admin-created registration does not supply those declarations on the learner's behalf. Reading and eligibility are self-reported; a comprehension result is not independent proof of reading or identity.
+
+No typed legal name, handwritten signature, signed-document upload, government-ID image, or recording is required or accepted by this enrollment workflow. Do not submit those items, addresses, email addresses, passwords, or unrelated sensitive information through enrollment fields or public channels.
+
+Registration and submission do not grant access or issue a permanent ID. Approval precedes initial ID issuance. The proposed section-login flow binds the assigned ID to the learner's Discord account and checks current authorization; sharing an ID does not authorize another account. Pending, denied, suspended, or revoked enrollment does not grant course access. These staged controls require deployment and live acceptance testing before being described as operational.
 
 ## 4. Lab-specific authorization
-Before testing, each lab requires explicit authorization from a party with authority over its targets. Authorization must identify targets, permitted activities and tools, exclusions, start and expiration times with timezone, additional rules, approver, emergency contact, and stop conditions. Missing, unclear, expired, suspended, or revoked authorization means no testing. Accessibility, discovered vulnerabilities, or possession of credentials do not expand scope. Academy approval cannot authorize third-party systems outside its authority.
 
-## 5. Prohibited activities
-Unless expressly authorized in the applicable lab rules, learners must not conduct disruptive or destructive testing, denial of service, phishing, social engineering, physical intrusion, unauthorized malware deployment or persistence, credential misuse, collection or disclosure of personal data, movement into unapproved systems, or evasion of monitoring and access controls. Public services, Academy production infrastructure, Discord systems, other learners, and third-party devices or accounts are excluded unless separately authorized by an appropriate party. Accounts, signatures, and credentials must not be shared for impersonation. General lessons do not override specific lab restrictions.
+Before testing, obtain explicit authorization from a party with authority over the targets. It must identify targets, permitted activities and tools, exclusions, start and expiration times with timezone, additional rules, approver, emergency contact, and stop conditions. Missing, unclear, expired, suspended, or revoked authorization means no testing. Accessibility, discovered vulnerabilities, or possession of credentials do not expand scope. Academy approval cannot authorize third-party systems outside its authority.
 
-## 6. Stop-work and incidents
-Stop immediately when instructed, when authorization expires or is withdrawn, when an unexpected third-party target or sensitive data is encountered, when disruption occurs, or when scope is uncertain. Report privately to eadred@neptuneguard.com. Do not continue beyond scope or publish sensitive findings while awaiting instructions. The operator must verify that this contact supports its approved incident-response process before activation.
+## 5. Prohibited activities and integrity
 
-## 7. Confidentiality and learning integrity
-Use lab information only for authorized learning and reporting. Do not post passwords, tokens, private signing documents, sensitive findings, or personal information in public channels. Follow approved storage, reporting, cleanup, and deletion instructions. Avoid unnecessary copying of unexpected sensitive information. Submit work honestly and distinguish actual execution, self-reported completion, simulated output, and outside assistance. Do not claim credentials that have not been issued. Confidentiality does not prevent legally protected reporting or compliance with lawful process.
+Unless expressly authorized in applicable lab rules, do not conduct disruptive or destructive testing, denial of service, phishing, social engineering, physical intrusion, unauthorized malware deployment or persistence, credential misuse, collection or disclosure of personal data, movement into unapproved systems, or evasion of monitoring and access controls. Public services, Academy production infrastructure, Discord systems, other learners, and third-party devices/accounts are excluded unless separately authorized by an appropriate party. General lessons do not override specific lab restrictions.
 
-## 8. Access changes
-The Academy may deny, suspend, or revoke access for incomplete records, suspected misuse, violations, or safety concerns. Learners must stop affected activities even if a technical session remains open. Reinstatement requires explicit approval and does not automatically restore lab authorization. Review requests may be sent to eadred@neptuneguard.com.
+Do not share accounts or credentials for impersonation or falsify declarations, work, or access records. Distinguish actual execution, self-reported completion, simulated output, and outside assistance. Do not claim credentials that have not been issued.
 
-## 9. Privacy and authorized access
-The proposed enrollment process records Discord user ID, typed full name, agreement version, acknowledgment timestamps, signed upload, comprehension result, approval and access audit records, and permanent student ID if issued. Collect only information reasonably needed for enrollment, training, security, administration, or legal obligations. Do not request government identification numbers, financial details, passwords, or unrelated sensitive information in agreement uploads.
+## 6. Stop-work, confidentiality, and incidents
 
-Signed documents will be stored in encrypted cloud storage. Access will be limited to authorized neptuneguard personnel with a relevant need for enrollment administration, security, compliance, or incident investigation. Access and material disclosures will be documented. Before collection, publish a privacy notice covering data, purposes, service providers, access, retention, disclosures, and available request procedures. The storage provider and encryption, access, backup, and deletion controls remain unselected or unverified.
+Stop immediately when instructed, when authorization expires or is withdrawn, when scope is uncertain, when disruption occurs, or when an unexpected third-party target or sensitive data is encountered. Report privately to eadred@neptuneguard.com. Do not continue beyond scope or publish sensitive findings while awaiting instructions. The operator must confirm that this contact supports the incident process before activation.
 
-## 10. Retention, deletion, and legal preservation
-Approved learners' signed agreements will ordinarily be retained for five years from enrollment approval, subject to applicable legal requirements. Signed documents may be held temporarily during application review. Unsigned uploads will be discarded. Signed documents for denied, withdrawn, or closed-without-approval applications will be deleted after closure rather than retained under the five-year policy.
+Use lab information only for authorized learning and reporting. Do not post passwords, tokens, personal information, or sensitive findings publicly. Avoid unnecessary copying and follow approved storage, reporting, cleanup, and deletion instructions. Confidentiality does not prevent legally protected reporting or compliance with lawful process.
 
-Deletion is subject to applicable retention duties, valid court orders, and legal holds requiring preservation. Preserved records remain access-restricted and will be reviewed for deletion when the requirement ends. Secure disposal procedures must address active storage, cloud-object versions, recoverable copies, and backups. Do not promise immediate deletion from all backups unless supported by the actual process. Separate schedules are required for application metadata, audit events, course progress, lab records, and incidents. Five years is the operator's chosen policy, not a claim of a universally required legal period.
+## 7. Limited registration records and privacy
 
-## 11. Court orders and investigation disclosures
-Relevant records may be disclosed when required by a valid court order or other legally binding process, or when reasonably necessary and legally permitted to assist investigations into suspected unlawful activity, security incidents, or Academy misuse. An authorized reviewer will assess legal basis, relevance, scope, and recipient. Limit disclosure to what is necessary or required and document it. Notify learners where required or appropriate and permitted; do not promise notice when legally restricted. This clause does not authorize unrestricted access or disclosure solely because someone requests investigative assistance.
+The proposed account-based workflow retains necessary Discord-linked enrollment and access records: Discord user ID, application/approval status, self-declared eligibility and acknowledgment status, agreement version and content hash, comprehension-check version/result, relevant timestamps, approval/audit records, and permanent academy ID if issued. An ID check does not independently verify identity.
 
-## 12. Information security and breach response
-The operator will maintain an appropriate security and incident-response program and assess applicable Massachusetts and federal requirements. Suspected unauthorized access, disclosure, loss, or misuse will be evaluated. Legally required notices will be provided to applicable individuals, authorities, and other recipients according to the relevant requirements. Contract confidentiality does not prevent mandatory reporting. These are proposed obligations, not representations of current implementation.
+Permission for these records does not authorize unrelated progress, quiz-answer history, XP, badge, activity, or provider tracking. Do not collect legal names, identity-document copies, signed agreements, recordings, birth dates, or other unnecessary details through enrollment.
 
-## 13. Eligibility and minors
-Minimum age and any guardian requirements must be decided and disclosed before enrollment opens. Do not approve applications involving minors until the operator establishes an appropriate eligibility, consent, privacy, and contracting process. Do not assume that a guardian signature alone resolves children's privacy requirements. No age rule is selected by this draft.
+Before activation, provide an approved privacy notice identifying actual data, purposes, responsible operator, authorized access, relevant providers, disclosures, retention/deletion procedures, and a contact for requests. Access must be limited to authorized personnel with an appropriate administrative, security, or legal need. These controls and provider behavior require verification; this draft makes no zero-retention, complete-erasure, or encryption-implementation promise.
 
-## 14. Intellectual property
-Academy materials may be used for authorized learning. Redistribution, publication, and commercial reuse require permission unless permitted by applicable license or law. Learners retain rights in their original submissions, subject to third-party rights, and grant the operator a limited permission to use submissions for assessment, administration, security review, and recordkeeping. No unrestricted publicity license is granted.
+## 8. Retention, lawful preservation, and disclosures — unresolved
 
-## 15. Fees, services, and certificates
-If fees are charged, disclose pricing, cancellation, refund terms, assessment criteria, and certificate requirements before purchase or commitment. Enrollment and completion do not guarantee employment, licensing, accreditation, third-party certification, or exam results. Describe Academy credentials accurately. No payment or refund policy has been selected in this draft.
+No retention period for enrollment/access metadata, audit records, incidents, or provider copies is approved by this draft. The retired five-year signed-document schedule does not apply to this document-free workflow. Before publication, approve and disclose the relevant schedules and procedures, including active storage, backups, recoverable copies, legal preservation, and request handling. Existing historical records have not been erased by this policy revision.
 
-## 16. Applicable law and complaints
-The operator will comply with applicable federal, Massachusetts, and other laws that apply to its activities and learners. Nothing authorizes unlawful conduct or waives a right that cannot lawfully be waived. If a provision is unenforceable, remaining provisions apply to the extent permitted by law. This draft does not establish exclusive court venue or mandatory arbitration. Complaints and record or access questions may be sent to eadred@neptuneguard.com without restricting legally available remedies. Liability caps, indemnity, arbitration, venue, and broad waivers require separate counsel review.
+Proposed disclosure rule for review: disclose relevant records only when legally required or otherwise legally permitted for a defined, necessary purpose, with authorized review of the basis, scope, and recipient. Document material disclosures and provide legally required notices. Do not promise immediate deletion, universal backup erasure, or learner notice where legally restricted. This clause does not authorize disclosure merely because someone requests investigative assistance.
 
-## 17. Versions and learner declaration
-Acknowledgment applies only to the version identified in the signing and enrollment records. Do not silently substitute terms. Present material changes for renewed acknowledgment before access requiring updated terms is granted.
+## 9. Access changes and material versions
 
-The learner confirms their association with the stated Discord account, reading of the identified version, understanding of separate lab authorization and stop requirements, accuracy of their submission, and intent to record agreement through both typed acknowledgment and signed upload. Signing does not itself grant access.
+The Academy may deny, suspend, or revoke access for incomplete records, suspected misuse, violations, or safety concerns. Stop affected activities even if a technical session remains open. Reinstatement requires explicit approval and does not automatically restore lab authorization. Send access-review requests to eadred@neptuneguard.com.
 
-Learner full name: ____________________
-Discord user ID: ____________________
-Agreement version: ____________________
-Learner signature: ____________________
-Date and timezone: ____________________
-Academy approval: recorded separately.
+Acknowledgment applies to the exact identified agreement version. Do not silently substitute terms or overwrite a published version. Present material changes for renewed acknowledgment before access requiring updated terms is granted. A final approved agreement must be available for the learner to read and obtain a copy; confirm that process before activation.
 
-## Release blockers
-- Counsel review of final terms and applicable requirements.
-- Minimum-age and minors policy.
-- Cloud provider, private upload route, signing review, and record-copy process.
-- Privacy notice and schedules for records other than signed agreements.
-- Security program, incident procedures, legal-hold and disclosure review process.
-- Verified encryption, access controls, retention, backup handling, and deletion.
-- Final approved version, comprehension questions, and effective date.
-- Lab-specific rules and actual learner routing and authorization enforcement.
-- Fees and refunds if applicable.
+## 10. Materials, fees, credentials, and complaints
 
-## Legal-review source pointers
-These sources inform review; listing them does not establish compliance or applicability to every record.
-- Massachusetts electronic transactions: https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXV/Chapter110G
-- Massachusetts information-security standards: https://www.mass.gov/regulations/201-CMR-1700-standards-for-the-protection-of-personal-information-of-residents-of-the-commonwealth
-- Massachusetts disposal requirements: https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXV/Chapter93I/Section2
-- Massachusetts breach notification: https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXV/Chapter93H/Section3
-- FTC COPPA: https://www.ftc.gov/legal-library/browse/rules/childrens-online-privacy-protection-rule-coppa
-- NIST testing guidance: https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-115.pdf
+Use Academy materials for authorized learning; redistribution, publication, or commercial reuse requires permission unless allowed by applicable license or law. Learners retain rights in their original work, subject to third-party rights. Any permission for the Academy to retain/use submissions requires a defined purpose and separate review; this draft grants no unrestricted publicity license.
+
+No pricing, payment, refund, accreditation, or certificate-issuance policy is established here. If fees are charged, disclose approved pricing, cancellation/refund terms, assessment criteria, and credential requirements before commitment. Enrollment or participation does not guarantee employment, licensing, third-party certification, or exam results.
+
+Comply with applicable law; nothing authorizes unlawful conduct or waives rights that cannot lawfully be waived. This draft establishes no mandatory arbitration, exclusive venue, liability cap, indemnity, or broad waiver. Direct questions or complaints to eadred@neptuneguard.com without restricting legally available remedies. Final legal terms require review.
+
+## 11. Proposed learner declaration
+
+I am using my own Discord account. I have read the identified NeptuneGuard learner agreement version and intend to acknowledge it through this account. I understand that reading confirmation and age eligibility are self-declarations, that registration/submission requires a separate admin decision, and that enrollment or an academy ID does not authorize lab activity or constitute a certificate award. I will follow scope, confidentiality, and stop-work rules and provide accurate responses.
+
+Record this declaration through the approved account-based workflow. Do not add typed-name, signature, or document-upload fields. The separately presented eligibility declaration must reflect the final approved age policy.
+
+## Release blockers — do not publish DRAFT-2 as an approved agreement
+
+- Confirm legal operator details and effective date; complete appropriate legal review.
+- Resolve and explicitly approve the age/eligibility field and policy.
+- Approve the privacy notice, retention/request procedures, authorized access, provider limitations, and incident/disclosure handling.
+- Approve exact final agreement text, immutable version, and approved comprehension questions with a server-side answer key. See comprehension-check-proposal.md; it is not an approved key or environment manifest.
+- Publish only the separately approved agreement version through an approved database action; verify its content hash.
+- Configure the matching manifest separately without exposing credentials or server-side answers in repository files.
+- Verify restricted runtime credentials, TLS, schema/function safeguards, actual routing, and both registration paths in the target environment.
+- Resolve and approve entry-message publication, production activation, and any fees/lab rules separately. No deployment, data deletion, migration, or enrollment activation is authorized by this document.

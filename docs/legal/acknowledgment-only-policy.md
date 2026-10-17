@@ -1,27 +1,17 @@
-# Current enrollment policy decision — acknowledgment only
+# Historical enrollment policy — typed-name acknowledgment
 
-Status: implementation requirement; not a published learner agreement and not an enrollment activation.
-Operator: neptuneguard, Massachusetts, United States.
-Contact: eadred@neptuneguard.com.
+Status: SUPERSEDED implementation proposal; not a current learner agreement, collection instruction, or activation authorization.
 
-## Superseding decision
-The learner reads the approved agreement, types their full name to acknowledge it, confirms reading, completes the required comprehension check, and submits an enrollment request for explicit owner approval. Acknowledgment does not automatically grant access or lab authorization. Reading confirmation is self-reported, not independently proven.
+## Policy history
 
-Signed-document uploads are no longer required and must not be collected by this workflow. There is no uploaded-agreement document retention. Prior cloud/S3 and Windows-local document-storage proposals and their five-year or six-month document-retention schedules are retired.
+This intermediate decision removed signed-document uploads and retired earlier signed-document storage/retention proposals, but still proposed typed full-name acknowledgment. The later clarification in docs/legal/limited-data-enrollment-policy.md, dated October 17, 2026, permits necessary Discord-linked registration/access records while excluding legal names, signed-document uploads, government-ID copies, recordings, and unnecessary personal details from the enrollment workflow.
 
-This decision supersedes the conflicting requirements in docs/legal/learner-agreement-draft.md, including mandatory uploaded signatures, document review, upload-related declaration wording, and signed-document storage and retention. That DRAFT-1 agreement must not be published or presented for acknowledgment. A revised agreement must remove those requirements and retain the nonconflicting training rules and legal-review safeguards before activation.
+The limited-data policy controls where this historical proposal conflicts with it. Do not use this file to require a typed name, request signed uploads, restore a document-retention schedule, or infer permission for unrelated learner tracking. Existing historical data has not been deleted or converted.
 
-## Acknowledgment metadata is separate
-The proposed application still needs the learner's Discord ID, typed name, agreement version and content hash, acknowledgment and learner-confirmed-read timestamps, comprehension result, approval record, and permanent student ID if issued. These are personal enrollment records, not uploaded documents. Their access, retention, deletion, and lawful preservation policy remains undecided. Do not infer zero metadata retention or reuse a retired document-retention schedule.
+## Current draft and implementation boundaries
 
-## Required code changes before use
-- Record typed-name acknowledgment and the exact approved agreement version without an upload.
-- Validate comprehension using an approved server-side question set.
-- Update enrollment approval and reinstatement validation so a signed-upload reference is not required for this acknowledgment-only method.
-- Preserve owner approval, transactional auditing, permanent IDs, and separate lab authorization.
-- Review database constraints and migration compatibility. Do not fabricate document references to satisfy old validation.
-- Add tests for incomplete acknowledgment, non-owner approval, malformed submissions, agreement-version changes, and denied or suspended access.
-- Revise learner-facing agreement and privacy wording and settle age eligibility and metadata retention.
+See learner-agreement-draft.md, DRAFT-2, for reconciled text awaiting operator and legal review. DRAFT-1 is obsolete and must not be published for new acknowledgment. DRAFT-2 is not yet approved for publication either.
 
-## Scope
-This policy document changes no code, database, Discord message, or deployed service. No migration, deletion of existing records, signature collection, or activation is authorized by this documentation commit. Legal enforceability and compliance are not certified.
+The staged implementation uses Discord-account acknowledgment, learner-confirmed reading, a comprehension check, the existing age-18-or-older self-declaration, separate admin approval, and permanent-ID issuance after approval. The final age-field decision and retention/privacy procedures remain unresolved in the current policy; this historical file does not decide them. Reading and eligibility are not independently verified.
+
+Enrollment, lab authorization, and certificates remain separate. Repository changes do not prove production activation or legal compliance. Database publication, environment updates, migrations, deletion, notifications, Discord publication, merge, and deployment require their own approved scope.
