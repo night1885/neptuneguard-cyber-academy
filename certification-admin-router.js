@@ -6,11 +6,17 @@ import { handleConsoleBrowser } from './certification-console-browser.js';
 import { createConsoleLabController } from './certification-console-labs.js';
 import { handleConsoleStudent } from './certification-console-student.js';
 import { withConsolePresentation } from './certification-console-presentation.js';
+import { createOwnerRegistrationHandler } from './certification-owner-registration-ui.js';
+import { createInitialConsoleHandler } from './certification-initial-console.js';
 
 export function createCertificationRouter(pool, config, guildId) {
   const route = createExistingRouter(pool, config, guildId);
   const labs = createConsoleLabController(pool, config, guildId);
+  const registration = createOwnerRegistrationHandler(pool, config, guildId);
+  const initialConsole = createInitialConsoleHandler(pool, config, guildId);
   return withConsolePresentation(async function routeWithAdminNavigation(interaction) {
+    if (await initialConsole(interaction)) return true;
+    if (await registration(interaction)) return true;
     if (await handleConsoleStudent(interaction, pool, config, guildId)) return true;
     if (await labs(interaction)) return true;
     if (await handleConsoleBrowser(interaction, pool, config, guildId)) return true;
@@ -19,7 +25,7 @@ export function createCertificationRouter(pool, config, guildId) {
     let target = interaction.customId;
     if (selection) {
       if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-        await interaction.reply({ content: 'Owner authorization in the configured server is required.', flags: 64, allowedMentions: { parse: [] } });
+        await interaction.reply({ content: 'Admin authorization in the configured server is required.', flags: 64, allowedMentions: { parse: [] } });
         return true;
       }
       target = interaction.values?.length === 1 ? adminSectionTarget(interaction.values[0]) : null;
@@ -46,9 +52,7 @@ export function createCertificationRouter(pool, config, guildId) {
             const components = [buildAdminNavigation(section), ...payload.components.slice(1)].map((row, rowIndex) => {
               const copy = ActionRowBuilder.from(row.toJSON());
               copy.components.forEach((component, componentIndex) => {
-                if (component.data.type === 2 && component.data.disabled) {
-                  component.setCustomId(`cert:disabled:${rowIndex}:${componentIndex}`);
-                }
+                if (component.data.type === 2 && component.data.disabled) component.setCustomId(`cert:disabled:${rowIndex}:${componentIndex}`);
               });
               return copy;
             });
@@ -56,7 +60,8 @@ export function createCertificationRouter(pool, config, guildId) {
               new ButtonBuilder().setCustomId('cert:console:settings').setLabel('Configuration').setStyle(ButtonStyle.Secondary),
               new ButtonBuilder().setCustomId('cert:dir:search').setLabel('Search / filter students').setStyle(ButtonStyle.Secondary),
               new ButtonBuilder().setCustomId('cert:audit:0').setLabel('Audit history').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId('cert:labview:all:0').setLabel('Lab records').setStyle(ButtonStyle.Secondary)
+              new ButtonBuilder().setCustomId('cert:labview:all:0').setLabel('Lab records').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('cert:register:open').setLabel('Register student').setStyle(ButtonStyle.Success)
             ));
             payload = { ...payload, components };
           }

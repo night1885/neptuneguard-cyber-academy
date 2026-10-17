@@ -31,7 +31,7 @@ export async function validateCertificationSchema(pool) {
 }
 
 export async function validateActiveEnrollmentAgreement(pool, config) {
-  if (!config.enrollmentSubmissionEnabled) return;
+  if (!config.enrollmentSubmissionEnabled && !config.activeAgreementVersion) return;
   const row = (await pool.query('SELECT content, content_sha256 FROM certification_agreements WHERE version=$1', [config.activeAgreementVersion])).rows[0];
   if (!row || typeof row.content !== 'string' || row.content.length > 60000 ||
       row.content_sha256 !== config.activeAgreementSha256 ||

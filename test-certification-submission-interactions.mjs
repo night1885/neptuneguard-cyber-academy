@@ -55,7 +55,7 @@ test('private account acknowledgment has age and agreement fields but no name in
   assert.deepEqual(form.modal.components.map(row => row.components[0].custom_id), ['age', 'read', 'answer0']);
   const i = interaction(sendId, 'modal'); await f.handle(i);
   assert.equal(i.deferOptions.flags, 64);
-  assert.match(i.replies.at(-1).content, /submitted for owner review/);
+  assert.match(i.replies.at(-1).content, /submitted for admin review/);
   assert.deepEqual(i.replies.at(-1).allowedMentions, { parse: [] });
   const update = f.calls.find(c => c.sql.includes('UPDATE certification_enrollments'));
   assert.equal(update.params[0], student);
@@ -156,5 +156,12 @@ test('database errors return generic responses without leaking details', async (
   const f = fixture(); f.pool.query = async () => { throw new Error('PRIVATE database details'); };
   const i = interaction('cert:submit:start'); await f.handle(i);
   assert.match(i.replies.at(-1).content, /could not be completed/);
+  assert.match(i.replies.at(-1).content, /check with the admin before retrying/);
   assert.ok(!i.replies.at(-1).content.includes('PRIVATE')); assert.equal(wrote(f), false);
+});
+
+test('agreement instructions request admin approval without promising access', async () => {
+  const f = fixture(); const { i } = await start(f);
+  assert.match(i.replies.at(-1).content, /Submission requests admin approval only; it grants no course or lab access/);
+  assert.equal(f.connections, 0); assert.equal(wrote(f), false);
 });

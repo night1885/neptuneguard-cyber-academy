@@ -63,7 +63,7 @@ for (const context of [
     assert.equal(f.queries.length, 0);
     assert.equal(f.deferrals.length, 0);
     assert.equal(f.replies[0].flags, 64);
-    assert.match(f.replies[0].content, /Owner authorization/);
+    assert.equal(f.replies[0].content, 'Admin authorization in the configured server is required.');
   });
 }
 

@@ -18,7 +18,7 @@ export function createAccessActionHandler(pool, config, guildId, { now = Date.no
     if (!(interaction.isButton() || interaction.isModalSubmit()) || !interaction.customId.startsWith('cert:access:')) return false;
     const respond = payload => interaction.reply({ flags: 64, allowedMentions: { parse: [] }, ...payload });
     if (!config.enabled || interaction.user.id !== config.ownerId || interaction.guildId !== guildId) {
-      await respond({ content: 'Owner authorization in the configured server is required.' }); return true;
+      await respond({ content: 'Admin authorization in the configured server is required.' }); return true;
     }
     const timestamp = now();
     for (const [key, value] of pending) if (value.expiresAt <= timestamp) pending.delete(key);

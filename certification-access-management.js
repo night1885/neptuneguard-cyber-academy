@@ -19,7 +19,7 @@ export function createCertificationAccessManagement(pool, config) {
       await db.query('BEGIN');
       const row = (await db.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1 FOR UPDATE', [studentDiscordId])).rows[0];
       if (!row || !transition.from.includes(row.status)) throw new Error('Enrollment status does not permit this action');
-      if (action === 'reinstate' && (!row.student_id || !row.approved_by || !row.approved_at || !hasCompleteAccountAcknowledgment(row) ||
+      if (action === 'reinstate' && (typeof row.student_id !== 'string' || !row.student_id.trim() || !row.approved_by || !row.approved_at || !hasCompleteAccountAcknowledgment(row) ||
           (config.activeAgreementVersion && row.agreement_version !== config.activeAgreementVersion) ||
           (config.activeAgreementSha256 && row.agreement_content_sha256 !== config.activeAgreementSha256) ||
           (config.comprehensionCheck?.version && row.comprehension_check_version !== config.comprehensionCheck.version))) throw new Error('Prior approval, current account acknowledgment, and self-declared age 18 eligibility required for reinstatement');

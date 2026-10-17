@@ -1,4 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { handleConsoleCourses } from './certification-console-courses.js';
 
 function button(id, label, disabled = false) {
   return new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
@@ -6,9 +7,10 @@ function button(id, label, disabled = false) {
 
 export async function handleCertificationDashboard(interaction, pool, config, guildId) {
   if (!interaction.isButton() || !interaction.customId.startsWith('cert:admin:')) return false;
+  if (await handleConsoleCourses(interaction, config, guildId)) return true;
   await interaction.deferReply({ flags: 64 });
   if (!config.enabled || interaction.user.id !== config.ownerId || interaction.guildId !== guildId) {
-    await interaction.editReply({ content: 'This dashboard is restricted to the configured owner and server.', components: [], embeds: [] });
+    await interaction.editReply({ content: 'This dashboard is restricted to the configured admin and server.', components: [], embeds: [] });
     return true;
   }
   const match = /^cert:admin:(overview|enrollments|labs):(\d{1,6})$/.exec(interaction.customId);
@@ -23,7 +25,7 @@ export async function handleCertificationDashboard(interaction, pool, config, gu
     button('cert:admin:enrollments:0', 'Enrollment requests'),
     button('cert:admin:labs:0', 'Lab requests')
   );
-  const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Owner console • Lab approval is separate from enrollment' });
+  const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Admin Dashboard • Lab approval is separate from enrollment' });
   const components = [navigation];
   if (view === 'overview') {
     const result = await pool.query(`SELECT e.*, l.*,
@@ -47,7 +49,7 @@ export async function handleCertificationDashboard(interaction, pool, config, gu
         FROM certification_lab_requests) l`);
     const counts = result.rows[0] || {};
     const count = key => String(counts[key] ?? '0');
-    embed.setTitle('NeptuneGuard Certification — Owner Console').setDescription(
+    embed.setTitle('NeptuneGuard Certification — Admin Dashboard').setDescription(
       `Pending enrollments: ${count('pending_enrollments')}\nApproved students: ${count('enrolled_students')}\nPending lab requests: ${count('pending_labs')}\n\nReview enrollment requests and student access below. Enrollment approval does not grant lab access or award a certificate.`
     ).addFields(
       { name: 'Student directory', value: `Total: ${count('total_students')}\nAwaiting acknowledgment: ${count('awaiting_acknowledgment')}\nDenied: ${count('denied_students')}\nSuspended: ${count('suspended_students')}\nRevoked: ${count('revoked_students')}`, inline: true },
@@ -82,12 +84,13 @@ export async function handleCertificationDashboard(interaction, pool, config, gu
       button(`cert:admin:${view}:${page + 1}`, 'Next', result.rows.length <= 5)
     ));
   }
+  components.push(new ActionRowBuilder().addComponents(button('cert:admin:courses:0', 'Course Overview')));
   await interaction.editReply({ content: '', embeds: [embed], components, allowedMentions: { parse: [] } });
   return true;
 }
 
 export function certificationDashboardEntry() {
-  return { content: 'NeptuneGuard Certification — Owner Dashboard', components: [
-    new ActionRowBuilder().addComponents(button('cert:admin:overview:0', 'Open owner dashboard'))
+  return { content: 'NeptuneGuard Certification — Admin Dashboard', components: [
+    new ActionRowBuilder().addComponents(button('cert:admin:overview:0', 'Open admin dashboard'))
   ], allowedMentions: { parse: [] } };
 }

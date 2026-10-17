@@ -26,7 +26,7 @@ export function createCertificationRouter(pool, config, guildId) {
       await interaction.deferReply({ flags: 64 });
       const respond = payload => interaction.editReply({ content: '', embeds: [], components: [], allowedMentions: { parse: [] }, ...payload });
       if (!config.enabled || interaction.user.id !== config.ownerId || interaction.guildId !== guildId) {
-        await respond({ content: 'Owner authorization in the configured server is required.' }); return true;
+        await respond({ content: 'Admin authorization in the configured server is required.' }); return true;
       }
       const list = /^cert:students:list:(\d{1,6})$/.exec(interaction.customId);
       const detail = /^cert:students:detail:(\d{17,20})$/.exec(interaction.customId);

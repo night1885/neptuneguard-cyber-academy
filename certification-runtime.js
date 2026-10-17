@@ -4,11 +4,14 @@ import { createCertificationRouter } from './certification-admin-router.js';
 import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
 import { createCertificationDatabasePool } from './certification-database-pool.js';
 import { loadCertificationDatabaseConnection } from './certification-database-config.js';
+import { createCertificationService } from './certification-service.js';
+import { replyRetentionHold } from './certification-retention-hold.js';
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
   const config = loadCertificationConfig(env);
   if (!config.enabled) return { enabled: false, detach() {} };
   const database = createPool(loadCertificationDatabaseConnection(env));
+  const service = createCertificationService(database, config);
   let route;
   try { route = createCertificationRouter(database, config, guildId); }
   catch (error) {
@@ -51,18 +54,21 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     } finally { initializing = null; }
   }
 
+  async function getCourseAuthorization(studentDiscordId) {
+    if (!ready || detached) return null;
+    const task = service.getCourseAuthorization(studentDiscordId);
+    active.add(task);
+    try {
+      const authorization = await task;
+      return ready && !detached ? authorization : null;
+    } finally { active.delete(task); }
+  }
+
   async function handleInteraction(interaction) {
     try {
-      if (!ready) {
-        await interaction.reply({ content: 'Certification is temporarily unavailable pending startup checks.', flags: 64 });
-        return;
-      }
-      await route(interaction);
+      await replyRetentionHold(interaction);
     } catch (error) {
-      console.error('Certification interaction failed:', { name: error?.name, code: error?.code });
-      const payload = { content: 'Certification action failed. Refresh the dashboard before retrying.', components: [], embeds: [], allowedMentions: { parse: [] } };
-      if (interaction.deferred || interaction.replied) await interaction.editReply(payload).catch(() => {});
-      else await interaction.reply({ ...payload, flags: 64 }).catch(() => {});
+      console.error('Certification hold reply failed:', { name: error?.name, code: error?.code });
     }
   }
 
@@ -77,7 +83,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   client.on(Events.InteractionCreate, onInteraction);
   client.once(Events.ClientReady, initialize);
   if (client.isReady()) void initialize();
-  return { enabled: true, get ready() { return ready; },
+  return { enabled: true, get ready() { return ready; }, getCourseAuthorization,
     detach() {
       detached = true; ready = false;
       client.off(Events.InteractionCreate, onInteraction);

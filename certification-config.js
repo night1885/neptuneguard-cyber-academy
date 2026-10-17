@@ -9,9 +9,9 @@ export function loadCertificationConfig(env = process.env) {
   if (flag !== undefined && flag !== 'true' && flag !== 'false') throw new Error('Invalid enrollment submission flag');
   const enrollmentSubmissionEnabled = flag === 'true';
   const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled };
-  if (!enrollmentSubmissionEnabled) return Object.freeze(base);
-  if (!enabled) throw new Error('Certification must be enabled before submission configuration');
   const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
+  if (!enrollmentSubmissionEnabled && (!enabled || raw === undefined)) return Object.freeze(base);
+  if (!enabled) throw new Error('Certification must be enabled before submission configuration');
   if (typeof raw !== 'string' || raw.length > 12000) throw new Error('Valid enrollment manifest required');
   let manifest;
   try { manifest = JSON.parse(raw); } catch { throw new Error('Valid enrollment manifest required'); }

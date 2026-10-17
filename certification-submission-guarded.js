@@ -4,9 +4,9 @@ import { observeSubmissionOperation } from './certification-submission-deadline.
 import { handleEnrollmentStatus } from './certification-enrollment-status.js';
 import { createStatusReadGuard } from './certification-status-read-guard.js';
 
-export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000 } = {}) {
+export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000, invitedOnly = false } = {}) {
   if (!Number.isInteger(responseTimeoutMs) || responseTimeoutMs < 1 || responseTimeoutMs > 60000) throw new Error('Invalid response deadline');
-  const handler = createCertificationSubmissionHandler(pool, config, guildId);
+  const handler = createCertificationSubmissionHandler(pool, config, guildId, { invitedOnly });
   const guard = createSubmissionAttemptGuard();
   const statusGuard = createStatusReadGuard();
   return async function guardedSubmission(interaction) {
@@ -15,7 +15,7 @@ export function createGuardedSubmissionHandler(pool, config, guildId, { response
       const guardedPool = { query: (...args) => statusGuard.run(interaction.user?.id, () => pool.query(...args)) };
       return handleEnrollmentStatus(interaction, guardedPool, config, guildId, responseTimeoutMs);
     }
-    if (config.enabled !== true || config.enrollmentSubmissionEnabled !== true ||
+    if (config.enabled !== true || (!invitedOnly && config.enrollmentSubmissionEnabled !== true) ||
         interaction.guildId !== guildId || !/^\d{17,20}$/.test(interaction.user?.id || '')) return handler(interaction);
     const match = /^cert:submit:(previous|next|form|send|cancel):([a-f0-9-]{36})$/.exec(interaction.customId);
     let action;
@@ -42,7 +42,7 @@ export function createGuardedSubmissionHandler(pool, config, guildId, { response
     const processing = guard.run(interaction.user.id, action, () => handler(guardedInteraction));
     const observed = await observeSubmissionOperation(processing, async () => {
       expired = true;
-      await notify('This enrollment action is taking longer than expected. Its outcome is not confirmed. Do not resubmit yet; ask the owner to check your enrollment status. This response timeout does not cancel database work or grant access.');
+      await notify('This enrollment action is taking longer than expected. Its outcome is not confirmed. Do not resubmit yet; ask the admin to check your enrollment status. This response timeout does not cancel database work or grant access.');
     }, responseTimeoutMs);
     if (observed.timedOut) return true;
     const result = observed.value;

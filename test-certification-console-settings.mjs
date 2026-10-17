@@ -28,7 +28,7 @@ test('configuration screen is private, read-only and excludes secrets', async ()
   assert.ok(payload.components[0].components.some(x => x.custom_id === 'cert:admin:overview:0'));
 });
 for (const scenario of [
-  { label: 'non-owner', interaction: { user: { id: '1223123544301633568' } } },
+  { label: 'non-admin', interaction: { user: { id: '1223123544301633568' } } },
   { label: 'wrong guild', interaction: { guildId: '1339276399390887956' } },
   { label: 'DM', interaction: { guildId: null } },
   { label: 'disabled certification', enabled: false }
@@ -38,7 +38,7 @@ for (const scenario of [
     await handleConsoleSettings(f.interaction, { ...config, enabled: scenario.enabled ?? true }, guild);
     assert.equal(f.deferrals.length, 0);
     assert.equal(f.replies[0].flags, 64);
-    assert.match(f.replies[0].content, /Owner authorization/);
+    assert.match(f.replies[0].content, /Admin authorization/);
     assert.equal(f.replies[0].embeds, undefined);
   });
 }
@@ -63,4 +63,19 @@ test('existing overview exposes configuration and respects component limits', as
   const rows = f.replies[0].components.map(row => row.toJSON());
   assert.ok(rows.length <= 5);
   assert.ok(rows.flatMap(row => row.components).some(x => x.custom_id === 'cert:console:settings'));
+});
+test('configuration displays admin labels while retaining ownerId as the account gate', async () => {
+  const f = fixture(); await handleConsoleSettings(f.interaction, config, guild);
+  const embed = f.replies[0].embeds[0];
+  assert.equal(embed.title, 'Admin Dashboard — Configuration');
+  assert.equal(embed.fields.find(field => field.name === 'Configured admin').value, owner);
+  assert.equal(embed.footer.text, 'Admin-only • Read-only • No environment changes');
+  assert.doesNotMatch(JSON.stringify(f.replies[0]), /Owner console|Owner-only|Configured owner/);
+});
+test('configuration exposes course overview with unique bounded button IDs', async () => {
+  const f = fixture(); await handleConsoleSettings(f.interaction, config, guild);
+  const rows = f.replies[0].components, controls = rows.flatMap(row => row.components);
+  assert.ok(controls.some(control => control.custom_id === 'cert:admin:courses:0' && control.label === 'Course Overview'));
+  assert.ok(rows.length <= 5 && rows.every(row => row.components.length <= 5));
+  assert.equal(new Set(controls.map(control => control.custom_id)).size, controls.length);
 });

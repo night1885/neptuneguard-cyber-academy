@@ -17,7 +17,7 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
   if (!interaction.isButton?.() || !id.startsWith('cert:labview:')) return false;
   const allowedMentions = { parse: [] };
   if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-    await interaction.reply({ content: 'Owner authorization in the configured server is required.', flags: 64, allowedMentions }); return true;
+    await interaction.reply({ content: 'Admin authorization in the configured server is required.', flags: 64, allowedMentions }); return true;
   }
   const globalList = /^cert:labview:(all|pending|approved|denied|suspended|revoked|expired):(\d{1,5})$/.exec(id);
   const studentList = /^cert:labview:student:(\d{17,20}):(all|pending|approved|denied|suspended|revoked|expired):(\d{1,5})$/.exec(id);
@@ -73,6 +73,6 @@ export async function handleConsoleLabs(interaction, pool, config, guildId) {
     const filters = statuses.filter(value => value !== status).map(value => button(target(value, 0), value === 'all' ? 'All statuses' : value));
     for (let i = 0; i < filters.length; i += 5) components.push(row(...filters.slice(i, i + 5)));
   }
-  await interaction.editReply({ content: '', embeds: [{ ...embed, footer: { text: 'Owner-only • Inspection is read-only • No provider calls' } }], components, allowedMentions });
+  await interaction.editReply({ content: '', embeds: [{ ...embed, footer: { text: 'Admin-only • Inspection is read-only • No provider calls' } }], components, allowedMentions });
   return true;
 }

@@ -11,7 +11,7 @@ export async function handleConsoleBrowser(interaction, pool, config, guildId) {
   if (!(interaction.isButton?.() || interaction.isModalSubmit?.()) || !(id.startsWith('cert:dir:') || id.startsWith('cert:audit:'))) return false;
   const reply = content => interaction.reply({ ...base, flags: 64, content });
   if (!config.enabled || interaction.user?.id !== config.ownerId || interaction.guildId !== guildId) {
-    await reply('Owner authorization in the configured server is required.'); return true;
+    await reply('Admin authorization in the configured server is required.'); return true;
   }
   if (id === 'cert:dir:search' && interaction.isButton()) {
     await interaction.showModal({ custom_id: 'cert:dir:search', title: 'Find students / filter status', components: [
@@ -52,6 +52,6 @@ export async function handleConsoleBrowser(interaction, pool, config, guildId) {
     ? { name: `Event ${clean(entry.event_id)} — ${formatAuditAction(entry.action)}`, value: `Actor: ${clean(entry.actor_discord_user_id)}\nSubject: ${clean(entry.subject_discord_user_id)}\nTime: ${stamp(entry.created_at)}` }
     : { name: `Student ${clean(entry.discord_user_id)}`, value: `Permanent ID: ${clean(entry.student_id)}\nStatus: ${clean(entry.status)}\nAgreement: ${clean(entry.agreement_version)}\nAcknowledgment method: ${clean(entry.signature_method)}\nAcknowledged: ${entry.acknowledged_at ? 'Yes' : 'No'} | Read declaration: ${entry.learner_confirmed_read_at ? 'Yes' : 'No'} | Comprehension: ${entry.comprehension_passed_at ? 'Yes' : 'No'}\nSelf-declared age 18+: ${entry.age_eligible === true ? 'Yes' : entry.age_eligible === false ? 'No' : 'Not recorded'}\nAge declaration: ${stamp(entry.age_declared_at)}\nApproved: ${stamp(entry.approved_at)}` });
   await interaction.editReply({ ...base, content: '', embeds: [{ title: `${audit ? 'Audit history' : 'Student search'} — page ${page + 1}`, color: 0x3498db,
-    description: audit ? `${entries.length ? 'Newest events first.' : 'No events on this page.'} Event details and private notes are intentionally omitted.` : `Status: ${clean(status)} | Exact ID: ${query ? clean(query) : 'Any'}\n${entries.length ? 'Open a student for existing access controls. Age eligibility is self-declared, not independently verified.' : 'No matching students on this page. Use Previous or change the filter.'}`, fields, footer: { text: 'Owner-only • Read-only • No records changed' } }], components });
+    description: audit ? `${entries.length ? 'Newest events first.' : 'No events on this page.'} Event details and private notes are intentionally omitted.` : `Status: ${clean(status)} | Exact ID: ${query ? clean(query) : 'Any'}\n${entries.length ? 'Open a student for existing access controls. Age eligibility is self-declared, not independently verified.' : 'No matching students on this page. Use Previous or change the filter.'}`, fields, footer: { text: 'Admin-only • Read-only • No records changed' } }], components });
   return true;
 }

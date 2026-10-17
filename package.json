@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Interactive Linux, cybersecurity, SOC, and security engineering learning bot for Discord",
   "type": "module",
-  "main": "index.js",
+  "main": "instructor.js",
   "scripts": {
-  "start": "node index.js",
-  "deploy-commands": "node deploy-commands.js"
-},
+    "start": "node instructor.js",
+    "deploy-commands": "node deploy-commands.js"
+  },
   "engines": {
     "node": ">=20.0.0"
   },
