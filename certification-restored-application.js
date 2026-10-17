@@ -2,6 +2,7 @@ import { Events } from 'discord.js';
 import { loadCertificationConfig } from './certification-config.js';
 import { attachCertificationRuntime } from './certification-runtime.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
+import { createRestorationRouter } from './certification-restoration-router.js';
 
 export function createRestoredCertificationApplication({ client, guildId, env = process.env, signals = process,
   exit = code => process.exit(code), log = message => console.error(message), timeoutMs = 15000, attachRuntime = attachCertificationRuntime } = {}) {
@@ -33,7 +34,7 @@ export function createRestoredCertificationApplication({ client, guildId, env = 
     async drainAcademy() { await Promise.allSettled([...active]); },
     detachCertification: detachRuntime, async closeAcademyPool() {}, destroyClient: () => client.destroy()
   });
-  runtime = attachRuntime(client, undefined, guildId, environment);
+  runtime = attachRuntime(client, undefined, guildId, environment, { createRouter: createRestorationRouter });
   return Object.freeze({
     get enabled() { return runtime.enabled === true; },
     get ready() { return !stopping && runtime.ready === true; },

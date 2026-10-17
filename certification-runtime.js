@@ -7,13 +7,13 @@ import { loadCertificationDatabaseConnection } from './certification-database-co
 import { createCertificationService } from './certification-service.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
 
-export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool } = {}) {
+export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter } = {}) {
   const config = loadCertificationConfig(env);
   if (!config.enabled) return { enabled: false, detach() {} };
   const database = createPool(loadCertificationDatabaseConnection(env));
   const service = createCertificationService(database, config);
   let route;
-  try { route = createCertificationRouter(database, config, guildId); }
+  try { route = createRouter(database, config, guildId); }
   catch (error) {
     void database.end().catch(() => {});
     throw error;
