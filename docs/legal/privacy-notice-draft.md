@@ -2,10 +2,10 @@
 
 Status: DRAFT FOR REVIEW — not approved or published as an operational privacy notice.
 Version: PRIVACY-DRAFT-1. Prepared: October 17, 2026. Effective date: Not set.
-Operator: neptuneguard, Massachusetts, United States; final legal operator details require confirmation.
-Contact: eadred@neptuneguard.com.
+Operator: Eadred Wallace, Massachusetts, United States (operator-provided details).
+Public contacts: edmac658@gmail.com and eadred@neptuneguard.com.
 
-This draft accompanies learner-agreement-draft.md, DRAFT-3. It distinguishes approved policy from capabilities not yet implemented or verified. Do not present it as proof of compliance, automatic deletion, or production activation.
+This draft accompanies learner-agreement-draft.md, DRAFT-3, and includes the operator-provided identity, location, and both public contacts. It distinguishes approved policy from capabilities not yet implemented or verified. Do not present it as proof of compliance, automatic deletion, or production activation.
 
 ## Scope and intended data
 
@@ -41,8 +41,8 @@ Review applicable preservation obligations and proposed disclosure exceptions se
 
 ## Requests and publication prerequisites
 
-Proposed contact for privacy, record, and access-review requests: eadred@neptuneguard.com. Confirm mailbox ownership, handling procedure, account-attribution checks, and any applicable response obligations before publication; this draft invents no statutory deadline or guarantee of automatic deletion on request. Do not request identity-document uploads merely to use this proposed process.
+Public contacts for privacy, record, and access-review requests: either edmac658@gmail.com or eadred@neptuneguard.com. The operator has supplied both addresses for public inclusion; mailbox ownership and monitoring have not been independently verified. Confirm the handling procedure, account-attribution checks, mailbox operation, and any applicable response obligations before publication; this draft invents no statutory deadline or guarantee of automatic deletion on request. Do not request identity-document uploads merely to use this proposed process.
 
-Before publication, confirm operator details/effective date, approve exact final wording, verify actual fields and providers, implement/test the approved retention workflow and related-record handling, and complete appropriate privacy/legal review. Present the approved notice with the corresponding agreement through a verified read/copy process.
+Before publication, approve exact final wording, leave the effective date unset until separately approved activation, verify actual fields and providers, implement/test the approved retention workflow and related-record handling, and complete appropriate privacy/legal review. Present the approved notice with the corresponding agreement through a verified read/copy process.
 
 No database writes/deletions, notifications, environment changes, manifest publication, merge, deployment, or enrollment activation are performed or authorized by this draft.

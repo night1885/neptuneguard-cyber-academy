@@ -3,11 +3,11 @@
 Status: DRAFT — not approved for learner acknowledgment, database publication, or enrollment activation.
 Version: DRAFT-3.
 Prepared: October 17, 2026.
-Operator: neptuneguard, Massachusetts, United States; final legal operator details require confirmation.
-Contact: eadred@neptuneguard.com.
+Operator: Eadred Wallace, Massachusetts, United States (operator-provided details).
+Public contacts: edmac658@gmail.com and eadred@neptuneguard.com.
 Effective date: Not set.
 
-This revision incorporates the approved eligibility and retention decisions in eligibility-retention-decisions.md. It replaces the earlier draft proposals for review, not an already published agreement. Operator and appropriate legal review remain outstanding. Approved policy intentions are not proof of implemented deletion, legal compliance, or live restoration. Existing records have not been deleted or converted.
+This revision incorporates the approved eligibility and retention decisions in eligibility-retention-decisions.md and the operator-provided identity, location, and public contacts. It replaces the earlier draft proposals for review, not an already published agreement. Final operator approval of the documents and appropriate legal review remain outstanding. Approved policy intentions are not proof of implemented deletion, legal compliance, or live restoration. Existing records have not been deleted or converted.
 
 ## 1. Education and separate approvals
 
@@ -33,7 +33,7 @@ Unless expressly authorized by applicable lab rules, do not conduct disruptive o
 
 ## 5. Stop-work, confidentiality, and integrity
 
-Stop immediately when instructed, when authorization expires or is withdrawn, when scope is uncertain, when disruption occurs, or when unexpected third-party targets or sensitive data are encountered. Report privately to eadred@neptuneguard.com. Do not continue beyond scope or publish sensitive findings while awaiting instructions. The operator must verify the incident contact and process before activation.
+Stop immediately when instructed, when authorization expires or is withdrawn, when scope is uncertain, when disruption occurs, or when unexpected third-party targets or sensitive data are encountered. Report privately to either edmac658@gmail.com or eadred@neptuneguard.com. Do not continue beyond scope or publish sensitive findings while awaiting instructions. The operator must verify both incident contacts and the incident process before activation.
 
 Use lab information only for authorized learning/reporting. Do not post passwords, tokens, personal information, or sensitive findings publicly. Avoid unnecessary copying and follow approved storage, reporting, cleanup, and deletion instructions. Confidentiality does not prevent legally protected reporting or compliance with lawful process.
 
@@ -59,7 +59,7 @@ Before activation, implement and verify completion/closure signals, shared-recor
 
 ## 8. Access changes and agreement versions
 
-The Academy may deny, suspend, or revoke access for incomplete records, suspected misuse, violations, or safety concerns. Stop affected activities even if a technical session remains open. Reinstatement requires explicit approval and does not automatically restore lab authorization. Direct access-review requests to eadred@neptuneguard.com.
+The Academy may deny, suspend, or revoke access for incomplete records, suspected misuse, violations, or safety concerns. Stop affected activities even if a technical session remains open. Reinstatement requires explicit approval and does not automatically restore lab authorization. Direct access-review requests to either edmac658@gmail.com or eadred@neptuneguard.com.
 
 Acknowledgment applies to the exact identified agreement version. Do not silently substitute terms or overwrite a published version. Present material changes for renewed acknowledgment before access requiring updated terms is granted. Confirm that learners can read and obtain a copy of the final approved agreement and privacy notice before activation.
 
@@ -69,7 +69,7 @@ Use Academy materials for authorized learning. Redistribution, publication, or c
 
 This draft establishes no pricing, payment/refund policy, accreditation, or certificate-issuance process. If fees are charged, disclose approved prices, cancellation/refund terms, assessment criteria, and credential requirements before commitment. Participation does not guarantee employment, licensing, third-party certification, or exam results.
 
-Comply with applicable law; nothing authorizes unlawful conduct or waives rights that cannot lawfully be waived. No mandatory arbitration, exclusive venue, liability cap, indemnity, or broad waiver is established here. Direct questions/complaints to eadred@neptuneguard.com without restricting legally available remedies. Proposed lawful-disclosure and incident procedures require review before publication; requests alone do not authorize unrestricted disclosure.
+Comply with applicable law; nothing authorizes unlawful conduct or waives rights that cannot lawfully be waived. No mandatory arbitration, exclusive venue, liability cap, indemnity, or broad waiver is established here. Direct questions/complaints to either edmac658@gmail.com or eadred@neptuneguard.com without restricting legally available remedies. Proposed lawful-disclosure and incident procedures require review before publication; requests alone do not authorize unrestricted disclosure.
 
 ## 10. Proposed learner declaration
 
@@ -79,7 +79,7 @@ Record the declaration through the approved account-based workflow, without type
 
 ## Release gates
 
-- Confirm final legal operator details and effective date; complete appropriate legal review. The approved age rule and retention periods are no longer undecided, but implementation and final wording still require verification/review.
+- Operator identity, location, and both public contacts have been supplied by the operator; they have not been independently verified. Leave the effective date unset until separately approved activation; complete appropriate legal review. The approved age rule and retention periods are no longer undecided, but implementation and final wording still require verification/review.
 - Approve the exact final agreement, privacy notice, comprehension questions, and server-side key. Assign final immutable versions only after approval; DRAFT-3 is not such an approval.
 - Verify completion/closure, deletion enforcement, dependencies, authorized access, provider/backup limitations, request handling, and incident/preservation/disclosure procedures before making operational promises.
 - Publish the separately approved agreement through an approved database action and verify its content hash. Configure the matching manifest separately; keep credentials and server-side answers out of repository files.
