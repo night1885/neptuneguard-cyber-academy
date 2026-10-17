@@ -7,18 +7,22 @@ import { loadCertificationDatabaseConnection } from './certification-database-co
 import { createCertificationService } from './certification-service.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
 import { createClosureRuntimeRouter, readApplicationClosureFlag } from './certification-application-closure-runtime.js';
+import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
 
-export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter } = {}) {
+export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter } = {}) {
   const config = loadCertificationConfig(env);
   const closureEnabled = readApplicationClosureFlag(env);
+  const courses = readCourseRuntimeOptions(env);
   if (closureEnabled && !config.enabled) throw new Error('Application closure requires enabled certification');
+  if (courses.enabled && (!config.enabled || !config.activeAgreementVersion)) throw new Error('Course runtime requires enabled certification and an explicit current agreement manifest');
   if (!config.enabled) return { enabled: false, detach() {} };
   const database = createPool(loadCertificationDatabaseConnection(env));
   const service = createCertificationService(database, config);
   let route;
   try {
-    route = closureEnabled ? createClosureRouter(database, config, guildId, { createBaseRouter: createRouter }) : createRouter(database, config, guildId);
-    if (typeof route !== 'function' || (closureEnabled && typeof route.initialize !== 'function')) throw new Error('Certification router and required initialization hook unavailable');
+    const baseFactory = closureEnabled ? (pool, settings, guild) => createClosureRouter(pool, settings, guild, { createBaseRouter: createRouter }) : createRouter;
+    route = courses.enabled ? createCourseRouter(database, config, guildId, { verifiedRoleId: courses.verifiedRoleId, createBaseRouter: baseFactory }) : baseFactory(database, config, guildId);
+    if (typeof route !== 'function' || ((closureEnabled || courses.enabled) && typeof route.initialize !== 'function')) throw new Error('Certification router and required initialization hook unavailable');
   } catch (error) {
     void database.end().catch(() => {});
     throw error;
