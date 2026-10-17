@@ -87,7 +87,16 @@ test('isolated PostgreSQL per-course lifecycle', { skip: !databaseUrl }, async t
     assert.equal(await auditCount(pool, 'courses_assigned'), 1); assert.equal(await auditCount(pool, 'course_completed'), 2);
     const row = (await pool.query('SELECT status,student_id FROM certification_enrollments WHERE discord_user_id=$1', [student])).rows[0];
     assert.equal(row.status, 'approved'); assert.equal(row.student_id, approval.studentId);
-    await assert.rejects(pool.query('DELETE FROM certification_enrollments WHERE discord_user_id=$1', [student]), error => error.code === '23503');
+    const enrollmentBeforeDelete = (await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1', [student])).rows[0];
+    const coursesBeforeDelete = await courses(pool);
+    const countSubjectAudits = async () => (await pool.query('SELECT count(*)::int AS n FROM certification_audit_events WHERE subject_discord_user_id=$1', [student])).rows[0].n;
+    const auditsBeforeDelete = await countSubjectAudits();
+    // PostgreSQL 18 reports RESTRICT as 23001; PostgreSQL 16 reports 23503.
+    await assert.rejects(pool.query('DELETE FROM certification_enrollments WHERE discord_user_id=$1', [student]),
+      error => ['23503', '23001'].includes(error.code) && error.constraint === 'certification_course_enrollments_discord_user_id_fkey');
+    assert.deepEqual((await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1', [student])).rows[0], enrollmentBeforeDelete);
+    assert.deepEqual(await courses(pool), coursesBeforeDelete);
+    assert.equal(await countSubjectAudits(), auditsBeforeDelete);
   }));
 
   await t.test('concurrent assignment and completion serialize on the shared enrollment', async () => isolated(async (pool, service) => {
