@@ -1,0 +1,57 @@
+name: Independent audit retention tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-retention-postgres:
+    name: audit-retention (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: certification_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U certification_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Check syntax and explicit disposable configuration
+        run: |
+          node --check certification-retention-audit-executor.js
+          node --check test-certification-retention-audit-executor.mjs
+          node --check test-certification-retention-audit-executor-postgres.mjs
+          test -n "$CERTIFICATION_TEST_DATABASE_URL"
+          test "$CERTIFICATION_TEST_ALLOW_ROLE_DDL" = true
+      - name: Run audit retention unit and disposable PostgreSQL acceptance
+        run: node --test test-certification-retention-audit-executor.mjs test-certification-retention-audit-executor-postgres.mjs
