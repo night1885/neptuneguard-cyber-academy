@@ -88,3 +88,5 @@ jobs:
         run: node --test test-certification-retention-acceptance.mjs
       - name: Run existing-table lab schema drift acceptance
         run: node --test test-certification-lab-schema-drift.mjs
+      - name: Run restricted closed-application retention acceptance
+        run: node --test test-certification-retention-closed-application-postgres.mjs
