@@ -86,3 +86,5 @@ jobs:
         run: node --test test-certification-retention-preview.mjs test-certification-audit-retention-preview.mjs
       - name: Run consolidated service-to-retention acceptance
         run: node --test test-certification-retention-acceptance.mjs
+      - name: Run existing-table lab schema drift acceptance
+        run: node --test test-certification-lab-schema-drift.mjs
