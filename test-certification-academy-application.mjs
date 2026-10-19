@@ -15,13 +15,14 @@ function fixture(overrides = {}) {
     exit(code) { calls.push(`exit:${code}`); }, log(...args) { logs.push(args); }, ...overrides };
   return { client, signals, calls, logs, options, application: createAcademyApplication(options) };
 }
-test('start installs lifecycle and shutdown detaches both listeners and closes resources once', async () => {
+test('start preserves runtime lifecycle without initializing legacy storage and closes resources once', async () => {
   const f = fixture(); assert.deepEqual(f.calls, ['attach']); assert.equal(f.signals.eventNames().length, 0);
   await f.application.start('fixture-only'); f.client.emit('clientReady', { user: { tag: 'fixture' } });
   f.client.emit('interactionCreate', {}); await tick();
   const first = f.application.shutdown(); assert.equal(f.application.shutdown(), first); await first;
-  assert.deepEqual(f.calls, ['attach', 'login', 'initialize', 'interaction', 'detach', 'pool', 'discord', 'exit:0']);
+  assert.deepEqual(f.calls, ['attach', 'login', 'interaction', 'detach', 'pool', 'discord', 'exit:0']);
   assert.equal(f.client.eventNames().length, 0); assert.equal(f.signals.eventNames().length, 0);
+  assert.ok(JSON.stringify(f.logs).includes('legacy learner storage initialization remains paused'));
   assert.throws(() => f.application.start('fixture-only'), /cannot be started again/);
 });
 test('shutdown waits for accepted interaction and blocks new work immediately', async () => {
@@ -31,17 +32,30 @@ test('shutdown waits for accepted interaction and blocks new work immediately', 
   assert.equal(handled, 1); assert.equal(f.application.stopping, true); assert.ok(!f.calls.includes('pool'));
   release(); await closing; assert.ok(f.calls.includes('exit:0'));
 });
-test('shutdown waits for accepted database initialization', async () => {
-  let release; const f = fixture({ initializeDatabase: () => new Promise(resolve => { release = resolve; }) });
-  await f.application.start('fixture-only'); f.client.emit('clientReady', { user: { tag: 'fixture' } }); await tick();
-  const closing = f.application.shutdown(); await tick(); assert.ok(!f.calls.includes('pool')); release(); await closing;
-  assert.ok(!JSON.stringify(f.logs).includes('online'));
+test('shutdown before queued ready work suppresses startup messaging and never initializes storage', async () => {
+  const f = fixture();
+  await f.application.start('fixture-only'); f.client.emit('clientReady', { user: { tag: 'fixture' } });
+  await f.application.shutdown();
+  assert.ok(!f.calls.includes('initialize')); assert.ok(!JSON.stringify(f.logs).includes('client connected'));
+  assert.ok(f.calls.includes('exit:0'));
 });
-test('database initialization failure triggers sanitized nonzero cleanup without self-deadlock', async () => {
-  const f = fixture({ async initializeDatabase() { throw new Error('PRIVATE connection details'); } });
+test('legacy initializer is never invoked even if it would perform DDL or throw', async () => {
+  let initializations = 0;
+  const f = fixture({ async initializeDatabase() { initializations++; throw new Error('PRIVATE legacy database fixture'); } });
   await f.application.start('fixture-only'); f.client.emit('clientReady', { user: { tag: 'fixture' } }); await tick();
-  await f.application.shutdown(); assert.ok(f.calls.includes('pool')); assert.ok(f.calls.includes('discord'));
-  assert.ok(f.calls.includes('exit:1')); assert.ok(!JSON.stringify(f.logs).includes('PRIVATE'));
+  assert.equal(initializations, 0); assert.equal(f.application.stopping, false);
+  await f.application.shutdown(); assert.ok(f.calls.includes('exit:0'));
+  assert.ok(!JSON.stringify(f.logs).includes('PRIVATE'));
+});
+test('legacy learner commands and buttons remain held before handler admission', async () => {
+  const f = fixture(), replies = [];
+  await f.application.start('fixture-only'); f.client.emit('clientReady', { user: { tag: 'fixture' } });
+  for (const commandName of ['start','begin','progress','badges','student-progress']) f.client.emit('interactionCreate', { commandName, isChatInputCommand: () => true, isButton: () => false, async reply(payload) { replies.push(payload); } });
+  for (const customId of ['academy:fixture','linux-m1-lesson','badge-page:0']) f.client.emit('interactionCreate', { customId, isChatInputCommand: () => false, isButton: () => true, async reply(payload) { replies.push(payload); } });
+  await tick();
+  assert.equal(replies.length, 8); assert.ok(!f.calls.includes('initialize')); assert.ok(!f.calls.includes('interaction'));
+  for (const payload of replies) { assert.equal(payload.flags, 64); assert.deepEqual(payload.allowedMentions, { parse: [] }); assert.deepEqual(payload.components, []); assert.match(payload.content, /Existing records have not been deleted/); }
+  await f.application.shutdown();
 });
 test('login failure uses cleanup rather than unhandled rejection', async () => {
   const f = fixture(); f.client.login = async () => { throw new Error('PRIVATE login fixture'); };

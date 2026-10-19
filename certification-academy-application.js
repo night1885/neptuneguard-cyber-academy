@@ -43,8 +43,8 @@ export function createAcademyApplication({ client, pool, guildId, initializeData
   }
   function onReady(readyClient) {
     void track(async () => {
-      await initializeDatabase();
-      if (!stopping) { try { log(`NeptuneGuard Cyber Academy is online as ${readyClient.user.tag}`); } catch {} }
+      // Keep the legacy callback contract, but do not initialize profile/progress/badge storage during the hold.
+      if (!stopping) { try { log(`NeptuneGuard Discord client connected as ${readyClient.user.tag}; legacy learner storage initialization remains paused.`); } catch {} }
     });
   }
   return Object.freeze({ shutdown: shutdown.shutdown, get stopping() { return stopping; },
