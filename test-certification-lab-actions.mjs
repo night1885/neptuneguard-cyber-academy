@@ -6,7 +6,7 @@ const owner = '1223123544301633567', student = '1223123544301633568', guild = '1
 const request = '00000000-0000-4000-8000-000000000001', config = { enabled: true, ownerId: owner };
 function fixture(status = 'pending') {
   const queries = [], writes = []; let clock = 0;
-  const pool = { async query(sql, params) { queries.push({ sql, params }); return { rows: [{ request_id: request, discord_user_id: student, status }] }; } };
+  const pool = { async query(sql, params) { if (sql.includes('pg_catalog.pg_attribute')) return { rows: Object.entries({ request_id: ['uuid', true], discord_user_id: ['text', true], status: ['text', true], status_reason: ['text', false], updated_at: ['timestamp with time zone', true] }).map(([attname, [type, attnotnull]]) => ({ attname, type, attnotnull, relkind: 'r', atthasdef: false, attgenerated: '', attidentity: '' })) }; queries.push({ sql, params }); return { rows: [{ request_id: request, discord_user_id: student, status }] }; } };
   const service = { async changeLabStatus(...args) { writes.push(args); return { requestId: request, status: args[2] === 'deny' ? 'denied' : 'revoked', alreadyApplied: false, sessionTerminationRequired: args[2] === 'revoke' }; } };
   const options = { now: () => clock, service };
   const handler = createLabActionHandler(pool, config, guild, options);
