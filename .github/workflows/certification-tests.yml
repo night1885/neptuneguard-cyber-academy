@@ -84,3 +84,5 @@ jobs:
         run: node --test test-certification-course-acceptance.mjs
       - name: Run read-only retention preview tests
         run: node --test test-certification-retention-preview.mjs test-certification-audit-retention-preview.mjs
+      - name: Run consolidated service-to-retention acceptance
+        run: node --test test-certification-retention-acceptance.mjs
