@@ -82,5 +82,5 @@ jobs:
         run: node --test test-certification-postgres.mjs test-certification-agreement-immutability.mjs test-certification-postgres-readiness.mjs test-certification-database-pool.mjs test-certification-postgres-role.mjs test-certification-lab-postgres.mjs test-certification-student-record-postgres.mjs test-certification-lab-review-postgres.mjs test-certification-owner-registration-postgres.mjs test-certification-invited-submission-postgres.mjs test-certification-application-closure-postgres.mjs test-certification-application-closure-service.mjs test-certification-application-closure-lifecycle.mjs test-certification-application-closure-readiness.mjs test-certification-application-closure-acceptance.mjs test-certification-course-lifecycle.mjs test-certification-course-readiness.mjs
       - name: Run consolidated course lifecycle acceptance with simulated Discord
         run: node --test test-certification-course-acceptance.mjs
-      - name: Run read-only enrollment retention preview tests
-        run: node --test test-certification-retention-preview.mjs
+      - name: Run read-only retention preview tests
+        run: node --test test-certification-retention-preview.mjs test-certification-audit-retention-preview.mjs
