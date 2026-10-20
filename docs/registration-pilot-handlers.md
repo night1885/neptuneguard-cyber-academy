@@ -1,0 +1,13 @@
+# Pilot handler-composition checkpoint
+
+Base: 37733421dae726d76a8ad1434eedfeda66162bff on feature/registration-pilot.
+
+Adds a handler factory for the next runtime-wiring step. It takes distinct read/write interfaces and trusted registration/invitation factories. Both native factories receive only the write interface and a frozen copy of the pilot context. The dedicated learner-status handler uses only the supplied read interface, the real invitation reader and status limiter; it never constructs a course-authorization service or offers a learning-section control. It rechecks the real policy classifier before invitation dispatch or status reads. It preserves private in-place status navigation only for an attributed private source belonging to the actor; otherwise it defers a new private response.
+
+This module does not create the read-only database facade or verify PostgreSQL privileges: distinct objects alone do not establish isolation. The runtime caller must supply the actual read-only facade for status and broad administrative views, and the separately scoped backing pool only to reviewed write handlers. Trusted factories remain responsible for their native behavior. An allowlist entry is not an invitation or approval.
+
+Fresh focused result: Node v20.20.1; 48 tests passed, zero failed, zero skipped. Tests use the committed core/policy, invitation reader and status limiter, with fake pool interfaces and native-factory spies. They cover interface placement, frozen context, direct actor/route/guild denial, status handling, invitation dispatch, private deferral/update behavior, rate/busy limits, error redaction and outer-core composition. These are not real registration/invitation UI, SDK serialization, runtime-entry, PostgreSQL or production acceptance tests. Prior test totals are not added to this result.
+
+Not imported by certification-runtime.js or startup in this checkpoint. No production settings, records, learner identities, schema, grants, deployment or Discord publication are changed. The parser's pilot requirements are not permission to disable the live read-only preview.
+
+Next: connect the factory inside the actual runtime with metadata/manifest checks and pilot authorization denial; correct owner-registration pilot entry instructions; test real parser/core/native factories/SDK/services together; verify all modes and shutdown; run disposable PostgreSQL acceptance and repository CI; extend mode-aware preflight; resolve the separate invitation/audit-retention dependency and review the actual learner entry. No runnable or activatable pilot is claimed here. Commit, merge and deployment are separate approvals.
