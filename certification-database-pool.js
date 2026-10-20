@@ -2,7 +2,7 @@ import pg from 'pg';
 
 export function buildCertificationPoolConfig({ connectionString, ssl } = {}, {
   connectionTimeoutMs = 3000, statementTimeoutMs = 5000, lockTimeoutMs = 2000,
-  idleTransactionTimeoutMs = 10000, max = 4
+  idleTransactionTimeoutMs = 10000, max = 4, readOnly = false
 } = {}) {
   if (typeof connectionString !== 'string' || !connectionString) throw new Error('Explicit certification database URL required');
   let url;
@@ -12,11 +12,11 @@ export function buildCertificationPoolConfig({ connectionString, ssl } = {}, {
   }
   if ([connectionTimeoutMs, statementTimeoutMs, lockTimeoutMs, idleTransactionTimeoutMs].some(value =>
     !Number.isSafeInteger(value) || value < 1 || value > 60000) ||
-    !Number.isSafeInteger(max) || max < 1 || max > 16 || lockTimeoutMs >= statementTimeoutMs) {
+    typeof readOnly !== 'boolean' || !Number.isSafeInteger(max) || max < 1 || max > 16 || lockTimeoutMs >= statementTimeoutMs) {
     throw new Error('Invalid certification database limits');
   }
   return { connectionString, ssl, max, connectionTimeoutMillis: connectionTimeoutMs, idleTimeoutMillis: 10000,
-    options: `-c statement_timeout=${statementTimeoutMs} -c lock_timeout=${lockTimeoutMs} -c idle_in_transaction_session_timeout=${idleTransactionTimeoutMs}` };
+    options: `-c statement_timeout=${statementTimeoutMs} -c lock_timeout=${lockTimeoutMs} -c idle_in_transaction_session_timeout=${idleTransactionTimeoutMs}` + (readOnly ? ' -c default_transaction_read_only=on' : '') };
 }
 
 export function createCertificationDatabasePool(connection, limits) {

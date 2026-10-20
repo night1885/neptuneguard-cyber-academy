@@ -1,4 +1,5 @@
 import { Events, PermissionFlagsBits } from 'discord.js';
+import { readReadOnlyPreviewFlag, createReadOnlyPreviewPool, createReadOnlyPreviewRouter } from './certification-read-only-preview.js';
 import { loadCertificationConfig } from './certification-config.js';
 import { createCertificationRouter } from './certification-admin-router.js';
 import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
@@ -11,20 +12,25 @@ import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certifica
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter } = {}) {
   const config = loadCertificationConfig(env);
+  const readOnlyPreview = readReadOnlyPreviewFlag(env);
   const closureEnabled = readApplicationClosureFlag(env);
   const courses = readCourseRuntimeOptions(env);
   if (closureEnabled && !config.enabled) throw new Error('Application closure requires enabled certification');
   if (courses.enabled && (!config.enabled || !config.activeAgreementVersion)) throw new Error('Course runtime requires enabled certification and an explicit current agreement manifest');
+  if (readOnlyPreview && (!config.enabled || config.enrollmentSubmissionEnabled || closureEnabled || courses.enabled || env.ACADEMY_OWNER_ID !== config.ownerId || env.ACADEMY_ADMIN_CHANNEL_ID !== config.adminChannelId || env.GUILD_ID !== guildId || !/^[0-9]{17,20}$/.test(guildId || ''))) throw new Error('Read-only preview requires explicit owner/server/channel and disabled enrollment, closure and course mutation features');
   if (!config.enabled) return { enabled: false, detach() {} };
-  const database = createPool(loadCertificationDatabaseConnection(env));
-  const service = createCertificationService(database, config);
-  let route;
+  const connection = loadCertificationDatabaseConnection(env);
+  const backing = readOnlyPreview ? createPool(connection, { readOnly: true }) : createPool(connection);
+  let database, service, route;
   try {
+    database = readOnlyPreview ? createReadOnlyPreviewPool(backing) : backing;
+    service = createCertificationService(database, config);
     const baseFactory = closureEnabled ? (pool, settings, guild) => createClosureRouter(pool, settings, guild, { createBaseRouter: createRouter }) : createRouter;
     route = courses.enabled ? createCourseRouter(database, config, guildId, { verifiedRoleId: courses.verifiedRoleId, createBaseRouter: baseFactory }) : baseFactory(database, config, guildId);
     if (typeof route !== 'function' || ((closureEnabled || courses.enabled) && typeof route.initialize !== 'function')) throw new Error('Certification router and required initialization hook unavailable');
+    if (readOnlyPreview) route = createReadOnlyPreviewRouter(route, config, guildId);
   } catch (error) {
-    void database.end().catch(() => {});
+    void backing.end().catch(() => {});
     throw error;
   }
   let ready = false; let detached = false; let initializing = null; let closing = null;
@@ -66,7 +72,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   async function getCourseAuthorization(studentDiscordId) {
-    if (!ready || detached) return null;
+    if (readOnlyPreview || !ready || detached) return null;
     const task = service.getCourseAuthorization(studentDiscordId);
     active.add(task);
     try {
@@ -101,7 +107,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   client.on(Events.InteractionCreate, onInteraction);
   client.once(Events.ClientReady, initialize);
   if (client.isReady()) void initialize();
-  return { enabled: true, get ready() { return ready; }, getCourseAuthorization,
+  return { enabled: true, readOnlyPreview, get ready() { return ready; }, getCourseAuthorization,
     detach() {
       detached = true; ready = false;
       client.off(Events.InteractionCreate, onInteraction);
