@@ -19,14 +19,21 @@ const application = createAcademyApplication({
   client, pool: { end: () => write('POOL_CLOSED') }, guildId: '1339276399390887957', env: {},
   attachRuntime: () => ({ detach: () => write('CERTIFICATION_CLOSED') }),
   async initializeDatabase() {
-    if (mode === 'busy') client.emit('interactionCreate', {});
-    await write('READY');
+    await write('LEGACY_INITIALIZER_CALLED');
+    throw new Error('Legacy initializer must remain paused');
   },
-  handleInteraction: () => mode === 'busy' ? new Promise(() => {}) : Promise.resolve(),
+  async handleInteraction() {
+    if (mode === 'busy') {
+      await write('READY');
+      await new Promise(() => {});
+    }
+  },
   timeoutMs: mode === 'busy' ? 100 : 2000,
   log: message => process.stderr.write(String(message) + '\n')
 });
-void application.start('synthetic-fixture-not-a-token');
+await application.start('synthetic-fixture-not-a-token');
+if (mode === 'busy') client.emit('interactionCreate', {});
+else if (mode === 'healthy') await write('READY');
 `;
 
 test('generated child fixture is valid JavaScript before process execution', () => {
@@ -70,6 +77,7 @@ function launch(t, mode) {
 }
 function assertCleanClose(result, code) {
   assert.equal(result.code, code); assert.equal(result.signal, null);
+  assert.ok(!result.stdout.includes('LEGACY_INITIALIZER_CALLED'));
   const markers = ['CERTIFICATION_CLOSED', 'POOL_CLOSED', 'DISCORD_CLOSED'];
   for (const marker of markers) assert.equal(result.stdout.split('\n').filter(line => line === marker).length, 1);
   assert.ok(result.stdout.indexOf(markers[0]) < result.stdout.indexOf(markers[1]));
@@ -90,6 +98,7 @@ test('disposable process cleans up on login rejection and exits nonzero', { skip
 test('stuck accepted work reaches shutdown watchdog rather than claiming successful drain', { skip: unsupported }, async t => {
   const f = launch(t, 'busy'); await f.ready; assert.equal(f.child.kill('SIGTERM'), true);
   const result = await f.done; assert.equal(result.code, 1); assert.equal(result.signal, null);
+  assert.ok(!result.stdout.includes('LEGACY_INITIALIZER_CALLED'));
   assert.match(result.stderr, /shutdown deadline exceeded/);
   assert.ok(!result.stdout.includes('POOL_CLOSED')); assert.ok(!result.stdout.includes('DISCORD_CLOSED'));
 });

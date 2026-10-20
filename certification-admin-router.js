@@ -49,7 +49,7 @@ export function createCertificationRouter(pool, config, guildId) {
         if (selection && (key === 'isModalSubmit' || key === 'isStringSelectMenu')) return () => false;
         if (key === 'editReply') return payload => {
           if (section && config.enabled && original.user?.id === config.ownerId && original.guildId === guildId && payload.components?.length) {
-            const components = [buildAdminNavigation(section), ...payload.components.slice(1)].map((row, rowIndex) => {
+            const components = [buildAdminNavigation(section, { includeCourses: true }), ...payload.components.slice(1)].map((row, rowIndex) => {
               const copy = ActionRowBuilder.from(row.toJSON());
               copy.components.forEach((component, componentIndex) => {
                 if (component.data.type === 2 && component.data.disabled) component.setCustomId(`cert:disabled:${rowIndex}:${componentIndex}`);

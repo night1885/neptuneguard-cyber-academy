@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { admitLabMutation } from './certification-lab-mutation-readiness.js';
 import { createCertificationLabManagement } from './certification-lab-management.js';
 const uuid = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}';
 const button = (custom_id, label, style = 2) => ({ type: 2, style, custom_id, label });
@@ -28,6 +29,7 @@ export function createLabActionHandler(pool, config, guildId, { now = Date.now, 
       pending.delete(confirmation[2]);
       if (confirmation[1] === 'cancel') { await reply('Canceled. No lab authorization changed.'); return true; }
       await interaction.deferReply({ flags: 64 });
+      if (!await admitLabMutation(pool, interaction)) return true;
       const result = await service.changeLabStatus(record.actorId, record.requestId, record.action, record.reason);
       await interaction.editReply({ content: `Request: ${result.requestId}\nStored authorization status: ${result.status}.\n${result.alreadyApplied ? 'The target status was already recorded; no new status write or audit event was created.' : 'Authorization change and audit event committed.'}\n${result.sessionTerminationRequired ? 'Provider-session termination still requires reconciliation. This action did not terminate a running session.' : 'No lab access was granted and no provider session was launched.'}`, components: [], allowedMentions: { parse: [] } });
       return true;

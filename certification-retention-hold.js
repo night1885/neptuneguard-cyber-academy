@@ -1,4 +1,4 @@
-export const RETENTION_HOLD_MESSAGE = 'Learner-account workflows are temporarily unavailable while the no-retention redesign is completed. No registration, approval, course activity, or saved-progress action was performed. Existing records have not been deleted.';
+export const RETENTION_HOLD_MESSAGE = 'Learner-account workflows are temporarily unavailable while dashboard and registration integration checks are completed. No registration, approval, course activity, or saved-progress action was performed. Existing records have not been deleted.';
 
 export async function replyRetentionHold(interaction) {
   const payload = { content: RETENTION_HOLD_MESSAGE, components: [], embeds: [], allowedMentions: { parse: [] } };

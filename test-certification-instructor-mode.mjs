@@ -93,7 +93,7 @@ test('handler failure returns generic private response and logs no raw exception
   await f.app.handle(x.i); assert.match(x.replies[0].content, /could not be completed/);
   assert.doesNotMatch(JSON.stringify([f.logs, x.replies]), /PRIVATE-DETAIL/);
 });
-test('new startup import graph has no database or learner-runtime dependency', async () => {
+test('explicit instructor fallback import graph has no database or learner-runtime dependency', async () => {
   const seen = new Set();
   async function visit(file) {
     const url = new URL(file, import.meta.url); if (seen.has(url.href)) return; seen.add(url.href);
@@ -107,7 +107,7 @@ test('new startup import graph has no database or learner-runtime dependency', a
   }
   await visit('./instructor.js'); assert.ok(seen.size >= 4);
   const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
-  assert.equal(pkg.scripts.start, 'node instructor.js'); assert.equal(pkg.main, 'instructor.js');
+  assert.equal(pkg.scripts['start:instructor'], 'node instructor.js');
   const entry = await readFile(new URL('./instructor.js', import.meta.url), 'utf8');
   assert.doesNotMatch(entry, /DATABASE_URL|VERIFIED_ROLE_ID|CERTIFICATION_ENABLED|CERTIFICATION_DATABASE_URL/);
   const syntax = spawnSync(process.execPath, ['--check', 'instructor.js'], { cwd: new URL('.', import.meta.url), encoding: 'utf8' });
