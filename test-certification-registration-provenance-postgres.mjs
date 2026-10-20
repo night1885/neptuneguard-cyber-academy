@@ -22,7 +22,7 @@ test('disposable active-invitation provenance migration foundation',{skip:!datab
   try{
     assert.equal((await admin.query('SELECT current_database() AS name')).rows[0].name,'certification_test');
     await admin.query(`CREATE SCHEMA "${schema}"`);schemaCreated=true;
-    for(const name of ['001-certification.sql','002-typed-acknowledgment.sql','003-enrollment-submission-metadata.sql','004-immutable-agreement-versions.sql','005-account-acknowledgment-age.sql','006-application-closure-metadata.sql','007-course-enrollment-lifecycle.sql','008-lab-status-reason.sql'])await admin.query(await readFile(new URL('./migrations/'+name,import.meta.url),'utf8'));
+    for(const name of ['001-certification.sql','002-typed-acknowledgment.sql','003-enrollment-submission-metadata.sql','004-immutable-agreement-versions.sql','005-account-acknowledgment-age.sql','006-application-closure-metadata.sql','007-course-enrollment-lifecycle.sql'])await admin.query(await readFile(new URL('./migrations/'+name,import.meta.url),'utf8'));
     await admin.query("INSERT INTO certification_enrollments(discord_user_id,status) VALUES($1,'awaiting_acknowledgment')",[legacy]);
     await admin.query("INSERT INTO certification_audit_events(actor_discord_user_id,subject_discord_user_id,action) VALUES($1,$2,'student_registered_by_owner')",[owner,legacy]);
     const agreementHash=createHash('sha256').update('Disposable provenance agreement.').digest('hex');
