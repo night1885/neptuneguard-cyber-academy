@@ -1,0 +1,15 @@
+# Owner-only preservation review adapter - staged, not an operational workflow
+
+Policy decision: only the configured academy owner may review and clear retention records. Discord Administrator permission, a role named Admin, and ordinary membership confer no review authority. Deletion execution remains separately owner-only.
+
+The new factory is default-disabled and has no runtime, Discord control, scheduler, database connection, environment loader, migration or write operation. It is a read-side adapter for the three staged executor callbacks. It requires explicit guild/database/schema scope and a trusted server-side readClearance implementation. This batch neither issues nor persists clearances.
+
+The future authenticated owner review handler must create trusted records; never use interaction JSON, role assertions, caller-supplied reviewer IDs or an unsigned client document as the trusted lookup result. Checking an ID here is not authentication. Production store access, integrity, revocation, race handling, durable evidence, publication and operational acceptance remain separate work. No production reader or permissive fallback is provided.
+
+Every accepted record must match owner actor and reviewer, policy version, guild/database/schema, category and target evidence; carry completed review, no uncertainty, no preservation requirement and no revocation; and have a safe opaque reference and current Date values with a maximum five-minute validity interval. Missing records, unavailable storage, expiration, mismatches, timeouts and cancellation return only a hold decision. Returned Dates and course arrays are copied; signals and arbitrary stored details are not returned as clearance data.
+
+Evidence strength remains that of each executor: shared completion binds the existing snapshot hash and course keys; closed applications currently bind subject and exact millisecond closure time; audit events bind bigint event ID and exact microsecond creation time. The latter two are not represented as full-content snapshot approvals. This adapter cannot independently discover legal obligations or provider copies, and an owner's clearance does not override a required preservation obligation.
+
+The trusted reader is bounded by a default 500 ms timeout and receives cooperative cancellation. Cancellation does not prove an underlying database operation or external request stopped. A clearance is not a single-use token or an atomic reservation; concurrent revocation/consumption must be resolved in the future storage/transaction design before operational activation. Existing executors still enforce their own eligibility, locks, dependencies, identities and review expiry.
+
+Local tests exercise the actual new module with fixture readers, including all three callback shapes, owner-only authority, scope/evidence mismatch, unresolved preservation, expiry, cancellation and sanitized failures. They do not establish authenticated Discord delivery, durable PostgreSQL storage or production acceptance. Existing unit discovery can run this test file; no deployed configuration is changed.
