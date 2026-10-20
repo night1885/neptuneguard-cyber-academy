@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Interactive Linux, cybersecurity, SOC, and security engineering learning bot for Discord",
   "type": "module",
-  "main": "instructor.js",
+  "main": "restoration.js",
   "scripts": {
-    "start": "node instructor.js",
+    "start": "node restoration.js",
+    "start:instructor": "node instructor.js",
     "deploy-commands": "node deploy-commands.js"
   },
   "engines": {

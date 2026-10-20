@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { runInNewContext } from 'node:vm';
 import { createRestoredCertificationApplication } from './certification-restored-application.js';
 const admin = '111111111111111111', guildId = '333333333333333333', channelId = '444444444444444444';
 const environment = { CERTIFICATION_ENABLED: 'true', CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED: 'false', ACADEMY_OWNER_ID: admin, ACADEMY_ADMIN_CHANNEL_ID: channelId,
@@ -90,13 +91,39 @@ test('empty token is rejected before login and application cannot start twice', 
     await f.app.start('fixture-only'); await assert.rejects(f.app.start('fixture-only'), /cannot be started again/);
   } finally { await f.app.shutdown(); }
 });
-test('restoration entry remains staged and does not initialize academy records or publish messages', async () => {
+test('default restoration entry does not initialize academy records or publish messages', async () => {
   const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
-  assert.equal(pkg.main, 'instructor.js'); assert.equal(pkg.scripts.start, 'node instructor.js');
+  assert.equal(pkg.main, 'restoration.js'); assert.equal(pkg.scripts.start, 'node restoration.js');
+  assert.equal(pkg.scripts['start:instructor'], 'node instructor.js');
   const entry = await readFile(new URL('./restoration.js', import.meta.url), 'utf8');
   const application = await readFile(new URL('./certification-restored-application.js', import.meta.url), 'utf8');
   for (const source of [entry, application]) assert.doesNotMatch(source, /initializeDatabase|createAcademyApplication|academy-handler|updateCertificationEntryPanels|\.send\(/);
   assert.match(entry, /createRestoredCertificationApplication/);
   const syntax = spawnSync(process.execPath, ['--check', 'restoration.js'], { cwd: new URL('.', import.meta.url), encoding: 'utf8' });
   assert.equal(syntax.status, 0, syntax.stderr);
+});
+
+test('default executable selects the restored factory using the configured guild and token', async () => {
+  const entry = await readFile(new URL('./restoration.js', import.meta.url), 'utf8');
+  const body = entry.replace(/^import [^\n]*\n/gm, '');
+  const calls = [], options = Object.freeze({ fixture: true }); let client;
+  runInNewContext(body, {
+    process: { env: { DISCORD_TOKEN: 'fixture-token', GUILD_ID: guildId } },
+    createInstructorClientOptions() { calls.push('options'); return options; },
+    Client: class { constructor(value) { assert.equal(value, options); client = this; calls.push('client'); } },
+    createRestoredCertificationApplication(value) {
+      assert.equal(value.client, client); assert.equal(value.guildId, guildId); calls.push('restored');
+      return { start(value) { assert.equal(value, 'fixture-token'); calls.push('start'); } };
+    }
+  });
+  assert.deepEqual(calls, ['options', 'client', 'restored', 'start']);
+});
+for (const token of [undefined, '', '   ']) test(`default executable rejects missing/blank token before client construction: ${JSON.stringify(token)}`, async () => {
+  const entry = await readFile(new URL('./restoration.js', import.meta.url), 'utf8'); let constructed = 0;
+  assert.throws(() => runInNewContext(entry.replace(/^import [^\n]*\n/gm, ''), {
+    process: { env: { DISCORD_TOKEN: token, GUILD_ID: guildId } },
+    createInstructorClientOptions() { constructed++; }, Client: class { constructor() { constructed++; } },
+    createRestoredCertificationApplication() { constructed++; }
+  }), /Explicit Discord token required/);
+  assert.equal(constructed, 0);
 });
