@@ -57,5 +57,6 @@ test('diagnostic entry is opt-in and does not load dotenv, start Discord, or alt
   assert.match(entry, /process\.argv\[2\] !== '--check'/);
   assert.doesNotMatch(entry, /dotenv|discord\.js|createRestoredCertificationApplication|trigger_deploy/);
   const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
-  assert.equal(pkg.main, 'instructor.js'); assert.equal(pkg.scripts.start, 'node instructor.js');
+  assert.equal(pkg.main, 'restoration.js'); assert.equal(pkg.scripts.start, 'node restoration.js');
+  assert.equal(pkg.scripts['start:instructor'], 'node instructor.js');
 });
