@@ -7,12 +7,12 @@ const statuses = new Map([
   ['suspended', 'Enrollment suspended'], ['revoked', 'Enrollment revoked']
 ]);
 const button = (custom_id, label, disabled = false) => ({ type: 2, style: 2, custom_id, label, disabled });
-export function createRegistrationPilotHandlers({ readPool, writePool, config, guildId, createRegistration, createInvitation } = {}) {
+export function createRegistrationPilotHandlers({ readPool, writePool, config, guildId, createRegistration, createInvitation, createInvitationReader = createRegistrationInvitationReader } = {}) {
   const scoped = Object.freeze({ ...config });
   const policy = registrationPilotPolicy(scoped);
   if (!policy || typeof policy.classify !== 'function' || typeof guildId !== 'string' || !/^[0-9]{17,20}$/.test(guildId) ||
       readPool === writePool || typeof readPool?.query !== 'function' || typeof writePool?.query !== 'function' ||
-      typeof writePool?.connect !== 'function' || [createRegistration, createInvitation].some(fn => typeof fn !== 'function') ||
+      typeof writePool?.connect !== 'function' || [createRegistration, createInvitation, createInvitationReader].some(fn => typeof fn !== 'function') ||
       typeof scoped.activeAgreementVersion !== 'string' || !scoped.activeAgreementVersion ||
       typeof scoped.activeAgreementSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(scoped.activeAgreementSha256)) {
     throw new Error('Explicit scoped pilot handler configuration required');
@@ -20,7 +20,7 @@ export function createRegistrationPilotHandlers({ readPool, writePool, config, g
   const registration = createRegistration(writePool, scoped, guildId);
   const invitation = createInvitation(writePool, scoped, guildId);
   if ([registration, invitation].some(fn => typeof fn !== 'function')) throw new Error('Pilot factories must return handlers');
-  const invitations = createRegistrationInvitationReader(readPool, scoped), reads = createStatusReadGuard();
+  const invitations = createInvitationReader(readPool, scoped), reads = createStatusReadGuard();
   const learner = async i => {
     if (i.guildId !== guildId || policy.classify(i) !== 'learner') {
       const payload = { content: 'This account or action is not admitted to the registration pilot.', flags: 64, embeds: [], components: [], allowedMentions: { parse: [] } };

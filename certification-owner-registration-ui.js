@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createOwnerRegistrationService } from './certification-owner-registration.js';
 
-export function createOwnerRegistrationHandler(pool, config, guildId, { now = Date.now } = {}) {
-  const service = createOwnerRegistrationService(pool, config);
+export function createOwnerRegistrationHandler(pool, config, guildId, { now = Date.now, createRegistrationService = createOwnerRegistrationService } = {}) {
+  if (typeof createRegistrationService !== 'function') throw new Error('Trusted owner registration service factory required');
+  const service = createRegistrationService(pool, config);
   const registrationEntry = config.registrationPilotEnabled === true
     ? 'Next step: after a pilot registration entry is separately approved and published, ask the learner to open it in this server.'
     : 'Next step: ask the learner to run /start in this server and open Registration / application console.';
