@@ -1,8 +1,15 @@
+import { registrationPilotPolicy } from './certification-registration-pilot-policy.js';
+
 export function createOwnerRegistrationService(pool, config) {
+  const pilotPolicy = registrationPilotPolicy(config);
   return Object.freeze({
     async register(actorId, discordUserId) {
       if (!config.enabled || actorId !== config.ownerId) throw new Error('Owner authorization required');
       if (typeof discordUserId !== 'string' || !/^\d{17,20}$/.test(discordUserId)) throw new Error('Invalid student Discord ID');
+      if (pilotPolicy) {
+        if (!pilotPolicy.owner(actorId)) throw new Error('Pilot owner authorization required');
+        pilotPolicy.assertTarget(discordUserId);
+      }
       const db = await pool.connect();
       let discard = false;
       try {

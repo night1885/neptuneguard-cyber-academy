@@ -1,9 +1,13 @@
+import { registrationPilotPolicy } from './certification-registration-pilot-policy.js';
 import { createHash } from 'node:crypto';
 import { validateAgeDeclaration } from './certification-age-declaration.js';
 import { hasCompleteAccountAcknowledgment } from './certification-account-acknowledgment.js';
 import { createRegistrationInvitationReader } from './certification-registration-invitation.js';
 
-export function createCertificationSubmission(pool, config) {
+export function createCertificationSubmission(pool, config, { createInvitationReader = createRegistrationInvitationReader } = {}) {
+  if (typeof createInvitationReader !== 'function') throw new Error('Trusted invitation reader factory required');
+  const pilotPolicy = registrationPilotPolicy(config);
+  const invitationConfig = pilotPolicy ? Object.freeze({ enabled: true, ownerId: config.ownerId }) : config;
   const enabled = config.enabled === true && config.enrollmentSubmissionEnabled === true;
   const version = config.activeAgreementVersion;
   const hash = config.activeAgreementSha256;
@@ -15,6 +19,10 @@ export function createCertificationSubmission(pool, config) {
     key.length > 0 && key.length <= 3 && key.every(value => typeof value === 'string' && value.length > 0 && value.length <= 100);
 
   async function submit(studentDiscordId, submission, invitedOnly) {
+    if (pilotPolicy) {
+      if (!invitedOnly) throw new Error('General enrollment is unavailable in registration pilot');
+      pilotPolicy.assertTarget(studentDiscordId);
+    }
     if (invitedOnly ? config.enabled !== true : !enabled) throw new Error('Enrollment submission is disabled');
     if (!configured) throw new Error('Approved agreement and comprehension configuration required');
     if (typeof studentDiscordId !== 'string' || !/^\d{17,20}$/.test(studentDiscordId)) throw new Error('Invalid student Discord ID');
@@ -40,7 +48,7 @@ export function createCertificationSubmission(pool, config) {
       if (!invitedOnly) await db.query(`INSERT INTO certification_enrollments (discord_user_id, status) VALUES ($1,'awaiting_acknowledgment') ON CONFLICT (discord_user_id) DO NOTHING`, [studentDiscordId]);
       const row = (await db.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1 FOR UPDATE', [studentDiscordId])).rows[0];
       if (!row) throw new Error('Enrollment record unavailable');
-      if (invitedOnly && !await createRegistrationInvitationReader(db, config).hasPendingInvitation(studentDiscordId)) throw new Error('Pending admin registration invitation required');
+      if (invitedOnly && !await createInvitationReader(db, invitationConfig).hasPendingInvitation(studentDiscordId)) throw new Error('Pending admin registration invitation required');
       if (row.status === 'pending') {
         if (!hasCompleteAccountAcknowledgment(row) || row.agreement_version !== version || row.agreement_content_sha256 !== hash || row.comprehension_check_version !== checkVersion) throw new Error('Existing pending request requires owner review');
         await db.query('COMMIT');

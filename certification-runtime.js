@@ -1,8 +1,13 @@
+import { readRegistrationPilotOptions, createRegistrationPilotPolicy, createRegistrationPilotRouter } from './certification-registration-pilot-guard.js';
+import { createProvenancePilotHandlers as createRegistrationPilotHandlers } from './certification-provenance-pilot-handlers.js';
+import { createProvenanceOwnerRegistrationHandler as createOwnerRegistrationHandler } from './certification-provenance-pilot-handlers.js';
+import { createProvenanceInvitationHandler as createInvitationInteractionHandler } from './certification-provenance-pilot-handlers.js';
 import { Events, PermissionFlagsBits } from 'discord.js';
 import { readReadOnlyPreviewFlag, createReadOnlyPreviewPool, createReadOnlyPreviewRouter } from './certification-read-only-preview.js';
 import { loadCertificationConfig } from './certification-config.js';
 import { createCertificationRouter } from './certification-admin-router.js';
-import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
+import { validateRuntimeCertificationSchema as validateCertificationSchema } from './certification-pilot-runtime-readiness.js';
+import { validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
 import { createCertificationDatabasePool } from './certification-database-pool.js';
 import { loadCertificationDatabaseConnection } from './certification-database-config.js';
 import { createCertificationService } from './certification-service.js';
@@ -13,22 +18,35 @@ import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certifica
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter } = {}) {
   const config = loadCertificationConfig(env);
   const readOnlyPreview = readReadOnlyPreviewFlag(env);
+  const pilot = env.CERTIFICATION_REGISTRATION_PILOT === undefined ? Object.freeze({ enabled: false }) : readRegistrationPilotOptions(env);
   const closureEnabled = readApplicationClosureFlag(env);
   const courses = readCourseRuntimeOptions(env);
   if (closureEnabled && !config.enabled) throw new Error('Application closure requires enabled certification');
   if (courses.enabled && (!config.enabled || !config.activeAgreementVersion)) throw new Error('Course runtime requires enabled certification and an explicit current agreement manifest');
   if (readOnlyPreview && (!config.enabled || config.enrollmentSubmissionEnabled || closureEnabled || courses.enabled || env.ACADEMY_OWNER_ID !== config.ownerId || env.ACADEMY_ADMIN_CHANNEL_ID !== config.adminChannelId || env.GUILD_ID !== guildId || !/^[0-9]{17,20}$/.test(guildId || ''))) throw new Error('Read-only preview requires explicit owner/server/channel and disabled enrollment, closure and course mutation features');
+  if (pilot.enabled && (readOnlyPreview || closureEnabled || courses.enabled || !config.enabled || config.enrollmentSubmissionEnabled ||
+      !config.activeAgreementVersion || typeof config.activeAgreementSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(config.activeAgreementSha256) ||
+      pilot.guildId !== guildId || pilot.ownerId !== config.ownerId || pilot.adminChannelId !== config.adminChannelId)) {
+    throw new Error('Pilot identity, agreement and disabled-feature requirements are not satisfied');
+  }
   if (!config.enabled) return { enabled: false, detach() {} };
   const connection = loadCertificationDatabaseConnection(env);
   const backing = readOnlyPreview ? createPool(connection, { readOnly: true }) : createPool(connection);
   let database, service, route;
   try {
-    database = readOnlyPreview ? createReadOnlyPreviewPool(backing) : backing;
+    database = readOnlyPreview || pilot.enabled ? createReadOnlyPreviewPool(backing) : backing;
     service = createCertificationService(database, config);
     const baseFactory = closureEnabled ? (pool, settings, guild) => createClosureRouter(pool, settings, guild, { createBaseRouter: createRouter }) : createRouter;
     route = courses.enabled ? createCourseRouter(database, config, guildId, { verifiedRoleId: courses.verifiedRoleId, createBaseRouter: baseFactory }) : baseFactory(database, config, guildId);
     if (typeof route !== 'function' || ((closureEnabled || courses.enabled) && typeof route.initialize !== 'function')) throw new Error('Certification router and required initialization hook unavailable');
     if (readOnlyPreview) route = createReadOnlyPreviewRouter(route, config, guildId);
+    if (pilot.enabled) {
+      const policy = createRegistrationPilotPolicy(pilot);
+      const pilotConfig = Object.freeze({ ...config, registrationPilotEnabled: true, registrationPilotPolicy: policy });
+      const handlers = createRegistrationPilotHandlers({ readPool: database, writePool: backing, config: pilotConfig, guildId,
+        createRegistration: createOwnerRegistrationHandler, createInvitation: createInvitationInteractionHandler });
+      route = createRegistrationPilotRouter({ settings: pilot, readViews: route, ...handlers });
+    }
   } catch (error) {
     void backing.end().catch(() => {});
     throw error;
@@ -41,8 +59,10 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     if (initializing) return initializing;
     initializing = (async () => {
       ready = false;
-      await validateCertificationSchema(database);
+      await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);
+      if (pilot.enabled && detached) return;
       await validateActiveEnrollmentAgreement(database, config);
+      if (detached) return;
       if (typeof route.initialize === 'function') await route.initialize();
       if (detached) return;
       const guild = await client.guilds.fetch(guildId);
@@ -72,7 +92,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   async function getCourseAuthorization(studentDiscordId) {
-    if (readOnlyPreview || !ready || detached) return null;
+    if (readOnlyPreview || pilot.enabled || !ready || detached) return null;
     const task = service.getCourseAuthorization(studentDiscordId);
     active.add(task);
     try {
@@ -107,7 +127,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   client.on(Events.InteractionCreate, onInteraction);
   client.once(Events.ClientReady, initialize);
   if (client.isReady()) void initialize();
-  return { enabled: true, readOnlyPreview, get ready() { return ready; }, getCourseAuthorization,
+  return { enabled: true, readOnlyPreview, registrationPilot: pilot.enabled, get ready() { return ready; }, getCourseAuthorization,
     detach() {
       detached = true; ready = false;
       client.off(Events.InteractionCreate, onInteraction);

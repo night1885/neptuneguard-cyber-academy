@@ -1,0 +1,13 @@
+# CI-only closed-label provenance diagnostic
+
+Base: b6c7b0b5afd598680fde3b1711d243d8f4994cd6. Ten checks passed; both provenance database jobs failed. The GitHub connector returned statuses, and job-page fetching failed. The actual database failure trace has not been retrieved; parameter inference remains a hypothesis, not an established cause.
+
+This patch changes neither the readiness validator, migration 009, replacement services, acceptance tests nor runtime. It adds an independent CI-only disposable metadata probe before the unchanged acceptance command. The probe applies 001-007 and 009 in a generated schema, uses a generated restricted login with the same intended transaction column/audit privileges, queries the actual unchanged catalog SQL, and closes pools/drops its schema and role. It inserts no learner/enrollment/audit records. URL, CI/version context and explicit role-DDL opt-in are checked before importing pg.
+
+Only a closed label is published as a step/job output: one of eight allowlisted SQLSTATE codes, a known failed Boolean guard name, a result-shape category, an opaque definition/function refusal, initial_ready, or fixture setup/cleanup failure. No received error messages, identifiers, passwords, URLs, function/constraint contents or metadata values are emitted. The informational marker job exposes that label in its check name so the available connector can read it without authenticated logs. Existing contents-read permissions remain unchanged; no checks-write permission, new credential, message or deployment is introduced.
+
+Matrix job outputs can select one completed probe; the label includes its configured PostgreSQL version. It is not a two-version summary or proof of all six drift tests. initial_ready means only the positive metadata probe passed. The marker job exits successfully for reporting, not acceptance. The original acceptance step still runs via always(), its command/assertions are unchanged, and failed matrix jobs remain failed. Never substitute the marker for the actual acceptance conclusions.
+
+Fresh local result: 36 diagnostic unit tests passed, zero failed/skipped. Five unsafe-target/opt-in CLI probes refused before pg import and did not write output or echo sentinel values. No local PostgreSQL execution is claimed. CI must establish the probe behavior and real failure category before a targeted fix; do not relax safeguards based on a guessed cause.
+
+PR #15 stays draft and activation-blocked. Application callers remain unwired. This authorizes only repository code and disposable CI, not production query/SQL/grants/backfill, environment changes, learner entry, merge, deployment or pilot activation.

@@ -1,0 +1,79 @@
+name: Registration provenance foundation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: registration-provenance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registration-provenance:
+    name: registration-provenance (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      diagnostic: ${{ steps.provenance_diagnostic.outputs.diagnostic }}
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: certification_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U certification_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      PROVENANCE_DIAGNOSTIC_POSTGRES: ${{ matrix.postgres }}
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Check fixture syntax
+        run: node --check test-certification-registration-provenance-postgres.mjs && node --check test-certification-registration-provenance-services.mjs && node --check test-certification-registration-provenance-readiness.mjs && node --check test-certification-provenance-personal-postgres.mjs && node --check test-certification-provenance-submission-readiness.mjs
+      - name: Require explicit disposable database and role-DDL configuration
+        run: |
+          test -n "$CERTIFICATION_TEST_DATABASE_URL"
+          test "$CERTIFICATION_TEST_ALLOW_ROLE_DDL" = true
+      - name: Capture closed-label readiness diagnostic
+        id: provenance_diagnostic
+        run: node certification-provenance-ci-diagnostic.mjs
+      - name: Run active-invitation provenance storage acceptance
+        if: always()
+        run: node --test test-certification-registration-provenance-postgres.mjs test-certification-registration-provenance-services.mjs test-certification-registration-provenance-readiness.mjs test-certification-provenance-personal-postgres.mjs test-certification-provenance-submission-readiness.mjs
+
+  provenance-diagnostic-marker:
+    name: "provenance-diagnostic (${{ needs['registration-provenance'].outputs.diagnostic || 'unavailable' }})"
+    if: always()
+    needs: [registration-provenance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Informational marker only; acceptance conclusions remain authoritative
+        run: exit 0

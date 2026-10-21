@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { classifyProvenanceDiagnostic as classify } from './certification-provenance-ci-diagnostic.mjs';
+const keys=['identity_ok','restricted_role','table_shape','audit_shape','non_owner','schema_limits','column_shape','constraint_validated','trigger_shape','function_shape','trigger_set','can_read_invitation','can_register','can_submit','enrollment_limits','can_append_audit','audit_limits'];
+const good=()=>Object.fromEntries(keys.map(key=>[key,true]));
+const ready=async()=>({ready:true});
+test('reports initial positive probe, not overall acceptance',async()=>{assert.equal(await classify(async()=>({rows:[good()]}),ready),'initial_ready');});
+for(const code of ['42P18','42P08','42703','42501','42883','42P01','42601','0A000'])test('only allowlisted SQLSTATE '+code+' is emitted',async()=>{assert.equal(await classify(async()=>{throw Object.assign(new Error('PRIVATE_SENTINEL'),{code});},ready),'sqlstate_'+code);});
+for(const code of ['PRIVATE_SENTINEL','ABCDE',undefined,null])test('unknown SQLSTATE is omitted '+typeof code,async()=>{assert.equal(await classify(async()=>{throw {code,message:'PRIVATE_SENTINEL'};},ready),'catalog_query_failed');});
+for(const key of keys)test('reports only known failed flag '+key,async()=>{const row={...good(),[key]:false,unrelated:'PRIVATE_SENTINEL'};assert.equal(await classify(async()=>({rows:[row]}),ready),'flag_'+key);});
+test('raw error message is never accessed',async()=>{let read=false;const error={code:'42P18',get message(){read=true;throw new Error('PRIVATE_SENTINEL');}};assert.equal(await classify(async()=>{throw error;},ready),'sqlstate_42P18');assert.equal(read,false);});
+test('hostile code getter still produces a fixed category',async()=>{assert.equal(await classify(async()=>{throw {get code(){throw new Error('PRIVATE_SENTINEL');}};},ready),'catalog_query_failed');});
+test('invalid catalog result shape is not treated as success',async()=>{for(const rows of [[],null,[good(),good()]])assert.equal(await classify(async()=>({rows}),ready),'catalog_result_shape');});
+test('opaque validator refusal is not a diagnosis of its body or constraint',async()=>{assert.equal(await classify(async()=>({rows:[good()]}),async()=>{throw new Error('PRIVATE_SENTINEL');}),'definition_or_function');});
+test('validator must actually return ready true',async()=>{for(const result of [undefined,false,{}, {ready:'true'}])assert.equal(await classify(async()=>({rows:[good()]}),async()=>result),'validator_result_shape');});
+test('hostile metadata access is categorized without raw details',async()=>{assert.equal(await classify(async()=>({get rows(){throw new Error('PRIVATE_SENTINEL');}}),ready),'catalog_result_shape');});

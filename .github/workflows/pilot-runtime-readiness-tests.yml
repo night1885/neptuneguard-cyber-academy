@@ -1,0 +1,61 @@
+name: Pilot runtime readiness regression
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-runtime-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot-runtime-readiness:
+    name: pilot-runtime-readiness (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: certification_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U certification_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      CERTIFICATION_TEST_ALLOW_PUBLIC_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Check regression syntax
+        run: |
+          node --check test-certification-pilot-runtime-readiness.mjs
+          node --check test-certification-runtime-agreement-detach.mjs
+      - name: Run VM and dedicated public-schema readiness regression
+        run: node --test test-certification-pilot-runtime-readiness.mjs test-certification-runtime-agreement-detach.mjs

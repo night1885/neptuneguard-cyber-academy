@@ -4,9 +4,10 @@ import { createCertificationSubmission } from './certification-submission.js';
 import { createRegistrationInvitationReader } from './certification-registration-invitation.js';
 import { AGE_DECLARATION_QUESTION, validateAgeDeclaration } from './certification-age-declaration.js';
 
-export function createCertificationSubmissionHandler(pool, config, guildId, { invitedOnly = false } = {}) {
+export function createCertificationSubmissionHandler(pool, config, guildId, { invitedOnly = false, createSubmissionService = createCertificationSubmission, createInvitationReader = createRegistrationInvitationReader } = {}) {
   if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) throw new Error('Configured guild ID required');
   if (typeof invitedOnly !== 'boolean') throw new Error('Invalid invitation mode');
+  if (typeof createSubmissionService !== 'function' || typeof createInvitationReader !== 'function') throw new Error('Trusted submission service and invitation reader factories required');
   const version = config.activeAgreementVersion;
   const hash = config.activeAgreementSha256;
   const checkVersion = config.comprehensionCheck?.version;
@@ -16,8 +17,8 @@ export function createCertificationSubmissionHandler(pool, config, guildId, { in
     typeof version === 'string' && typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash) &&
     typeof checkVersion === 'string' && prompts.length >= 1 && prompts.length <= 3 &&
     prompts.length === answers.length && prompts.every(p => typeof p === 'string' && p.length > 0 && p.length <= 300);
-  const service = createCertificationSubmission(pool, { ...config, comprehensionCheck: { version: checkVersion, correctAnswers: answers } });
-  const invitations = createRegistrationInvitationReader(pool, config);
+  const service = createSubmissionService(pool, { ...config, comprehensionCheck: { version: checkVersion, correctAnswers: answers } });
+  const invitations = createInvitationReader(pool, config);
   const sessions = new Map();
   const unchanged = () => config.enabled === true && (invitedOnly || config.enrollmentSubmissionEnabled === true) &&
     config.activeAgreementVersion === version && config.activeAgreementSha256 === hash &&

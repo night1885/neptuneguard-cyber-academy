@@ -4,9 +4,11 @@ import { observeSubmissionOperation } from './certification-submission-deadline.
 import { handleEnrollmentStatus } from './certification-enrollment-status.js';
 import { createStatusReadGuard } from './certification-status-read-guard.js';
 
-export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000, invitedOnly = false } = {}) {
+export function createGuardedSubmissionHandler(pool, config, guildId, { responseTimeoutMs = 10000, invitedOnly = false, createSubmissionService, createInvitationReader } = {}) {
   if (!Number.isInteger(responseTimeoutMs) || responseTimeoutMs < 1 || responseTimeoutMs > 60000) throw new Error('Invalid response deadline');
-  const handler = createCertificationSubmissionHandler(pool, config, guildId, { invitedOnly });
+  if ([createSubmissionService, createInvitationReader].some(value => value !== undefined && typeof value !== 'function')) throw new Error('Trusted submission factories required');
+  const factories = { ...(createSubmissionService === undefined ? {} : { createSubmissionService }), ...(createInvitationReader === undefined ? {} : { createInvitationReader }) };
+  const handler = createCertificationSubmissionHandler(pool, config, guildId, { invitedOnly, ...factories });
   const guard = createSubmissionAttemptGuard();
   const statusGuard = createStatusReadGuard();
   return async function guardedSubmission(interaction) {

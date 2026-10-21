@@ -2,8 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createOwnerRegistrationService } from './certification-owner-registration.js';
 
-export function createOwnerRegistrationHandler(pool, config, guildId, { now = Date.now } = {}) {
-  const service = createOwnerRegistrationService(pool, config);
+export function createOwnerRegistrationHandler(pool, config, guildId, { now = Date.now, createRegistrationService = createOwnerRegistrationService } = {}) {
+  if (typeof createRegistrationService !== 'function') throw new Error('Trusted owner registration service factory required');
+  const service = createRegistrationService(pool, config);
+  const registrationEntry = config.registrationPilotEnabled === true
+    ? 'Next step: after a pilot registration entry is separately approved and published, ask the learner to open it in this server.'
+    : 'Next step: ask the learner to run /start in this server and open Registration / application console.';
   const pending = new Map();
   const row = (...items) => new ActionRowBuilder().addComponents(items);
   const button = (id, label, style = ButtonStyle.Secondary) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(style);
@@ -38,7 +42,7 @@ export function createOwnerRegistrationHandler(pool, config, guildId, { now = Da
     if (match[1] === 'cancel') { await reply('Registration canceled. No record changed.'); return true; }
     await interaction.deferReply({ flags: 64 });
     const result = await service.register(record.actorId, record.studentId);
-    await interaction.editReply({ content: result.created ? `Registered Discord user ${record.studentId}; awaiting learner acknowledgment. Course access is not active.\n\nNext step: ask the learner to run /start in this server and open Registration / application console. With the agreement manifest configured, eligible admin-registered learners can complete invited registration while general enrollment remains closed. The learner must complete their own acknowledgment and declarations, then await a separate admin decision. No DM was sent.` : `A record already exists for Discord user ${record.studentId}. No record or access was changed.`, allowedMentions: { parse: [] }, components: [row(button(`cert:students:detail:${record.studentId}`, 'Open student record'))] });
+    await interaction.editReply({ content: result.created ? `Registered Discord user ${record.studentId}; awaiting learner acknowledgment. Course access is not active.\n\n${registrationEntry} With the agreement manifest configured, eligible admin-registered learners can complete invited registration while general enrollment remains closed. The learner must complete their own acknowledgment and declarations, then await a separate admin decision. No DM was sent.` : `A record already exists for Discord user ${record.studentId}. No record or access was changed.`, allowedMentions: { parse: [] }, components: [row(button(`cert:students:detail:${record.studentId}`, 'Open student record'))] });
     return true;
   };
 }

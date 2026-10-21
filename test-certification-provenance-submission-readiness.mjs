@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { inspectProvenanceAgreementMetadata as inspect,validateProvenanceSubmissionReadiness as validate,provenanceAgreementReadinessSql as sql } from './certification-provenance-submission-readiness.js';
+const migration=await readFile(new URL('./migrations/004-immutable-agreement-versions.sql',import.meta.url),'utf8'),body=migration.match(/AS \$\$([\s\S]*?)\$\$;/)[1];
+const flags=['identity_ok','table_shape','non_owner','can_read','can_lock','mutation_limits','row_trigger','truncate_trigger','function_shape','trigger_set'];
+const good=()=>({...Object.fromEntries(flags.map(key=>[key,true])),function_body:body,function_settings:null});
+test('reviewed agreement metadata returns a frozen marker',()=>{const result=inspect([good()]);assert.deepEqual(result,{ready:true});assert.ok(Object.isFrozen(result));});
+for(const flag of flags)for(const value of [false,null,undefined,'true'])test('fails closed '+flag+' '+typeof value,()=>{assert.throws(()=>inspect([{...good(),[flag]:value}]),/agreement readiness failed/);});
+for(const change of [{function_body:'PRIVATE_SENTINEL'},{function_body:body+' '},{function_settings:[]},{function_settings:['search_path=public']}])test('function body/settings are pinned '+Object.keys(change)[0],()=>{assert.throws(()=>inspect([{...good(),...change}]),e=>!e.message.includes('PRIVATE_SENTINEL'));});
+test('missing and ambiguous rows fail closed',()=>{for(const rows of [undefined,[],[good(),good()]])assert.throws(()=>inspect(rows));});
+test('explicit target required before importing base validator or querying',async()=>{let calls=0;await assert.rejects(validate({query(){calls++;}},{schema:'fixture',expectedRole:undefined,expectedDatabase:'certification_test'}));assert.equal(calls,0);});
+test('all scalar references have explicit text casts',()=>{for(const match of sql.matchAll(/\$([123])\b/g))assert.ok(sql.slice(match.index+match[0].length).startsWith('::pg_catalog.text'));});
