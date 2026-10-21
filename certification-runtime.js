@@ -1,12 +1,13 @@
 import { readRegistrationPilotOptions, createRegistrationPilotPolicy, createRegistrationPilotRouter } from './certification-registration-pilot-guard.js';
-import { createRegistrationPilotHandlers } from './certification-registration-pilot-handlers.js';
-import { createOwnerRegistrationHandler } from './certification-owner-registration-ui.js';
-import { createInvitationInteractionHandler } from './certification-invitation-interactions.js';
+import { createProvenancePilotHandlers as createRegistrationPilotHandlers } from './certification-provenance-pilot-handlers.js';
+import { createProvenanceOwnerRegistrationHandler as createOwnerRegistrationHandler } from './certification-provenance-pilot-handlers.js';
+import { createProvenanceInvitationHandler as createInvitationInteractionHandler } from './certification-provenance-pilot-handlers.js';
 import { Events, PermissionFlagsBits } from 'discord.js';
 import { readReadOnlyPreviewFlag, createReadOnlyPreviewPool, createReadOnlyPreviewRouter } from './certification-read-only-preview.js';
 import { loadCertificationConfig } from './certification-config.js';
 import { createCertificationRouter } from './certification-admin-router.js';
-import { validateCertificationSchema, validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
+import { validateRuntimeCertificationSchema as validateCertificationSchema } from './certification-pilot-runtime-readiness.js';
+import { validateActiveEnrollmentAgreement } from './certification-schema-readiness.js';
 import { createCertificationDatabasePool } from './certification-database-pool.js';
 import { loadCertificationDatabaseConnection } from './certification-database-config.js';
 import { createCertificationService } from './certification-service.js';
@@ -58,7 +59,8 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     if (initializing) return initializing;
     initializing = (async () => {
       ready = false;
-      await validateCertificationSchema(database);
+      await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);
+      if (pilot.enabled && detached) return;
       await validateActiveEnrollmentAgreement(database, config);
       if (typeof route.initialize === 'function') await route.initialize();
       if (detached) return;
