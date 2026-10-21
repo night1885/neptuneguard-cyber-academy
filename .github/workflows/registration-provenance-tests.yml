@@ -17,6 +17,8 @@ jobs:
     name: registration-provenance (PostgreSQL ${{ matrix.postgres }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      diagnostic: ${{ steps.provenance_diagnostic.outputs.diagnostic }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +40,7 @@ jobs:
     env:
       CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
       CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      PROVENANCE_DIAGNOSTIC_POSTGRES: ${{ matrix.postgres }}
       CERTIFICATION_ENABLED: 'false'
       DATABASE_URL: ''
       CERTIFICATION_DATABASE_URL: ''
@@ -58,5 +61,19 @@ jobs:
         run: |
           test -n "$CERTIFICATION_TEST_DATABASE_URL"
           test "$CERTIFICATION_TEST_ALLOW_ROLE_DDL" = true
+      - name: Capture closed-label readiness diagnostic
+        id: provenance_diagnostic
+        run: node certification-provenance-ci-diagnostic.mjs
       - name: Run active-invitation provenance storage acceptance
+        if: always()
         run: node --test test-certification-registration-provenance-postgres.mjs test-certification-registration-provenance-services.mjs test-certification-registration-provenance-readiness.mjs
+
+  provenance-diagnostic-marker:
+    name: "provenance-diagnostic (${{ needs['registration-provenance'].outputs.diagnostic || 'unavailable' }})"
+    if: always()
+    needs: [registration-provenance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Informational marker only; acceptance conclusions remain authoritative
+        run: exit 0
