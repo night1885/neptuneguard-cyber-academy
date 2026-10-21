@@ -7,8 +7,10 @@ export function invitationPayload(value) {
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, key === 'custom_id' && typeof item === 'string' ? item.replace(/^cert:submit:/, 'cert:invite:') : invitationPayload(item)]));
 }
 
-export function createInvitationInteractionHandler(pool, config, guildId) {
-  const handle = createGuardedSubmissionHandler(pool, config, guildId, { invitedOnly: true });
+export function createInvitationInteractionHandler(pool, config, guildId, { createSubmissionService, createInvitationReader } = {}) {
+  if ([createSubmissionService, createInvitationReader].some(value => value !== undefined && typeof value !== 'function')) throw new Error('Trusted submission factories required');
+  const factories = { ...(createSubmissionService === undefined ? {} : { createSubmissionService }), ...(createInvitationReader === undefined ? {} : { createInvitationReader }) };
+  const handle = createGuardedSubmissionHandler(pool, config, guildId, { invitedOnly: true, ...factories });
   return async function routeInvitation(interaction) {
     const id = interaction.customId || '';
     if (!(interaction.isButton?.() || interaction.isModalSubmit?.()) || !id.startsWith('cert:invite:')) return false;
