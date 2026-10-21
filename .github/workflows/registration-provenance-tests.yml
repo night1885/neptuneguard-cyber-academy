@@ -53,10 +53,10 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Check fixture syntax
-        run: node --check test-certification-registration-provenance-postgres.mjs
+        run: node --check test-certification-registration-provenance-postgres.mjs && node --check test-certification-registration-provenance-services.mjs
       - name: Require explicit disposable database and role-DDL configuration
         run: |
           test -n "$CERTIFICATION_TEST_DATABASE_URL"
           test "$CERTIFICATION_TEST_ALLOW_ROLE_DDL" = true
       - name: Run active-invitation provenance storage acceptance
-        run: node --test test-certification-registration-provenance-postgres.mjs
+        run: node --test test-certification-registration-provenance-postgres.mjs test-certification-registration-provenance-services.mjs

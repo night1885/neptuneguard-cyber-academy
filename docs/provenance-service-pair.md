@@ -1,0 +1,15 @@
+# Protected invitation writer/reader: staged replacement pair
+
+Base: 269f1199a9e75dd74a70126b31c7d47d904a0c47, whose eleven checks passed. PR #15 remains draft and activation-blocked.
+
+This checkpoint implements separately named replacement services in certification-registration-provenance.js. The existing application, owner-registration factory, invitation reader, guarded sessions, submission transaction and runtime are NOT wired to them yet. This is deliberate staging before a multi-caller cutover, not resolution of the application's audit dependency or readiness approval.
+
+The replacement writer captures the configured owner/enabled state/pilot policy, rejects unauthorized or unlisted requests before checkout, and inserts registration_owner_id only when creating a new awaiting enrollment. Registration and its normal audit append share one transaction. Existing rows remain untouched: duplicate registration neither backfills provenance nor creates another audit event. Returned registration records do not include the new owner field.
+
+The replacement reader captures the same owner/policy and checks protected ownership plus clean awaiting state with one parameterized SELECT. It reads no audit history and has no legacy/audit fallback. Missing schema or database failures propagate rather than granting access. Migration 009 remains responsible for provenance immutability and clearing; ID syntax/provenance alone are not learner acknowledgment, approval or course/lab access.
+
+Fresh local result: Node v20.20.1; fourteen unit tests passed, zero failed, one PostgreSQL root skipped. Five unsafe-target/opt-in probes refused before pg import without sentinel-value disclosure. The actual committed pilot-policy helper reproduces its pinned hash. The local unit tests use fake database connections; no local PostgreSQL or SDK/client/session acceptance is claimed.
+
+The existing PostgreSQL 16/18 workflow additionally runs a seven-subtest disposable database fixture. It uses the actual pilot policy and replacement services with a generated restricted login, applies migrations 001-007 and 009 in a generated schema, and checks owner binding, target/actor denial before checkout, reader survival after fixture audit deletion, legacy/wrong-owner denial, duplicate races, real audit-failure rollback/retry and clearing/non-restoration after a status transition. Fixture audit append/sequence grants are disposable only. This is not execution of the retention executor or the final personal-acknowledgment transaction; that transaction is still on the old reader. All database results for this new fixture await CI.
+
+Next: add and test fail-closed schema/trigger/column-privilege readiness, wire all status/session/submission callers to the new pair consistently, and update relevant mocks/database fixtures. Verify actual personal submission after audit cleanup, concurrency and rollback before declaring the dependency resolved. No production SQL, grant, backfill, reissue, environment change, entry publication, merge, deployment or pilot activation is authorized.
