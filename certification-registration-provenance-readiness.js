@@ -25,7 +25,7 @@ function constraintMatches(value){
   }catch{return false;}
 }
 export const registrationProvenanceReadinessSql=`SELECT
-  pg_catalog.current_database()=$3 AND current_user=$2 AND session_user=$2
+  pg_catalog.current_database()::pg_catalog.text=$3::pg_catalog.text AND current_user::pg_catalog.text=$2::pg_catalog.text AND session_user::pg_catalog.text=$2::pg_catalog.text
     AND pg_catalog.current_setting('session_replication_role')='origin' AS identity_ok,
   NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles r WHERE pg_catalog.pg_has_role(current_user,r.oid,'MEMBER') AND
     (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls)) AS restricted_role,
@@ -63,7 +63,7 @@ export const registrationProvenanceReadinessSql=`SELECT
       WHERE pg_catalog.has_column_privilege(current_user,c.oid,x.name,'INSERT') OR pg_catalog.has_column_privilege(current_user,c.oid,x.name,'UPDATE')) AS enrollment_limits,
   NOT EXISTS(SELECT 1 FROM pg_catalog.unnest(ARRAY['actor_discord_user_id','subject_discord_user_id','action','details']) x(name)
     WHERE NOT pg_catalog.has_column_privilege(current_user,d.oid,x.name,'INSERT'))
-    AND pg_catalog.has_sequence_privilege(current_user,pg_catalog.pg_get_serial_sequence(pg_catalog.format('%I.%I',$1,'certification_audit_events'),'event_id'),'USAGE') AS can_append_audit,
+    AND pg_catalog.has_sequence_privilege(current_user,pg_catalog.pg_get_serial_sequence(pg_catalog.format('%I.%I',$1::pg_catalog.text,'certification_audit_events'),'event_id'),'USAGE') AS can_append_audit,
   NOT pg_catalog.has_any_column_privilege(current_user,d.oid,'UPDATE') AND NOT pg_catalog.has_table_privilege(current_user,d.oid,'DELETE,TRUNCATE,TRIGGER') AS audit_limits
   FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
   JOIN pg_catalog.pg_class d ON d.relnamespace=c.relnamespace AND d.relname='certification_audit_events'
@@ -71,7 +71,7 @@ export const registrationProvenanceReadinessSql=`SELECT
   LEFT JOIN pg_catalog.pg_constraint k ON k.conrelid=c.oid AND k.conname='certification_active_registration_owner'
   LEFT JOIN pg_catalog.pg_trigger t ON t.tgrelid=c.oid AND t.tgname='certification_registration_provenance_guard'
   LEFT JOIN pg_catalog.pg_proc p ON p.oid=t.tgfoid
-  WHERE n.nspname=$1 AND c.relname='certification_enrollments'`;
+  WHERE n.nspname::pg_catalog.text=$1::pg_catalog.text AND c.relname='certification_enrollments'`;
 const flags=['identity_ok','restricted_role','table_shape','audit_shape','non_owner','schema_limits','column_shape','constraint_validated','trigger_shape','function_shape','trigger_set','can_read_invitation','can_register','can_submit','enrollment_limits','can_append_audit','audit_limits'];
 export async function validateRegistrationProvenance(pool,{schema,expectedRole,expectedDatabase}={}){
   if([schema,expectedRole,expectedDatabase].some(v=>typeof v!=='string'||!/^[a-z_][a-z0-9_]{0,62}$/.test(v)))throw new Error('Explicit expected provenance database, role and schema required');
