@@ -62,6 +62,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);
       if (pilot.enabled && detached) return;
       await validateActiveEnrollmentAgreement(database, config);
+      if (detached) return;
       if (typeof route.initialize === 'function') await route.initialize();
       if (detached) return;
       const guild = await client.guilds.fetch(guildId);

@@ -54,6 +54,8 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Check regression syntax
-        run: node --check test-certification-pilot-runtime-readiness.mjs
+        run: |
+          node --check test-certification-pilot-runtime-readiness.mjs
+          node --check test-certification-runtime-agreement-detach.mjs
       - name: Run VM and dedicated public-schema readiness regression
-        run: node --test test-certification-pilot-runtime-readiness.mjs
+        run: node --test test-certification-pilot-runtime-readiness.mjs test-certification-runtime-agreement-detach.mjs
