@@ -1,0 +1,128 @@
+name: Manual-review PostgreSQL 16 diagnosis
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'certification-**'
+      - 'test-certification-**'
+      - 'migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/manual-review-pg16-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-review-pg16-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: manual-review-pg16-probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      context: ${{ steps.probe.outputs.context }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: manual_diagnostic_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U manual_diagnostic_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://manual_diagnostic_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Run existing tests with bounded failure output and credential-value redaction
+        id: probe
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, re, secrets, subprocess, sys, tempfile
+
+          def classify(stage, filename, text):
+              lines = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
+              line = int(lines[-1]) if lines else 0
+              codes = re.findall(r"\bcode:\s*['\"]([A-Z0-9_]{1,40})['\"]", text)
+              code = codes[0] if codes else 'unknown'
+              if not re.fullmatch(r'[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE', code):
+                  code = 'unknown'
+              return f'pg16_{stage}_L{line}_{code}'
+
+          def show_failure(stage, text):
+              for name in ['CERTIFICATION_TEST_DATABASE_URL', 'DATABASE_URL', 'DISCORD_TOKEN', 'GITHUB_TOKEN', 'GH_TOKEN']:
+                  value = os.environ.get(name)
+                  if value:
+                      text = text.replace(value, '[REDACTED]')
+              marker = secrets.token_hex(16)
+              print(f'::group::Failed {stage} fixture test output (bounded)', flush=True)
+              print(f'::stop-commands::{marker}', flush=True)
+              print(text[:65536], flush=True)
+              print(f'::{marker}::', flush=True)
+              print('::endgroup::', flush=True)
+
+          context = 'pg16_ready'
+          status = 0
+          for stage, filename in [
+              ('migration', 'test-certification-manual-review-postgres.mjs'),
+              ('native', 'test-certification-manual-review-native-postgres.mjs')
+          ]:
+              with tempfile.TemporaryFile() as output:
+                  try:
+                      result = subprocess.run(['node', '--test', filename], stdout=output, stderr=subprocess.STDOUT, timeout=120)
+                      if result.returncode == 0:
+                          continue
+                      output.seek(0)
+                      text = output.read(262144).decode('utf-8', errors='replace')
+                      show_failure(stage, text)
+                      context = classify(stage, filename, text)
+                  except subprocess.TimeoutExpired:
+                      output.seek(0)
+                      show_failure(stage, output.read(262144).decode('utf-8', errors='replace'))
+                      context = f'pg16_{stage}_timeout'
+                  status = 1
+                  break
+          assert re.fullmatch(r'pg16_(ready|(migration|native)_(timeout|L[0-9]{1,5}_(unknown|[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE)))', context)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + chr(10))
+          print(context)
+          sys.exit(status)
+          PY
+
+  context:
+    name: manual-review-pg16-diagnostic (${{ needs.probe.outputs.context || 'missing' }})
+    needs: probe
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Preserve the probe result
+        env:
+          CONTEXT: ${{ needs.probe.outputs.context }}
+          RESULT: ${{ needs.probe.result }}
+        run: |
+          test -n "$CONTEXT"
+          test "$RESULT" = success

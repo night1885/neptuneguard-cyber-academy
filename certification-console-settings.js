@@ -1,3 +1,4 @@
+import { ownerCurrentQuestionGuide } from './certification-manual-review-owner-guide.mjs';
 const safe = value => String(value ?? 'Not configured').replace(/[`*_~|<>]/g, '').slice(0, 100);
 
 export async function handleConsoleSettings(interaction, config, guildId) {
@@ -19,7 +20,8 @@ export async function handleConsoleSettings(interaction, config, guildId) {
         { name: 'Active agreement version', value: safe(config.activeAgreementVersion), inline: true },
         { name: 'Comprehension check version', value: safe(config.comprehensionCheck?.version), inline: true },
         { name: 'Operational boundaries', value: 'Enrollment approval does not grant lab access or issue a certificate. Revoking lab authorization does not terminate a running provider session. This screen does not test database credentials or provider health.' }
-      ], footer: { text: 'Admin-only • Read-only • No environment changes' } }],
+      ], footer: { text: 'Admin-only • Read-only • No environment changes' } },
+      ...(config.manualReviewEnabled === true ? [ownerCurrentQuestionGuide(config, interaction.user.id, interaction.guildId, guildId)] : [])],
     components: [{ type: 1, components: [
       { type: 2, style: 2, custom_id: 'cert:admin:overview:0', label: 'Overview' },
       { type: 2, style: 2, custom_id: 'cert:console:settings', label: 'Refresh configuration' },

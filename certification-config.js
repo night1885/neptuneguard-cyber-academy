@@ -8,8 +8,16 @@ export function loadCertificationConfig(env = process.env) {
   const flag = env.CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED;
   if (flag !== undefined && flag !== 'true' && flag !== 'false') throw new Error('Invalid enrollment submission flag');
   const enrollmentSubmissionEnabled = flag === 'true';
-  const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled };
+  const manualFlag = env.CERTIFICATION_MANUAL_REVIEW_ENABLED;
+  if (manualFlag !== undefined && manualFlag !== 'true' && manualFlag !== 'false') throw new Error('Invalid manual-review flag');
+  const manualReviewEnabled = manualFlag === 'true';
+  const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled,
+    ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}) };
   const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
+  if (manualReviewEnabled && (!enabled || raw === undefined)) throw new Error('Manual review requires enabled certification and an enrollment manifest');
+  if (manualReviewEnabled && (env.CERTIFICATION_REGISTRATION_PILOT !== 'true' || flag !== 'false')) {
+    throw new Error('Manual review currently requires the registration pilot and explicitly disabled general enrollment');
+  }
   if (!enrollmentSubmissionEnabled && (!enabled || raw === undefined)) return Object.freeze(base);
   if (!enabled) throw new Error('Certification must be enabled before submission configuration');
   if (typeof raw !== 'string' || raw.length > 12000) throw new Error('Valid enrollment manifest required');

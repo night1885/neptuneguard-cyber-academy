@@ -4,6 +4,7 @@ import { createOwnerRegistrationHandler } from './certification-owner-registrati
 import { createInvitationInteractionHandler } from './certification-invitation-interactions.js';
 import { createProvenanceOwnerRegistrationService,createProvenanceInvitationReader } from './certification-registration-provenance.js';
 import { createProvenanceInvitedSubmission } from './certification-provenance-submission.js';
+import { createManualReviewInvitationHandler } from './certification-manual-review-invitation.mjs';
 // Named native factories keep the runtime dependency interface stable; their backends are pinned.
 export function createProvenanceOwnerRegistrationHandler(pool,config,guildId){
   const policy=registrationPilotPolicy(config);
@@ -12,6 +13,7 @@ export function createProvenanceOwnerRegistrationHandler(pool,config,guildId){
   return async interaction=>policy.classify(interaction)==='registration'?native(interaction):false;
 }
 export function createProvenanceInvitationHandler(pool,config,guildId){
+  if(config.manualReviewEnabled===true)return createManualReviewInvitationHandler(pool,config,guildId);
   return createInvitationInteractionHandler(pool,config,guildId,{createSubmissionService:createProvenanceInvitedSubmission,createInvitationReader:createProvenanceInvitationReader});
 }
 export function createProvenancePilotHandlers({readPool,writePool,config,guildId,createRegistration,createInvitation}={}){

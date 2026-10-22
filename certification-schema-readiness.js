@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { validateManualReviewReadiness } from './certification-manual-review-readiness.mjs';
 
 export const requiredEnrollmentColumns = Object.freeze(['discord_user_id', 'student_id', 'status',
   'agreement_version', 'acknowledgment_name', 'agreement_content_sha256', 'comprehension_check_version',
@@ -31,6 +32,10 @@ export async function validateCertificationSchema(pool) {
 }
 
 export async function validateActiveEnrollmentAgreement(pool, config) {
+  if (config.manualReviewEnabled === true) {
+    if (!config.activeAgreementVersion) throw new Error('Manual review requires an active enrollment agreement');
+    await validateManualReviewReadiness(pool);
+  }
   if (!config.enrollmentSubmissionEnabled && !config.activeAgreementVersion) return;
   const row = (await pool.query('SELECT content, content_sha256 FROM certification_agreements WHERE version=$1', [config.activeAgreementVersion])).rows[0];
   if (!row || typeof row.content !== 'string' || row.content.length > 60000 ||

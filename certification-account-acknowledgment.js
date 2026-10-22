@@ -1,6 +1,10 @@
 import { AGE_DECLARATION_VERSION } from './certification-age-declaration.js';
+import { hasManualReviewAcknowledgment } from './certification-manual-review-data.mjs';
 
 export function hasCompleteAccountAcknowledgment(record) {
+  if (record?.comprehension_submitted_at != null || record?.comprehension_review_snapshot != null) {
+    return hasManualReviewAcknowledgment(record);
+  }
   return Boolean(record &&
     typeof record.discord_user_id === 'string' && /^\d{17,20}$/.test(record.discord_user_id) &&
     record.signature_method === 'discord_account' &&
