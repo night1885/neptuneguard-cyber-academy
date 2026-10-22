@@ -3,6 +3,7 @@ import { buildAdminNavigation } from './certification-admin-navigation.js';
 import { buildAccessControls } from './certification-access-actions.js';
 import { formatAuditAction } from './certification-console-browser.js';
 import { evaluateCourseAccessReadiness } from './certification-access-readiness.js';
+import { ownerManualReviewEmbed } from './certification-manual-review-data.mjs';
 const safe = (value, max = 100) => String(value ?? 'Not recorded').replace(/[`*_~|<>@]/g, '').slice(0, max);
 const stamp = value => value instanceof Date ? value.toISOString() : safe(value);
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
@@ -21,11 +22,20 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
   const studentId = (detail || timeline)[1];
   await interaction.deferReply({ flags: 64 });
   const components = [buildAdminNavigation('students')];
+  const extraEmbeds = [];
   const embed = new EmbedBuilder().setColor(0x3498db).setFooter({ text: 'Admin-only • Inspection is read-only • Separate confirmations for access changes' });
   if (detail) {
     const result = await pool.query('SELECT discord_user_id, student_id, status, agreement_version, agreement_content_sha256, acknowledgment_name, signature_reference, signature_method, acknowledged_at, learner_confirmed_read_at, comprehension_passed_at, comprehension_check_version, age_eligible, age_declared_at, age_declaration_version, approved_by, approved_at, status_reason, created_at, updated_at FROM certification_enrollments WHERE discord_user_id=$1', [studentId]);
     const record = result.rows[0];
     if (!record) { await interaction.editReply({ content: 'Student record not found.', embeds: [], components, allowedMentions: { parse: [] } }); return true; }
+    if (config.manualReviewEnabled === true) {
+      const review = (await pool.query('SELECT comprehension_submitted_at, comprehension_review_snapshot FROM certification_enrollments WHERE discord_user_id=$1', [studentId])).rows[0];
+      if (!review) throw new Error('Student record changed during inspection');
+      Object.assign(record, review);
+      if (review.comprehension_review_snapshot != null) {
+        extraEmbeds.push(ownerManualReviewEmbed(review.comprehension_review_snapshot, config, interaction.user.id, interaction.guildId, guildId));
+      }
+    }
     const labs = (await pool.query(`SELECT COUNT(*) AS total,
       COUNT(*) FILTER (WHERE status='pending') AS pending,
       COUNT(*) FILTER (WHERE status='approved') AS approved,
@@ -39,7 +49,9 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
     embed.setTitle('Student access record').setDescription(`Discord ID: ${studentId}\nPermanent ID: ${safe(record.student_id)}\nStored status: ${safe(record.status)}\n\nRecorded declarations are not independent identity or age verification. This view does not grant lab access or issue a certificate.`).addFields(
       { name: 'Course access readiness', value: `Course access checks: ${readiness.authorized ? 'Passed' : 'Blocked'}\nPending record ready for approval: ${readiness.readyForApproval ? 'Yes' : 'No'}\n${readiness.blockers.length ? readiness.blockers.join('\n') : 'No course-access blockers found.'}\nInspection does not change access or approve enrollment.` },
       { name: 'Agreement acknowledgment', value: `Version: ${safe(record.agreement_version)}\nMethod: ${safe(record.signature_method)}\nAcknowledged: ${stamp(record.acknowledged_at)}\nLearner-confirmed reading: ${stamp(record.learner_confirmed_read_at)}` },
-      { name: 'Comprehension record', value: `Check version: ${safe(record.comprehension_check_version)}\nPassed at: ${stamp(record.comprehension_passed_at)}`, inline: true },
+      { name: 'Comprehension record', value: config.manualReviewEnabled === true && record.comprehension_submitted_at
+        ? `Check version: ${safe(record.comprehension_check_version)}\nSubmitted for owner review: ${stamp(record.comprehension_submitted_at)}\nNo automatic comprehension pass recorded.`
+        : `Check version: ${safe(record.comprehension_check_version)}\nPassed at: ${stamp(record.comprehension_passed_at)}`, inline: true },
       { name: 'Self-declared age eligibility', value: `Age 18+: ${record.age_eligible === true ? 'Yes' : record.age_eligible === false ? 'No' : 'Not recorded'}\nDeclaration version: ${safe(record.age_declaration_version)}\nDeclared at: ${stamp(record.age_declared_at)}`, inline: true },
       { name: 'Approval record', value: `Approved by: ${safe(record.approved_by)}\nApproved at: ${stamp(record.approved_at)}` },
       { name: 'Record chronology', value: `Created: ${stamp(record.created_at)}\nUpdated: ${stamp(record.updated_at)}` },
@@ -62,6 +74,6 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
       button(page === 10000 ? 'cert:noop:student-audit:next' : `cert:student-audit:${studentId}:${page + 1}`, 'Next', result.rows.length <= 5 || page === 10000)
     ));
   }
-  await interaction.editReply({ content: '', embeds: [embed], components, allowedMentions: { parse: [] } });
+  await interaction.editReply({ content: '', embeds: [embed, ...extraEmbeds], components, allowedMentions: { parse: [] } });
   return true;
 }
