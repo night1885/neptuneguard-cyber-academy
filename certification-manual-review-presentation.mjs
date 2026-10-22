@@ -10,7 +10,7 @@ export function buildManualReviewModal(token, config) {
     field('read', 'Agreement acknowledgment', 'Type AGREE only if you have read and agree to the agreement.', 5),
     ...questions.map((question, index) => field(`answer${index}`,
       question.prompt.length <= 45 ? question.prompt : `Comprehension question ${index + 1}`,
-      question.prompt, 100, 2))
+      question.prompt.length <= 100 ? question.prompt : `Answer question ${index + 1} from the application message in your own words.`, 100, 2))
   ] };
 }
 export function buildManualQuestionEmbed(config) {

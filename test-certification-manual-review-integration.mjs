@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { ModalBuilder } from 'discord.js';
 import { createManualReviewSnapshot, hasManualReviewAcknowledgment, ownerManualReviewEmbed } from './certification-manual-review-data.mjs';
 import { createManualReviewSubmission } from './certification-manual-review-submission.mjs';
 import { buildManualReviewModal, buildManualQuestionEmbed } from './certification-manual-review-presentation.mjs';
@@ -95,12 +96,12 @@ test('owner view includes response and guide, but unauthorized actors receive ne
   assert.throws(() => ownerManualReviewEmbed(snapshot, config, student, guild, guild), /Owner authorization/);
   assert.throws(() => ownerManualReviewEmbed(snapshot, config, owner, '444444444444444444', guild), /Owner authorization/);
 });
-test('long questions are present in full in the form, never replaced with answer-as-instructed', () => {
+test('long questions remain complete in the application message with a short modal reference', () => {
   const question = 'Q'.repeat(300);
   const settings = { ...config, comprehensionCheck: { ...config.comprehensionCheck,
     questions: [{ prompt: question }], correctAnswers: ['PRIVATE_GUIDE'] } };
   const modal = buildManualReviewModal('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', settings);
-  assert.equal(modal.components[2].description, question);
+  assert.equal(modal.components[2].description, 'Answer question 1 from the application message in your own words.');
   assert.equal(modal.components[2].component.custom_id, 'answer0');
   assert.doesNotMatch(JSON.stringify(modal), /PRIVATE_GUIDE|as instructed/);
   assert.equal(buildManualQuestionEmbed(settings).fields[0].value, question);
@@ -114,4 +115,29 @@ test('pending record missing required declarations is not treated as submitted',
   const service = createManualReviewSubmission(f.pool, config, f.options);
   await assert.rejects(service.submitInvitedEnrollment(student, input), /owner review/);
   assert.equal(f.queries.some(q => q.sql.startsWith('UPDATE')), false);
+});
+for (const length of [1, 45, 46, 99, 100, 101, 300]) test(`manual-review modal passes SDK validation at prompt length ${length}`, () => {
+  const questions = [1, 2, 3].map(() => ({ prompt: 'Q'.repeat(length) }));
+  const settings = { ...config, comprehensionCheck: { ...config.comprehensionCheck, questions } };
+  const modal = buildManualReviewModal('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', settings);
+  assert.equal(modal.components.length, 5);
+  modal.components.forEach(field => {
+    assert.ok(field.label.length <= 45);
+    assert.ok(field.description.length <= 100);
+  });
+  questions.forEach((question, index) => {
+    const field = modal.components[index + 2];
+    assert.equal(field.component.custom_id, `answer${index}`);
+    assert.equal(field.component.style, 2);
+    assert.equal(field.component.required, true);
+    assert.equal(field.component.max_length, 100);
+    assert.equal(buildManualQuestionEmbed(settings).fields[index].value, question.prompt);
+    if (length <= 100) assert.equal(field.description, question.prompt);
+  });
+  assert.doesNotThrow(() => new ModalBuilder(modal).toJSON());
+});
+test('SDK validation rejects the oversized description used by the old modal', () => {
+  const modal = buildManualReviewModal('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', config);
+  modal.components[2].description = 'Q'.repeat(101);
+  assert.throws(() => new ModalBuilder(modal).toJSON());
 });
