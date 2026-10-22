@@ -17,6 +17,13 @@ const migrations=['001-certification.sql','002-typed-acknowledgment.sql','003-en
 const owner='1'.repeat(18),student='2'.repeat(18),other='6'.repeat(18),outsider='5'.repeat(18),guild='3'.repeat(18),channel='4'.repeat(18);
 const prompt='Explain the permission required before starting an authorized training lab.';
 const guide='PRIVATE REVIEW GUIDE FIXTURE',response='Learner response fixture unmatched';
+const updates=Object.freeze([...registrationAcknowledgmentUpdateColumns,'comprehension_submitted_at','comprehension_review_snapshot']);
+const columnIdentifier=key=>typeof key==='string'&&/^[a-z_][a-z0-9_]{0,62}$/.test(key);
+test('native fixture admits reviewed digit-containing columns and rejects unsafe identifiers',()=>{
+  assert.ok(updates.every(columnIdentifier));
+  assert.ok(columnIdentifier('agreement_content_sha256'));
+  for(const value of ['',null,'2column','name;DROP TABLE x','public.column','name,other','name WITH GRANT OPTION','name--comment','name\\nother','x'.repeat(64)])assert.equal(columnIdentifier(value),false);
+});
 const controls=i=>i.messages.at(-1)?.components?.flatMap(row=>row.components)||[];
 test('native manual-review invitation, submission and private owner inspection with real PostgreSQL',
   {skip:!databaseUrl||!enabled,timeout:90000},async()=>{
@@ -70,8 +77,7 @@ test('native manual-review invitation, submission and private owner inspection w
     await db.query(`GRANT SELECT ON public.certification_enrollments,public.certification_agreements,public.certification_lab_requests,public.certification_course_enrollments TO "${role}"`);
     await db.query(`GRANT UPDATE(version) ON public.certification_agreements TO "${role}"`);
     await db.query(`GRANT INSERT(discord_user_id,status,registration_owner_id) ON public.certification_enrollments TO "${role}"`);
-    const updates=[...registrationAcknowledgmentUpdateColumns,'comprehension_submitted_at','comprehension_review_snapshot'];
-    assert.ok(updates.every(key=>/^[a-z_]+$/.test(key)));
+    assert.ok(updates.every(columnIdentifier));
     await db.query(`GRANT UPDATE(${updates.join(',')}) ON public.certification_enrollments TO "${role}"`);
     await db.query(`GRANT INSERT(actor_discord_user_id,subject_discord_user_id,action,details) ON public.certification_audit_events TO "${role}"`);
     await db.query(`GRANT USAGE ON SEQUENCE public.certification_audit_events_event_id_seq TO "${role}"`);
