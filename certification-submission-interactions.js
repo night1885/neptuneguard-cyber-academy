@@ -1,3 +1,4 @@
+import { createSubmissionDiagnostic, submissionFailureReference } from './certification-submission-diagnostics.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createCertificationSubmission } from './certification-submission.js';
@@ -43,6 +44,7 @@ export function createCertificationSubmissionHandler(pool, config, guildId, { in
         new ButtonBuilder().setCustomId(`cert:submit:cancel:${token}`).setLabel('Cancel').setStyle(ButtonStyle.Secondary));
       await respond({ content: `Agreement ${version} — page ${record.page + 1}/${record.pages.length}\n\n${record.pages[record.page]}`, components: [controls] });
     };
+    const diagnostic = createSubmissionDiagnostic();
     try {
       if (interaction.customId === 'cert:submit:start' && interaction.isButton()) {
         await interaction.deferReply({ flags: 64 });
@@ -84,23 +86,28 @@ export function createCertificationSubmissionHandler(pool, config, guildId, { in
       if (action === 'send' && interaction.isModalSubmit() && record.stage === 'form') {
         sessions.delete(token);
         await interaction.deferReply({ flags: 64 });
+        diagnostic.setStage('age_declaration');
         const ageEligibility = interaction.fields.getTextInputValue('age').toLowerCase();
         if (ageEligibility === 'no') { await respond({ content: 'Enrollment requires age 18 or older. No enrollment record was submitted.' }); return true; }
         validateAgeDeclaration({ ageEligibility });
+        diagnostic.setStage('acknowledgment_validation');
         const accepted = interaction.fields.getTextInputValue('read') === 'AGREE';
         const submit = invitedOnly ? service.submitInvitedEnrollment : service.submitEnrollment;
+        diagnostic.setStage('submission_validation');
         const result = await submit(interaction.user.id, {
           ageEligibility, acknowledgmentAccepted: accepted, confirmedRead: accepted,
           agreementVersion: version, agreementSha256: hash, comprehensionCheckVersion: checkVersion,
           answers: prompts.map((_, i) => interaction.fields.getTextInputValue(`answer${i}`))
         });
+        diagnostic.setStage('interaction');
         await respond({ content: `${result.alreadySubmitted ? 'Your matching request is already pending.' : 'Enrollment request submitted for admin review.'} No student ID, course access, lab permission, or certificate was issued by this submission.` }); return true;
       }
       await respond({ content: 'Invalid session action. Start again if the form is no longer available.' }); return true;
-    } catch {
+    } catch (error) {
+      const correlationId = submissionFailureReference(error) || diagnostic.report(error);
       const token = /^cert:submit:[a-z]+:([a-f0-9-]{36})$/.exec(interaction.customId)?.[1];
       if (token) sessions.delete(token);
-      await respond({ content: 'The submission could not be completed. If you already submitted, check with the admin before retrying. Otherwise start again and confirm the agreement, age eligibility, and answers. No automatic access is granted.' });
+      await respond({ content: 'The submission could not be completed. If you already submitted, check with the admin before retrying. Otherwise start again and confirm the agreement, age eligibility, and answers. No automatic access is granted. Reference: ' + correlationId });
       return true;
     }
   };
