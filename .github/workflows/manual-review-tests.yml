@@ -67,3 +67,5 @@ jobs:
           for file in certification-manual-review*.mjs test-certification-manual-review*.mjs; do node --check "$file" || exit 1; done
       - name: Run exact migration and invalid-state acceptance in a fresh disposable database
         run: node --test test-certification-manual-review-postgres.mjs
+      - name: Run native pilot submission and private owner inspection with simulated Discord and real PostgreSQL
+        run: node --test test-certification-manual-review-native-postgres.mjs
