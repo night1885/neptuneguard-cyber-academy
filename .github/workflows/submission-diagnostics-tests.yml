@@ -1,0 +1,41 @@
+name: Submission diagnostics tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: submission-diagnostics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  submission-diagnostics-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Check diagnostic module and integration syntax
+        run: |
+          node --check certification-submission-diagnostics.mjs
+          node --check certification-submission.js
+          node --check certification-submission-interactions.js
+          node --check certification-submission-diagnostics.test.mjs
+          node --check certification-submission-diagnostics-integration.test.mjs
+      - name: Run diagnostic tests with installed discord.js
+        run: node --test certification-submission-diagnostics.test.mjs certification-submission-diagnostics-integration.test.mjs
