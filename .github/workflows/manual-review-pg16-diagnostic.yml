@@ -56,14 +56,13 @@ jobs:
           cache: npm
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
-      - name: Run existing tests and expose only bounded failure metadata
+      - name: Run existing tests with bounded failure output and credential-value redaction
         id: probe
         shell: bash
         run: |
           python3 - <<'PY'
-          import os, re, subprocess, sys, tempfile
-          from pathlib import Path
-          
+          import os, re, secrets, subprocess, sys, tempfile
+
           def classify(stage, filename, text):
               lines = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
               line = int(lines[-1]) if lines else 0
@@ -72,7 +71,19 @@ jobs:
               if not re.fullmatch(r'[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE', code):
                   code = 'unknown'
               return f'pg16_{stage}_L{line}_{code}'
-          
+
+          def show_failure(stage, text):
+              for name in ['CERTIFICATION_TEST_DATABASE_URL', 'DATABASE_URL', 'DISCORD_TOKEN', 'GITHUB_TOKEN', 'GH_TOKEN']:
+                  value = os.environ.get(name)
+                  if value:
+                      text = text.replace(value, '[REDACTED]')
+              marker = secrets.token_hex(16)
+              print(f'::group::Failed {stage} fixture test output (bounded)', flush=True)
+              print(f'::stop-commands::{marker}', flush=True)
+              print(text[:65536], flush=True)
+              print(f'::{marker}::', flush=True)
+              print('::endgroup::', flush=True)
+
           context = 'pg16_ready'
           status = 0
           for stage, filename in [
@@ -86,8 +97,11 @@ jobs:
                           continue
                       output.seek(0)
                       text = output.read(262144).decode('utf-8', errors='replace')
+                      show_failure(stage, text)
                       context = classify(stage, filename, text)
                   except subprocess.TimeoutExpired:
+                      output.seek(0)
+                      show_failure(stage, output.read(262144).decode('utf-8', errors='replace'))
                       context = f'pg16_{stage}_timeout'
                   status = 1
                   break
@@ -105,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
-      - name: Preserve the probe result without exposing raw output
+      - name: Preserve the probe result
         env:
           CONTEXT: ${{ needs.probe.outputs.context }}
           RESULT: ${{ needs.probe.result }}
