@@ -19,11 +19,11 @@ AS $function$
           jsonb_typeof(item->'question') IS DISTINCT FROM 'string'
           OR jsonb_typeof(item->'response') IS DISTINCT FROM 'string'
           OR jsonb_typeof(item->'expectedAnswer') IS DISTINCT FROM 'string'
-          OR COALESCE(char_length(btrim(item->>'question')),0) < 1
+          OR COALESCE(char_length(btrim(item->>'question', U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')),0) < 1
           OR char_length(item->>'question') > 300
-          OR COALESCE(char_length(btrim(item->>'response')),0) < 1
+          OR COALESCE(char_length(btrim(item->>'response', U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')),0) < 1
           OR char_length(item->>'response') > 100
-          OR COALESCE(char_length(btrim(item->>'expectedAnswer')),0) < 1
+          OR COALESCE(char_length(btrim(item->>'expectedAnswer', U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')),0) < 1
           OR char_length(item->>'expectedAnswer') > 100
           OR item - ARRAY['question','response','expectedAnswer']::text[] <> '{}'::jsonb
         END

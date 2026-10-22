@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID,createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import pg from 'pg';
+import { createManualReviewSnapshot } from './certification-manual-review-data.mjs';
+const databaseUrl=process.env.CERTIFICATION_TEST_DATABASE_URL;
+const enabled=process.env.CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL==='true';
+const migrations=['001-certification.sql','002-typed-acknowledgment.sql','003-enrollment-submission-metadata.sql','004-immutable-agreement-versions.sql','005-account-acknowledgment-age.sql','006-application-closure-metadata.sql','007-course-enrollment-lifecycle.sql','008-lab-status-reason.sql','009-active-registration-provenance.sql'];
+test('exact manual-review migration preserves legacy records and rejects invalid states',{skip:!databaseUrl||!enabled,timeout:90000},async()=>{
+  const url=new URL(databaseUrl);
+  assert.ok(['postgres:','postgresql:'].includes(url.protocol));
+  assert.ok(['localhost','127.0.0.1','[::1]'].includes(url.hostname));
+  assert.equal(url.pathname,'/certification_test');assert.equal(url.search,'');assert.equal(url.hash,'');
+  const admin=new pg.Pool({connectionString:databaseUrl,max:1,connectionTimeoutMillis:5000});
+  const name=`cert_manual_review_${randomUUID().replaceAll('-','')}`;
+  assert.match(name,/^cert_manual_review_[a-f0-9]{32}$/);
+  let created=false,pool;
+  try{
+    assert.equal((await admin.query('SELECT current_database() AS name')).rows[0].name,'certification_test');
+    await admin.query(`CREATE DATABASE "${name}" TEMPLATE template0`);created=true;
+    url.pathname=`/${name}`;
+    pool=new pg.Pool({connectionString:url.href,max:1,connectionTimeoutMillis:5000,options:'-c search_path=public -c statement_timeout=15000 -c lock_timeout=5000'});
+    assert.equal((await pool.query('SELECT current_database() AS name')).rows[0].name,name);
+    for(const file of migrations)await pool.query(await readFile(new URL(`./migrations/${file}`,import.meta.url),'utf8'));
+    const content='Disposable manual-review agreement fixture.',hash=createHash('sha256').update(content).digest('hex'),now='2026-10-22T12:00:00Z';
+    await pool.query('INSERT INTO certification_agreements(version,content,content_sha256) VALUES($1,$2,$3)',['fixture-v1',content,hash]);
+    await pool.query(`INSERT INTO certification_enrollments(discord_user_id,status,signature_method,agreement_version,agreement_content_sha256,acknowledged_at,learner_confirmed_read_at,comprehension_passed_at,comprehension_check_version,age_eligible,age_declared_at,age_declaration_version) VALUES('111111111111111111','pending','discord_account','fixture-v1',$1,$2,$2,$2,'check-v1',true,$2,'adult-18-v1')`,[hash,now]);
+    await pool.query("INSERT INTO certification_enrollments(discord_user_id,status,registration_owner_id) VALUES('111111111111111112','awaiting_acknowledgment','222222222222222222')");
+    const before=(await pool.query('SELECT to_jsonb(e) AS record FROM certification_enrollments e ORDER BY discord_user_id')).rows;
+    const aclSql="SELECT relacl::text AS acl FROM pg_class WHERE oid='public.certification_enrollments'::regclass",acl=(await pool.query(aclSql)).rows;
+    await pool.query(await readFile(new URL('./migrations/010-manual-review-enrollment.sql',import.meta.url),'utf8'));
+    assert.deepEqual((await pool.query("SELECT to_jsonb(e)-'comprehension_submitted_at'-'comprehension_review_snapshot' AS record FROM certification_enrollments e ORDER BY discord_user_id")).rows,before);
+    assert.deepEqual((await pool.query(aclSql)).rows,acl);
+    assert.equal(Number((await pool.query('SELECT count(*) AS n FROM certification_enrollments WHERE comprehension_submitted_at IS NOT NULL OR comprehension_review_snapshot IS NOT NULL')).rows[0].n),0);
+    const constraints=(await pool.query("SELECT convalidated FROM pg_constraint WHERE conrelid='public.certification_enrollments'::regclass AND conname=ANY($1::text[])",[['certification_manual_review_snapshot_complete','certification_account_acknowledgment_required']])).rows;
+    assert.equal(constraints.length,2);assert.ok(constraints.every(row=>row.convalidated===true));
+    assert.deepEqual((await pool.query("SELECT prosecdef,provolatile,proparallel,proconfig FROM pg_proc WHERE oid='public.certification_valid_manual_review_snapshot(jsonb)'::regprocedure")).rows[0],{prosecdef:false,provolatile:'i',proparallel:'s',proconfig:['search_path=pg_catalog']});
+    const snapshot=createManualReviewSnapshot({comprehensionCheck:{version:'check-v1',questions:[{prompt:'Fixture question?'}],correctAnswers:['Expected fixture answer']}},['Different learner response']);
+    const columns=['discord_user_id','status','signature_method','agreement_version','agreement_content_sha256','acknowledged_at','learner_confirmed_read_at','comprehension_passed_at','comprehension_check_version','age_eligible','age_declared_at','age_declaration_version','comprehension_submitted_at','comprehension_review_snapshot'];
+    const base=[null,'pending','discord_account','fixture-v1',hash,now,now,null,'check-v1',true,now,'adult-18-v1',now,snapshot];let next=111111111111111113n;
+    const insert=(index=-1,value=null)=>{const values=[...base];values[0]=String(next++);if(index>=0)values[index]=value;return pool.query(`INSERT INTO certification_enrollments(${columns.join(',')}) VALUES(${columns.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`,values);};
+    const row=(await insert()).rows[0];assert.equal(row.status,'pending');assert.deepEqual(row.comprehension_review_snapshot,snapshot);
+    for(const field of ['comprehension_passed_at','student_id','approved_by','approved_at'])assert.equal(row[field],null);
+    for(const [index,value] of [[12,null],[13,null],[7,now],[8,'other-v1'],[8,null],[6,null],[9,false],[10,null],[11,'unknown']])await assert.rejects(insert(index,value),error=>error.code==='23514');
+    const invalid=[null,[],{}, {...snapshot,extra:true},{...snapshot,items:[]},{...snapshot,items:Array(4).fill(snapshot.items[0])}];
+    for(const field of ['question','response','expectedAnswer'])for(const value of ['', '   ','\t\r\n','\u00a0\ufeff',null,42,'x'.repeat(field==='question'?301:101)])invalid.push({...snapshot,items:[{...snapshot.items[0],[field]:value}]});
+    invalid.push({...snapshot,items:[{...snapshot.items[0],extra:true}]});
+    for(const value of invalid){assert.equal((await pool.query('SELECT public.certification_valid_manual_review_snapshot($1::jsonb) AS valid',[JSON.stringify(value)])).rows[0].valid,false);await assert.rejects(insert(13,value),error=>error.code==='23514');}
+    assert.equal(Number((await pool.query('SELECT count(*) AS n FROM certification_enrollments')).rows[0].n),3);
+  }finally{try{if(pool)await pool.end();}finally{try{if(created)await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);}finally{await admin.end();}}}
+});

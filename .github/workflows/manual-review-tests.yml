@@ -1,0 +1,69 @@
+name: Manual-review migration acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'certification-**'
+      - 'test-certification-**'
+      - 'migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/manual-review-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-review-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  manual-review-postgres:
+    name: manual-review-migration (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: manual_review_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U manual_review_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://manual_review_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Require disposable database test configuration
+        run: |
+          test -n "$CERTIFICATION_TEST_DATABASE_URL"
+          test "$CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL" = true
+      - name: Check manual-review source and test syntax
+        run: |
+          for file in certification-manual-review*.mjs test-certification-manual-review*.mjs; do node --check "$file" || exit 1; done
+      - name: Run exact migration and invalid-state acceptance in a fresh disposable database
+        run: node --test test-certification-manual-review-postgres.mjs
