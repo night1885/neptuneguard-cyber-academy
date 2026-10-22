@@ -15,6 +15,9 @@ export function loadCertificationConfig(env = process.env) {
     ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}) };
   const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
   if (manualReviewEnabled && (!enabled || raw === undefined)) throw new Error('Manual review requires enabled certification and an enrollment manifest');
+  if (manualReviewEnabled && (env.CERTIFICATION_REGISTRATION_PILOT !== 'true' || flag !== 'false')) {
+    throw new Error('Manual review currently requires the registration pilot and explicitly disabled general enrollment');
+  }
   if (!enrollmentSubmissionEnabled && (!enabled || raw === undefined)) return Object.freeze(base);
   if (!enabled) throw new Error('Certification must be enabled before submission configuration');
   if (typeof raw !== 'string' || raw.length > 12000) throw new Error('Valid enrollment manifest required');
