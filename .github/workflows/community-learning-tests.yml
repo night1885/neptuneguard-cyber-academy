@@ -2,9 +2,9 @@ name: Community learning access policy
 on:
   push:
     branches: [community-learning-verified-linux]
-    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', 'course-registry.js', 'course-content.js', 'fundamentals-stage-*.js', 'linux-administration.js', 'linux-security-engineering.js', 'module-progress.js', 'certification-student-course-content.js', '.github/workflows/community-learning-tests.yml']
+    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', 'certification-restored-application.js', 'certification-database-*.js', 'course-registry.js', 'course-content.js', 'fundamentals-stage-*.js', 'linux-administration.js', 'linux-security-engineering.js', 'module-progress.js', 'certification-student-course-content.js', 'badge-pages.js', 'package*.json', '.github/workflows/community-learning-tests.yml']
   pull_request:
-    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', 'course-registry.js', 'course-content.js', 'fundamentals-stage-*.js', 'linux-administration.js', 'linux-security-engineering.js', 'module-progress.js', 'certification-student-course-content.js', '.github/workflows/community-learning-tests.yml']
+    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', 'certification-restored-application.js', 'certification-database-*.js', 'course-registry.js', 'course-content.js', 'fundamentals-stage-*.js', 'linux-administration.js', 'linux-security-engineering.js', 'module-progress.js', 'certification-student-course-content.js', 'badge-pages.js', 'package*.json', '.github/workflows/community-learning-tests.yml']
 permissions:
   contents: read
 jobs:
@@ -18,4 +18,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - run: npm ci
       - run: node --test test-community-learning-*.mjs
