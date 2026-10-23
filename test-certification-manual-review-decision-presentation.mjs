@@ -35,9 +35,15 @@ test('review screen is private, complete, and does not change the application', 
   const payload = ui().review(context, { record: row, reviewToken: token });
   validateReply(payload);
   assert.match(JSON.stringify(payload), /Awaiting owner review/);
-  assert.match(JSON.stringify(payload), /PRIVATE_RESPONSE/);
-  assert.match(JSON.stringify(payload), /PRIVATE_GUIDE/);
-  assert.equal(payload.embeds[1].fields[0].value, 'Q'.repeat(300));
+  const fields = payload.embeds[1].fields;
+  assert.equal(fields.length, 9);
+  for (let index = 0; index < 3; index++) {
+    assert.deepEqual(fields.slice(index * 3, index * 3 + 3), [
+      { name: `Question ${index + 1}`, value: 'Q'.repeat(300) },
+      { name: `Learner response ${index + 1}`, value: 'PRIVATE' + String.fromCharCode(92) + '_RESPONSE' },
+      { name: `Expected answer / guide ${index + 1}`, value: 'PRIVATE' + String.fromCharCode(92) + '_GUIDE' }
+    ]);
+  }
   assert.deepEqual(payload.components[0].components.map(value => value.label), ['Approve...', 'Deny...']);
   assert.deepEqual(row, before);
 });
