@@ -2,11 +2,35 @@ import assert from 'node:assert/strict';
 import { createManualReviewDecisionService } from './certification-manual-review-decisions.mjs';
 import { createManualReviewDecisionFlow } from './certification-manual-review-decision-flow.mjs';
 import { createManualReviewDecisionInteractionHandler } from './certification-manual-review-decision-interactions.mjs';
+import { validateManualReviewDecisionCapabilities } from './certification-manual-review-decision-capabilities.mjs';
 
 // Invoked only by the localhost-only disposable PostgreSQL acceptance fixture.
 // Discord transport is synthetic; the flow, guard, service, queries, locks, and audits are real.
 export async function runDecisionStackAcceptance({ t, app, db, config, guildId, owner, role, seed, read, audits, guide, response, setPhase }) {
   assert.match(role, /^cert_dec_[a-f0-9]{32}$/);
+  const target = { expectedRole: role, expectedDatabase: (await db.query('SELECT current_database() AS name')).rows[0].name };
+  await t.test('decision capability metadata accepts the exact restricted fixture login', async () => {
+    setPhase('capabilities:baseline');
+    assert.deepEqual(await validateManualReviewDecisionCapabilities(app, target), { ready: true });
+    await assert.rejects(validateManualReviewDecisionCapabilities(app, { ...target, expectedRole: 'wrong_fixture_role' }),
+      error => error.code === 'MANUAL_REVIEW_DECISION_CAPABILITY_CHECK_FAILED');
+  });
+  await t.test('decision capability metadata rejects missing approval update privilege', async () => {
+    setPhase('capabilities:missing-update');
+    await db.query(`REVOKE UPDATE(approved_at) ON public.certification_enrollments FROM "${role}"`);
+    try { await assert.rejects(validateManualReviewDecisionCapabilities(app, target)); }
+    finally { await db.query(`GRANT UPDATE(approved_at) ON public.certification_enrollments TO "${role}"`); }
+    assert.deepEqual(await validateManualReviewDecisionCapabilities(app, target), { ready: true });
+  });
+  for (const capability of ['UPDATE(comprehension_review_snapshot) ON public.certification_enrollments', 'SELECT ON public.certification_audit_events']) {
+    await t.test(`decision capability metadata rejects excessive ${capability}`, async () => {
+      setPhase('capabilities:excess');
+      await db.query(`GRANT ${capability} TO "${role}"`);
+      try { await assert.rejects(validateManualReviewDecisionCapabilities(app, target)); }
+      finally { await db.query(`REVOKE ${capability} FROM "${role}"`); }
+      assert.deepEqual(await validateManualReviewDecisionCapabilities(app, target), { ready: true });
+    });
+  }
   const scoped = { ...config, adminChannelId: '444444444444444444' };
   const escapedFixture = value => value.replaceAll('_', String.fromCharCode(92) + '_');
   function stack({ now = Date.now, ttlMs = 300000 } = {}) {
