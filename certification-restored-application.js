@@ -3,9 +3,11 @@ import { loadCertificationConfig } from './certification-config.js';
 import { attachCertificationRuntime } from './certification-runtime.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
 import { createRestorationRouter } from './certification-restoration-router.js';
+import { attachNativeCommunityRuntime } from './community-learning-startup.mjs';
 
 export function createRestoredCertificationApplication({ client, guildId, env = process.env, signals = process,
-  exit = code => process.exit(code), log = message => console.error(message), timeoutMs = 15000, attachRuntime = attachCertificationRuntime } = {}) {
+  exit = code => process.exit(code), log = message => console.error(message), timeoutMs = 15000, attachRuntime = attachCertificationRuntime,
+  attachCommunity = attachNativeCommunityRuntime } = {}) {
   const id = value => typeof value === 'string' && /^\d{17,20}$/.test(value);
   if (!id(guildId) || !id(env?.ACADEMY_OWNER_ID) || !id(env?.ACADEMY_ADMIN_CHANNEL_ID) || env.CERTIFICATION_ENABLED !== 'true') {
     throw new Error('Explicit restoration guild, admin, admin channel and certification enablement required');
@@ -16,13 +18,17 @@ export function createRestoredCertificationApplication({ client, guildId, env = 
   if (['on', 'off', 'once', 'isReady', 'login', 'destroy'].some(name => typeof client?.[name] !== 'function') || client.isReady()) {
     throw new Error('A fresh restoration Discord client is required');
   }
-  if ([exit, log, attachRuntime].some(callback => typeof callback !== 'function')) throw new Error('Invalid restoration callbacks');
-  const active = new Set(); let runtime, runtimeClosing, started = false, stopping = false, failed = false;
+  if ([exit, log, attachRuntime, attachCommunity].some(callback => typeof callback !== 'function')) throw new Error('Invalid restoration callbacks');
+  const active = new Set(); let runtime, community, runtimeClosing, started = false, stopping = false, failed = false;
   const report = message => { try { log(message); } catch {} };
   function detachRuntime() {
     if (!runtimeClosing) {
-      try { runtimeClosing = Promise.resolve(runtime.detach()); }
-      catch (error) { runtimeClosing = Promise.reject(error); }
+      const tasks = [];
+      for (const handler of [community, runtime]) {
+        try { if (handler) tasks.push(Promise.resolve(handler.detach())); }
+        catch (error) { tasks.push(Promise.reject(error)); }
+      }
+      runtimeClosing = Promise.allSettled(tasks).then(results => { if (results.some(result => result.status === 'rejected')) throw new Error('Runtime shutdown requires attention'); });
       void runtimeClosing.catch(() => {});
     }
     return runtimeClosing;
@@ -35,9 +41,17 @@ export function createRestoredCertificationApplication({ client, guildId, env = 
     detachCertification: detachRuntime, async closeAcademyPool() {}, destroyClient: () => client.destroy()
   });
   runtime = attachRuntime(client, undefined, guildId, environment, { createRouter: createRestorationRouter });
+  try {
+    community = attachCommunity(client, guildId, environment);
+    if (typeof community?.detach !== 'function') throw new Error('Community lifecycle unavailable');
+  } catch {
+    community = Object.freeze({ enabled: false, ready: false, detach: async () => {} });
+    report('Community learning configuration failed; certification startup will continue.');
+  }
   return Object.freeze({
     get enabled() { return runtime.enabled === true; },
     get ready() { return !stopping && runtime.ready === true; },
+    get communityReady() { return !stopping && community.ready === true; },
     get stopping() { return stopping; },
     shutdown: shutdown.shutdown,
     async start(token) {
