@@ -3,7 +3,7 @@ import { buildAdminNavigation } from './certification-admin-navigation.js';
 import { buildAccessControls } from './certification-access-actions.js';
 import { formatAuditAction } from './certification-console-browser.js';
 import { evaluateCourseAccessReadiness } from './certification-access-readiness.js';
-import { ownerManualReviewEmbed } from './certification-manual-review-data.mjs';
+import { hasManualReviewAcknowledgment, ownerManualReviewEmbed } from './certification-manual-review-data.mjs';
 const safe = (value, max = 100) => String(value ?? 'Not recorded').replace(/[`*_~|<>@]/g, '').slice(0, max);
 const stamp = value => value instanceof Date ? value.toISOString() : safe(value);
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
@@ -59,7 +59,18 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
       { name: 'This student — lab authorization records', value: `Total requests: ${count('total')}\nPending: ${count('pending')}\nApproved records: ${count('approved')}\nWithin recorded time window: ${count('within_window')}\nApproved but elapsed: ${count('elapsed_approved')}\nRevoked: ${count('revoked')}\nStored expired status: ${count('expired')}\nCounts describe stored authorizations, not running sessions or a full eligibility decision. Elapsed approved records remain approved until separately changed.` }
     );
     components.push(...buildAccessControls(studentId, record.status));
-    if (record.status === 'pending') components.push(row(button(`cert:enrollment:review:${studentId}`, 'Review acknowledgment')));
+    if (record.status === 'pending') {
+      const scopedIds = config.manualReviewDecisionStudentIds;
+      const canReview = config.manualReviewDecisionsEnabled === true && config.manualReviewEnabled === true &&
+        /^[0-9]{17,20}$/.test(config.adminChannelId || '') && interaction.channelId === config.adminChannelId &&
+        Array.isArray(scopedIds) && Object.isFrozen(scopedIds) && scopedIds.includes(studentId) &&
+        record.discord_user_id === studentId && hasManualReviewAcknowledgment(record) && record.approved_by == null && record.approved_at == null &&
+        record.agreement_version === config.activeAgreementVersion && record.agreement_content_sha256 === config.activeAgreementSha256 &&
+        record.comprehension_check_version === config.comprehensionCheck?.version &&
+        (record.student_id == null || (typeof record.student_id === 'string' && record.student_id.trim().length > 0 && record.student_id.length <= 100));
+      components.push(row(button(`cert:enrollment:review:${studentId}`, 'Review acknowledgment'),
+        ...(canReview ? [button(`cert:review:open:${studentId}`, 'Review responses and decide')] : [])));
+    }
     components.push(row(button(`cert:student-audit:${studentId}:0`, 'Student audit timeline'), button('cert:dir:search', 'Search / filter students'), button(`cert:labview:student:${studentId}:all:0`, 'This learner\'s labs'), button(id, 'Refresh student')));
   } else {
     const page = Number(timeline[2]);

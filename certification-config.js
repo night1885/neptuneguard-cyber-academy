@@ -16,16 +16,18 @@ export function loadCertificationConfig(env = process.env) {
   const decisionFlag = env.CERTIFICATION_MANUAL_REVIEW_DECISIONS_ENABLED;
   if (decisionFlag !== undefined && decisionFlag !== 'true' && decisionFlag !== 'false') throw new Error('Invalid manual-review owner-decision flag');
   const manualReviewDecisionsEnabled = decisionFlag === 'true';
+  let manualReviewDecisionStudentIds;
   if (manualReviewDecisionsEnabled) {
     if (!enabled || !manualReviewEnabled) throw new Error('Owner decisions require enabled certification and manual review');
     const pilot = readRegistrationPilotOptions(env);
     if (pilot.enabled !== true || pilot.ownerId !== ownerId || pilot.adminChannelId !== adminChannelId) {
       throw new Error('Owner decisions require explicit restricted registration-pilot settings');
     }
+    manualReviewDecisionStudentIds = pilot.studentIds;
   }
   const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled,
     ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}),
-    ...(manualReviewDecisionsEnabled ? { manualReviewDecisionsEnabled: true } : {}) };
+    ...(manualReviewDecisionsEnabled ? { manualReviewDecisionsEnabled: true, manualReviewDecisionStudentIds } : {}) };
   const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
   if (manualReviewEnabled && (!enabled || raw === undefined)) throw new Error('Manual review requires enabled certification and an enrollment manifest');
   if (manualReviewEnabled && (env.CERTIFICATION_REGISTRATION_PILOT !== 'true' || flag !== 'false')) {
