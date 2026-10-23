@@ -11,6 +11,7 @@ jobs:
   policy:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         node: [20, 22]
     steps:
@@ -20,3 +21,33 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci
       - run: node --test test-community-learning-*.mjs
+  community-postgres:
+    name: community-postgres (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fixture-pg-only
+          POSTGRES_DB: community_acceptance
+          POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d community_acceptance"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: node --test test-community-learning-postgres.mjs
+        env:
+          COMMUNITY_PG_DISPOSABLE: 'true'
+          COMMUNITY_PG_ADMIN_URL: postgresql://postgres:fixture-pg-only@127.0.0.1:5432/community_acceptance
