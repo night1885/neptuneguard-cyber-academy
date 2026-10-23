@@ -41,8 +41,13 @@ export function createRestoredCertificationApplication({ client, guildId, env = 
     detachCertification: detachRuntime, async closeAcademyPool() {}, destroyClient: () => client.destroy()
   });
   runtime = attachRuntime(client, undefined, guildId, environment, { createRouter: createRestorationRouter });
-  try { community = attachCommunity(client, guildId, environment); }
-  catch (error) { void detachRuntime().catch(() => report('Restoration construction cleanup requires attention.')); throw error; }
+  try {
+    community = attachCommunity(client, guildId, environment);
+    if (typeof community?.detach !== 'function') throw new Error('Community lifecycle unavailable');
+  } catch {
+    community = Object.freeze({ enabled: false, ready: false, detach: async () => {} });
+    report('Community learning configuration failed; certification startup will continue.');
+  }
   return Object.freeze({
     get enabled() { return runtime.enabled === true; },
     get ready() { return !stopping && runtime.ready === true; },
