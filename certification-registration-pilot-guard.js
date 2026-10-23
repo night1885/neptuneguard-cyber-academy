@@ -4,6 +4,9 @@ const uuid = '[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}';
 const registrationButton = new RegExp(`^cert:register:(?:open|(?:confirm|cancel):${uuid})$`);
 const invitedButton = new RegExp(`^cert:invite:(?:start|(?:previous|next|form|cancel):${uuid})$`);
 const invitedModal = new RegExp(`^cert:invite:send:${uuid}$`);
+const decisionOpen = /^cert:review:open:([0-9]{17,20})$/;
+const decisionSessionButton = new RegExp(`^cert:review:(?:choose:(?:approve|deny):|(?:confirm|cancel):)${uuid}$`);
+const decisionModal = new RegExp(`^cert:review:reason:(?:approve|deny):${uuid}$`);
 const banner = 'Registration pilot: submissions request review only; no student ID, course access or lab access is granted.';
 const json = value => typeof value?.toJSON === 'function' ? value.toJSON() : value;
 function snapshot(s) {
@@ -42,20 +45,27 @@ function kind(i) {
   const kinds = [i.isButton?.() === true, i.isModalSubmit?.() === true, i.isStringSelectMenu?.() === true];
   return kinds.filter(Boolean).length !== 1 ? null : kinds[0] ? 'button' : kinds[1] ? 'modal' : 'menu';
 }
-export function createRegistrationPilotPolicy(settings) {
+export function createRegistrationPilotPolicy(settings, { ownerDecisionsEnabled = false } = {}) {
+  if (typeof ownerDecisionsEnabled !== 'boolean') throw new Error('Explicit boolean owner-decision policy setting required');
   const s = snapshot(settings), ids = new Set(s.studentIds);
   const allowsStudent = actor => isId(actor) && ids.has(actor);
+  const ownerDecisionButton = id => {
+    if (!ownerDecisionsEnabled || typeof id !== 'string') return false;
+    const open = decisionOpen.exec(id);
+    return open ? allowsStudent(open[1]) : decisionSessionButton.test(id);
+  };
   return Object.freeze({
+    ...(ownerDecisionsEnabled ? { ownerDecisionsEnabled: true } : {}),
     allowsStudent,
     assertTarget(actor) { if (!allowsStudent(actor)) throw new Error('Pilot registration target not permitted'); },
     owner(actor) { return actor === s.ownerId; },
     allowsButton(actor, id) {
       if (typeof id !== 'string') return false;
-      return actor === s.ownerId ? readButton(id) || registrationButton.test(id) : allowsStudent(actor) && studentButton(id);
+      return actor === s.ownerId ? readButton(id) || registrationButton.test(id) || ownerDecisionButton(id) : allowsStudent(actor) && studentButton(id);
     },
     allowsModal(actor, id) {
       if (typeof id !== 'string') return false;
-      return actor === s.ownerId ? ['cert:register:submit', 'cert:dir:search'].includes(id) : allowsStudent(actor) && invitedModal.test(id);
+      return actor === s.ownerId ? ['cert:register:submit', 'cert:dir:search'].includes(id) || (ownerDecisionsEnabled && decisionModal.test(id)) : allowsStudent(actor) && invitedModal.test(id);
     },
     classify(i) {
       const actor = i.user?.id, type = kind(i), id = i.customId;
@@ -63,6 +73,9 @@ export function createRegistrationPilotPolicy(settings) {
       if (!type || !isId(actor) || i.guildId !== s.guildId || typeof id !== 'string' ||
           (i.message?.flags?.has?.(64) === true && origin && origin !== actor)) return null;
       if (actor === s.ownerId) {
+        if (ownerDecisionsEnabled && i.channelId === s.adminChannelId &&
+            ((type === 'button' && ownerDecisionButton(id) && (decisionOpen.test(id) || i.message?.flags?.has?.(64) === true)) ||
+             (type === 'modal' && decisionModal.test(id) && i.message?.flags?.has?.(64) === true))) return 'decision';
         if (type === 'modal' && id === 'cert:register:submit') {
           let target;
           try { target = i.fields.getTextInputValue('discord_user_id'); } catch { return null; }
@@ -81,7 +94,9 @@ export function createRegistrationPilotPolicy(settings) {
 function presentation(payload, policy, actor) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('Structured pilot response required');
   if (payload.content != null && typeof payload.content !== 'string') throw new Error('Pilot content must be text');
-  const content = banner + (payload.content ? String.fromCharCode(10) + payload.content : '');
+  const notice = policy.ownerDecisionsEnabled === true
+    ? 'Registration pilot: submissions are not approvals. A separate owner decision can issue a permanent ID; course runtime and lab authorization remain separate.' : banner;
+  const content = notice + (payload.content ? String.fromCharCode(10) + payload.content : '');
   if (content.length > 2000) throw new Error('Pilot response exceeds message limit');
   const components = (payload.components || []).map((row, r) => {
     const source = json(row);
@@ -102,12 +117,18 @@ function presentation(payload, policy, actor) {
   return { ...payload, content, components, allowedMentions: { parse: [] } };
 }
 // Trusted scoped callbacks only; this is not SQL isolation or runtime activation.
-export function createRegistrationPilotRouter({ settings, readViews, registration, learner } = {}) {
+// Decision callbacks must assert policy targets again against server-held records before prepare/confirm.
+export function createRegistrationPilotRouter({ settings, readViews, registration, learner, ownerDecisionsEnabled = false, ownerDecisions } = {}) {
   if ([readViews, registration, learner].some(fn => typeof fn !== 'function')) throw new Error('Explicit scoped pilot handlers required');
-  const policy = createRegistrationPilotPolicy(settings), handlers = { read: readViews, registration, learner };
-  let disposed = false;
+  if (typeof ownerDecisionsEnabled !== 'boolean' || (ownerDecisionsEnabled
+    ? typeof ownerDecisions !== 'function' || typeof ownerDecisions.initialize !== 'function' || typeof ownerDecisions.dispose !== 'function'
+    : ownerDecisions !== undefined)) throw new Error('Explicit decision handler with readiness and disposal hooks required');
+  const policy = createRegistrationPilotPolicy(settings, { ownerDecisionsEnabled });
+  const handlers = { read: readViews, registration, learner, decision: ownerDecisions };
+  let disposed = false, decisionsReady = false, initializing = null;
   const route = async i => {
-    const destination = disposed ? null : policy.classify(i);
+    let destination = disposed ? null : policy.classify(i);
+    if (destination === 'decision' && !decisionsReady) destination = null;
     if (!destination) {
       const payload = { content: 'This action is unavailable in the registration pilot. No operation was admitted.', embeds: [], components: [], flags: 64, allowedMentions: { parse: [] } };
       if (i.deferred || i.replied) await i.followUp(payload); else await i.reply(payload);
@@ -137,7 +158,32 @@ export function createRegistrationPilotRouter({ settings, readViews, registratio
     if (await handlers[destination](adapter, policy) !== true) throw new Error('Admitted pilot route was not handled');
     return true;
   };
-  if (typeof readViews.initialize === 'function') route.initialize = () => readViews.initialize();
-  route.dispose = () => { if (!disposed) { disposed = true; if (typeof readViews.dispose === 'function') return readViews.dispose(); } };
+  if (!ownerDecisionsEnabled) {
+    if (typeof readViews.initialize === 'function') route.initialize = () => readViews.initialize();
+  } else {
+    route.initialize = () => {
+      if (disposed) return Promise.reject(new Error('Pilot router disposed'));
+      if (!initializing) initializing = Promise.resolve().then(async () => {
+        if (disposed) throw new Error('Pilot initialization stopped');
+        if (typeof readViews.initialize === 'function') await readViews.initialize();
+        if (disposed) throw new Error('Pilot initialization stopped');
+        const result = await ownerDecisions.initialize();
+        if (disposed || result?.ready !== true) throw new Error('Owner-decision readiness not confirmed');
+        decisionsReady = true;
+        return Object.freeze({ ready: true });
+      }).catch(error => { decisionsReady = false; throw error; });
+      return initializing;
+    };
+  }
+  route.dispose = () => {
+    if (disposed) return;
+    disposed = true; decisionsReady = false;
+    if (!ownerDecisionsEnabled) { if (typeof readViews.dispose === 'function') return readViews.dispose(); return; }
+    const tasks = [];
+    for (const handler of [readViews, ownerDecisions]) if (typeof handler.dispose === 'function') {
+      try { tasks.push(Promise.resolve(handler.dispose())); } catch (error) { tasks.push(Promise.reject(error)); }
+    }
+    return Promise.allSettled(tasks).then(results => { if (results.some(result => result.status === 'rejected')) throw new Error('Pilot route shutdown requires attention'); });
+  };
   return route;
 }

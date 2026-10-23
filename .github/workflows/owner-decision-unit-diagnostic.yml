@@ -1,0 +1,106 @@
+name: Owner-decision unit failure diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'certification-*'
+      - 'test-certification-*'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/owner-decision-unit-diagnostic.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-decision-unit-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    if: github.event.pull_request.head.ref == 'feature/manual-review-owner-decisions'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      context: ${{ steps.tests.outputs.context }}
+    env:
+      DISCORD_TOKEN: ''
+      DATABASE_URL: ''
+      CERTIFICATION_ENABLED: 'false'
+      CERTIFICATION_TEST_DATABASE_URL: ''
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL: 'false'
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'false'
+      CERTIFICATION_TEST_ALLOW_LAB_DDL: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Run unit suite and expose only bounded failure metadata
+        id: tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, os, re, subprocess, sys, tempfile
+          context, status = 'unit_diagnostic_error', 1
+          try:
+              files = sorted(glob.glob('test-certification-*.mjs'))
+              if not files:
+                  context = 'unit_no_tests'
+              else:
+                  with tempfile.TemporaryFile() as output:
+                      try:
+                          result = subprocess.run(['node', '--test', *files], stdout=output, stderr=subprocess.STDOUT, timeout=180)
+                      except subprocess.TimeoutExpired:
+                          context = 'unit_timeout'
+                      else:
+                          status = result.returncode
+                          if status == 0:
+                              context = 'unit_pass'
+                          else:
+                              output.seek(0)
+                              text = output.read(8388608).decode('utf-8', errors='replace')
+                              first = re.search(r'(?m)^[ \t]*not ok [0-9]+ - ', text)
+                              block = text[first.start():] if first else text
+                              boundary = re.search(r'\n[ \t]*(?:# Subtest:|(?:not )?ok [0-9]+ - )', block)
+                              if boundary:
+                                  block = block[:boundary.start()]
+                              locations = re.findall(r'\b(test-certification-[A-Za-z0-9._-]+\.mjs):([0-9]{1,6})(?::[0-9]{1,6})?', block)
+                              names = re.findall(r'\btest-certification-[A-Za-z0-9._-]+\.mjs\b', block)
+                              filename, line = locations[-1] if locations else (names[0], '0') if names else ('unknown', '0')
+                              codes = re.findall(r"(?m)^[ \t]*code:\s*['\"]?([A-Z0-9_]{1,40})", block)
+                              code = codes[0] if codes else 'FAIL'
+                              context = filename + '_L' + line + '_' + code
+                              for key in ['expected', 'actual']:
+                                  value = re.search(r'(?m)^[ \t]*' + key + r':\s*(true|false|null|undefined|-?[0-9]{1,10})[ \t]*$', block)
+                                  if value:
+                                      context += '_' + key + value.group(1)
+                              context = re.sub(r'[^A-Za-z0-9_.-]', '_', context)[:200]
+          except Exception:
+              context, status = 'unit_diagnostic_error', 1
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + chr(10))
+          print(context)
+          sys.exit(0 if status == 0 else 1)
+          PY
+
+  failure_context:
+    name: "unit-error-context (${{ needs.diagnose.outputs.context || 'missing' }})"
+    needs: diagnose
+    if: ${{ always() && needs.diagnose.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Preserve the actual unit-test result
+        env:
+          CONTEXT: ${{ needs.diagnose.outputs.context }}
+          RESULT: ${{ needs.diagnose.result }}
+        run: |
+          test -n "$CONTEXT"
+          test "$RESULT" = success

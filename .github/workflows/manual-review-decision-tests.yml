@@ -1,0 +1,124 @@
+name: Manual-review owner decision acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'certification-manual-review-*'
+      - 'test-certification-manual-review-*'
+      - 'migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/manual-review-decision-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-decision-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres_decisions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      context: ${{ steps.actual.outputs.context }}
+    services:
+      postgres16:
+        image: postgres:16
+        env:
+          POSTGRES_USER: decision_ci
+          POSTGRES_PASSWORD: disposable_decision_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U decision_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgres18:
+        image: postgres:18
+        env:
+          POSTGRES_USER: decision_ci
+          POSTGRES_PASSWORD: disposable_decision_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U decision_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DISCORD_TOKEN: ''
+      DATABASE_URL: ''
+      CERTIFICATION_ENABLED: 'false'
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DECISION_DDL: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Check new source and test syntax
+        run: |
+          node --check certification-manual-review-decisions.mjs
+          node --check test-certification-manual-review-decisions-postgres.mjs
+      - name: Test both disposable PostgreSQL versions with bounded failure context
+        id: actual
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess, sys, tempfile
+          context, status = 'decision_diagnostic_error', 1
+          filename = 'test-certification-manual-review-decisions-postgres.mjs'
+          try:
+              for version, port in [(16, 5432), (18, 5433)]:
+                  env = dict(os.environ)
+                  env['CERTIFICATION_TEST_DATABASE_URL'] = f'postgresql://decision_ci:disposable_decision_fixture_only@127.0.0.1:{port}/certification_test'
+                  with tempfile.TemporaryFile() as output:
+                      try:
+                          result = subprocess.run(['node', '--test', filename], env=env, stdout=output, stderr=subprocess.STDOUT, timeout=150)
+                      except subprocess.TimeoutExpired:
+                          context, status = f'pg{version}_decision_timeout', 1
+                          break
+                      status = result.returncode
+                      if status:
+                          output.seek(0)
+                          text = output.read(8388608).decode('utf-8', errors='replace')
+                          first = re.search(r'(?m)^[ \t]*not ok [0-9]+ - ', text)
+                          block = text[first.start():] if first else text
+                          boundary = re.search(r'\n[ \t]*(?:# Subtest:|(?:not )?ok [0-9]+ - )', block)
+                          if boundary:
+                              block = block[:boundary.start()]
+                          lines = re.findall(re.escape(filename) + r':([0-9]{1,6})(?::[0-9]{1,6})?', block)
+                          codes = re.findall(r"(?m)^[ \t]*code:\s*['\"]?([A-Z0-9_]{1,40})", block)
+                          line, code = (lines[-1] if lines else '0'), (codes[0] if codes else 'FAIL')
+                          context = f'pg{version}_decision_L{line}_{code}'
+                          break
+                  context = 'pg16_pg18_decisions_pass'
+          except Exception:
+              context, status = 'decision_diagnostic_error', 1
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + chr(10))
+          print(context)
+          sys.exit(0 if status == 0 else 1)
+          PY
+
+  decision_context:
+    name: "owner-decision-context (${{ needs.postgres_decisions.outputs.context || 'missing' }})"
+    needs: postgres_decisions
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Preserve the real acceptance-test result
+        env:
+          CONTEXT: ${{ needs.postgres_decisions.outputs.context }}
+          RESULT: ${{ needs.postgres_decisions.result }}
+        run: |
+          test -n "$CONTEXT"
+          test "$RESULT" = success
