@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { randomUUID,createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
@@ -19,6 +20,24 @@ const prompt='Explain the permission required before starting an authorized trai
 const guide='PRIVATE REVIEW GUIDE FIXTURE',response='Learner response fixture unmatched';
 const updates=Object.freeze([...registrationAcknowledgmentUpdateColumns,'comprehension_submitted_at','comprehension_review_snapshot']);
 const columnIdentifier=key=>typeof key==='string'&&/^[a-z_][a-z0-9_]{0,62}$/.test(key);
+const sqlState=error=>typeof error?.code==='string'&&/^[A-Z0-9]{5}$/.test(error.code)?error.code:'unknown';
+function trackedPool(Pool,options,label,state){
+  const pool=new Pool(options);
+  pool.on('error',error=>state.errors.push({pool:label,phase:state.phase,code:sqlState(error)}));
+  return pool;
+}
+test('native fixture captures sanitized pool errors instead of ignoring them',()=>{
+  class FakePool extends EventEmitter{}
+  const state={phase:'readiness',errors:[]};
+  const pool=trackedPool(FakePool,{},'app',state);
+  pool.emit('error',Object.assign(new Error('PRIVATE CONNECTION DETAILS'),{code:'57P01'}));
+  assert.deepEqual(state.errors,[{pool:'app',phase:'readiness',code:'57P01'}]);
+  assert.throws(()=>assert.deepEqual(state.errors,[]));
+  assert.ok(!JSON.stringify(state.errors).includes('PRIVATE'));
+  state.phase='cleanup';
+  pool.emit('error',Object.assign(new Error('PRIVATE'),{code:'PRIVATE CONNECTION DETAILS'}));
+  assert.deepEqual(state.errors[1],{pool:'app',phase:'cleanup',code:'unknown'});
+});
 test('native fixture admits reviewed digit-containing columns and rejects unsafe identifiers',()=>{
   assert.ok(updates.every(columnIdentifier));
   assert.ok(columnIdentifier('agreement_content_sha256'));
@@ -26,13 +45,16 @@ test('native fixture admits reviewed digit-containing columns and rejects unsafe
 });
 const controls=i=>i.messages.at(-1)?.components?.flatMap(row=>row.components)||[];
 test('native manual-review invitation, submission and private owner inspection with real PostgreSQL',
-  {skip:!databaseUrl||!enabled,timeout:90000},async()=>{
+  {skip:!databaseUrl||!enabled,timeout:90000},async context=>{
   const url=new URL(databaseUrl);
   assert.ok(['postgres:','postgresql:'].includes(url.protocol));assert.ok(['localhost','127.0.0.1','[::1]'].includes(url.hostname));
   assert.equal(url.pathname,'/certification_test');assert.equal(url.search,'');assert.equal(url.hash,'');
   const name=`cert_native_${randomUUID().replaceAll('-','')}`,role=`cert_native_${randomUUID().replaceAll('-','')}`,password=randomUUID();
   assert.match(name,/^cert_native_[a-f0-9]{32}$/);assert.match(role,/^cert_native_[a-f0-9]{32}$/);
-  const admin=new pg.Pool({connectionString:databaseUrl,max:1,connectionTimeoutMillis:5000});
+  const state={phase:'setup',errors:[]};
+  const stage=value=>{state.phase=value;context.diagnostic(`Native fixture phase: ${value}`);};
+  context.after(()=>assert.deepEqual(state.errors,[],'Unexpected PostgreSQL pool or cleanup errors (sanitized)'));
+  const admin=trackedPool(pg.Pool,{connectionString:databaseUrl,max:1,connectionTimeoutMillis:5000},'admin',state);
   let created=false,roleCreated=false,db,app,readPool,route;
   const learnerPackets=[];
   function interaction(customId,{actor=owner,type='button',server=guild,fields={}}={}){
@@ -64,10 +86,13 @@ test('native manual-review invitation, submission and private owner inspection w
     assert.fail('Missing native manual-review form');
   }
   try{
+    stage('admin-connection');
     assert.equal((await admin.query('SELECT current_database() AS name')).rows[0].name,'certification_test');
+    stage('database-create');
     await admin.query(`CREATE DATABASE "${name}" TEMPLATE template0`);created=true;url.pathname=`/${name}`;
-    db=new pg.Pool({connectionString:url.href,max:1,connectionTimeoutMillis:5000,options:'-c search_path=public -c statement_timeout=15000 -c lock_timeout=5000'});
-    for(const file of migrations)await db.query(await readFile(new URL(`./migrations/${file}`,import.meta.url),'utf8'));
+    db=trackedPool(pg.Pool,{connectionString:url.href,max:1,connectionTimeoutMillis:5000,options:'-c search_path=public -c statement_timeout=15000 -c lock_timeout=5000'},'setup',state);
+    for(const file of migrations){stage(`migration:${file}`);await db.query(await readFile(new URL(`./migrations/${file}`,import.meta.url),'utf8'));}
+    stage('fixture-and-restricted-role');
     const content='Native manual-review agreement fixture.',hash=createHash('sha256').update(content).digest('hex');
     await db.query('INSERT INTO certification_agreements(version,content,content_sha256) VALUES($1,$2,$3)',['native-v1',content,hash]);
     await admin.query(`CREATE ROLE "${role}" LOGIN PASSWORD '${password}' NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`);roleCreated=true;
@@ -82,19 +107,23 @@ test('native manual-review invitation, submission and private owner inspection w
     await db.query(`GRANT INSERT(actor_discord_user_id,subject_discord_user_id,action,details) ON public.certification_audit_events TO "${role}"`);
     await db.query(`GRANT USAGE ON SEQUENCE public.certification_audit_events_event_id_seq TO "${role}"`);
     const connection=new URL(url);connection.username=role;connection.password=password;
-    app=new pg.Pool({connectionString:connection.href,max:1,connectionTimeoutMillis:5000,options:'-c search_path=public -c statement_timeout=15000 -c lock_timeout=5000'});
+    app=trackedPool(pg.Pool,{connectionString:connection.href,max:1,connectionTimeoutMillis:5000,options:'-c search_path=public -c statement_timeout=15000 -c lock_timeout=5000'},'app',state);
     readPool=createReadOnlyPreviewPool(app);
     const settings={enabled:true,ownerId:owner,guildId:guild,adminChannelId:channel,studentIds:[student,other]};
     const config=Object.freeze({enabled:true,manualReviewEnabled:true,ownerId:owner,adminChannelId:channel,enrollmentSubmissionEnabled:false,
       activeAgreementVersion:'native-v1',activeAgreementSha256:hash,comprehensionCheck:{version:'native-check-v1',questions:[{prompt}],correctAnswers:[guide]},
       registrationPilotEnabled:true,registrationPilotPolicy:createRegistrationPilotPolicy(settings)});
+    stage('readiness');
     await validateRuntimeCertificationSchema(readPool,{pilotConnection:{connectionString:connection.href}});
     await validateActiveEnrollmentAgreement(readPool,config);
     const handlers=createProvenancePilotHandlers({readPool,writePool:app,config,guildId:guild});
     const readViews=async i=>(await handleConsoleStudent(i,readPool,config,guild))||(await handleConsoleSettings(i,config,guild));
     route=createRegistrationPilotRouter({settings,readViews,...handlers});
+    stage('registration');
     await register(student);await register(other);
+    stage('form-opening');
     const modal=await form(student);
+    stage('submission');
     const submitted=interaction(modal,{actor:student,type:'modal',fields:{age:'Yes',read:'AGREE',answer0:response}});await route(submitted);
     const record=(await db.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1',[student])).rows[0];
     assert.equal(record.status,'pending');assert.equal(record.registration_owner_id,null);assert.equal(record.age_eligible,true);
@@ -104,12 +133,14 @@ test('native manual-review invitation, submission and private owner inspection w
     const audit=()=>db.query("SELECT details FROM certification_audit_events WHERE subject_discord_user_id=$1 AND action='enrollment_submitted'",[student]);
     const events=(await audit()).rows;assert.equal(events.length,1);
     for(const value of [prompt,response,guide])assert.ok(!JSON.stringify(events).includes(value));
+    stage('replay-and-owner-inspection');
     await route(interaction(modal,{actor:student,type:'modal',fields:{age:'Yes',read:'AGREE',answer0:'Changed replay answer'}}));
     assert.equal((await audit()).rows.length,1);
     const review=interaction(`cert:students:detail:${student}`);await route(review);
     for(const value of [prompt,response,guide])assert.ok(JSON.stringify(review.messages).includes(value));
     assert.ok(controls(review).filter(x=>/approve|deny|suspend|revoke|reinstate/i.test(x.label||'')).every(x=>x.disabled===true));
     const configuration=interaction('cert:console:settings');await route(configuration);assert.ok(JSON.stringify(configuration.messages).includes(guide));
+    stage('negative-authorization-and-age');
     await route(interaction('cert:console:settings',{actor:student}));
     await route(interaction(`cert:students:detail:${student}`,{actor:student}));
     await route(interaction('cert:invite:start',{actor:outsider}));
@@ -117,12 +148,25 @@ test('native manual-review invitation, submission and private owner inspection w
     const denied=(await db.query('SELECT status,registration_owner_id,comprehension_submitted_at,comprehension_review_snapshot FROM certification_enrollments WHERE discord_user_id=$1',[other])).rows[0];
     assert.deepEqual(denied,{status:'awaiting_acknowledgment',registration_owner_id:owner,comprehension_submitted_at:null,comprehension_review_snapshot:null});
     assert.ok(!JSON.stringify(learnerPackets).includes(guide));
+    stage('permission-boundaries');
     const permissions=(await app.query("SELECT bool_or(has_column_privilege(current_user,'public.certification_enrollments',name,'UPDATE') OR has_column_privilege(current_user,'public.certification_enrollments',name,'INSERT')) AS can_approve FROM unnest(ARRAY['student_id','approved_by','approved_at']) x(name)")).rows[0];
     assert.equal(permissions.can_approve,false);
     assert.equal((await db.query('SELECT status FROM certification_enrollments WHERE discord_user_id=$1',[student])).rows[0].status,'pending');
+  }catch(error){
+    context.diagnostic(`Native fixture failed in phase: ${state.phase}`);
+    throw error;
   }finally{
-    try{route?.dispose();}finally{try{if(app)await app.end();}finally{try{if(db)await db.end();}
-    finally{try{if(created)await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);}
-    finally{try{if(roleCreated)await admin.query(`DROP ROLE "${role}"`);}finally{await admin.end();}}}}}
+    const cleanup=async(label,operation)=>{
+      stage(`cleanup:${label}`);
+      try{await operation();return true;}
+      catch(error){state.errors.push({pool:'cleanup',phase:state.phase,code:sqlState(error)});return false;}
+    };
+    await cleanup('router',async()=>{await route?.dispose();});
+    await cleanup('app-pool',async()=>{if(app)await app.end();});
+    await cleanup('setup-pool',async()=>{if(db)await db.end();});
+    let dropped=!created;
+    if(created)dropped=await cleanup('database',()=>admin.query(`DROP DATABASE "${name}"`));
+    if(roleCreated&&dropped)await cleanup('role',()=>admin.query(`DROP ROLE "${role}"`));
+    await cleanup('admin-pool',()=>admin.end());
   }
 });
