@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { createManualReviewSnapshot } from './certification-manual-review-data.mjs';
 import { createManualReviewDecisionService } from './certification-manual-review-decisions.mjs';
+import { runDecisionStackAcceptance } from './test-certification-manual-review-decision-stack-helpers.mjs';
 
 const databaseUrl = process.env.CERTIFICATION_TEST_DATABASE_URL;
 const enabled = process.env.CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DECISION_DDL === 'true';
@@ -151,6 +152,8 @@ test('owner decisions use real row locks, atomic audits, and restricted disposab
       assert.deepEqual(await read(row.discord_user_id), row);
       assert.equal((await audits(row.discord_user_id)).length, 0);
     });
+    await runDecisionStackAcceptance({ t, app, db, config, guildId, owner, role, seed, read, audits, guide, response,
+      setPhase: value => { phase = value; } });
     await t.test('decision role cannot rewrite responses or delete applications', async () => {
       phase = 'privilege-boundaries';
       const row = await seed();
