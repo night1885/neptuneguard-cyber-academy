@@ -67,10 +67,17 @@ jobs:
               lines = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
               line = int(lines[-1]) if lines else 0
               codes = re.findall(r"\bcode:\s*['\"]([A-Z0-9_]{1,40})['\"]", text)
-              code = codes[0] if codes else 'unknown'
+              code = next((value for value in codes if re.fullmatch(r'[0-9A-Z]{5}', value)), codes[0] if codes else 'unknown')
               if not re.fullmatch(r'[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE', code):
                   code = 'unknown'
-              return f'pg16_{stage}_L{line}_{code}'
+              markers = [
+                  ('administrator_termination', 'terminating connection due to administrator command'),
+                  ('connection_refused', 'ECONNREFUSED'),
+                  ('connection_lost', 'Connection terminated unexpectedly'),
+                  ('assertion', 'ERR_ASSERTION')
+              ]
+              category = next((name for name, marker in markers if marker in text), 'unclassified')
+              return f'pg16_{stage}_L{line}_{code}_{category}'
 
           def show_failure(stage, text):
               for name in ['CERTIFICATION_TEST_DATABASE_URL', 'DATABASE_URL', 'DISCORD_TOKEN', 'GITHUB_TOKEN', 'GH_TOKEN']:
@@ -105,7 +112,7 @@ jobs:
                       context = f'pg16_{stage}_timeout'
                   status = 1
                   break
-          assert re.fullmatch(r'pg16_(ready|(migration|native)_(timeout|L[0-9]{1,5}_(unknown|[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE)))', context)
+          assert re.fullmatch(r'pg16_(ready|(migration|native)_(timeout|L[0-9]{1,5}_(unknown|[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE)_(administrator_termination|connection_refused|connection_lost|assertion|unclassified)))', context)
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
               output.write('context=' + context + chr(10))
           print(context)
