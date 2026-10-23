@@ -22,7 +22,7 @@ function initialRecord(studentId = null) {
 }
 function fixture({ fail = '', rollbackFails = false, commitApplied = false, studentId = null, zeroUpdate = false, zeroAudit = false } = {}) {
   let time = 1000, working, events;
-  const state = { row: initialRecord(studentId), audits: [], queries: [], releases: [], connects: 0, agreement: { content, content_sha256: hash } };
+  const state = { row: structuredClone(initialRecord(studentId)), audits: [], queries: [], releases: [], connects: 0, agreement: { content, content_sha256: hash } };
   const failure = Object.assign(new Error('Synthetic transaction failure'), { code: 'XX000' });
   function persist() { state.row = structuredClone(working); state.audits.push(...structuredClone(events)); }
   const db = { async query(sql, parameters = []) {
@@ -98,8 +98,9 @@ test('unauthorized server, actor, or malformed target fails before connecting', 
 });
 for (const mutate of [row => { row.status = 'denied'; }, row => { row.comprehension_review_snapshot.items[0].response = 'changed'; },
   row => { row.updated_at = new Date('2026-10-22T21:14:00Z'); }]) test(`stale reviewed application cannot be changed: ${mutate.toString()}`, async () => {
-  const f = fixture(), issued = f.prepare();
+  const f = fixture(), reviewed = structuredClone(f.state.row), issued = f.prepare();
   mutate(f.state.row);
+  assert.notDeepEqual(f.state.row, reviewed);
   const before = structuredClone(f.state.row);
   await assert.rejects(f.confirm(issued));
   assert.deepEqual(f.state.row, before);
