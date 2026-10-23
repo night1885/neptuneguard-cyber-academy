@@ -2,9 +2,9 @@ name: Community learning access policy
 on:
   push:
     branches: [community-learning-verified-linux]
-    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', '.github/workflows/community-learning-tests.yml']
+    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', 'course-registry.js', 'course-content.js', 'fundamentals-stage-*.js', 'linux-administration.js', 'linux-security-engineering.js', 'module-progress.js', 'certification-student-course-content.js', '.github/workflows/community-learning-tests.yml']
   pull_request:
-    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', '.github/workflows/community-learning-tests.yml']
+    paths: ['community-learning-*.mjs', 'test-community-learning-*.mjs', 'course-registry.js', 'course-content.js', 'fundamentals-stage-*.js', 'linux-administration.js', 'linux-security-engineering.js', 'module-progress.js', 'certification-student-course-content.js', '.github/workflows/community-learning-tests.yml']
 permissions:
   contents: read
 jobs:
