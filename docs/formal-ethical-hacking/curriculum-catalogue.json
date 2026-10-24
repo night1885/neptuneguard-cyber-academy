@@ -30,6 +30,7 @@
     {"id":"EH-WEB-PRACTICAL-CAPSTONE","requires":["EH-WEB-04","EH-WEB-05","EH-WEB-06"]},
     {"id":"EH-WEB-07","requires":["EH-WEB-06","EH-LINUX-01","EH-WEB-04"]},
     {"id":"EH-WEB-08","requires":["EH-WEB-04","EH-WEB-07"]},
+    {"id":"EH-WEB-09","requires":["EH-WEB-08"]},
     {"id":"EH-ASSESS-01","requires":["EH-NET-CAPSTONE","EH-LAB-05"]},
     {"id":"EH-ASSESS-02","requires":["EH-ASSESS-01","EH-LAB-03","EH-LAB-04"]},
     {"id":"EH-ASSESS-03","requires":["EH-ASSESS-02"]},

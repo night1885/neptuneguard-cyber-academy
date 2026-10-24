@@ -62,6 +62,9 @@ If the Python in these practicals is unfamiliar, use the [guided Python reading 
 | [Integrated repair capstone](lessons/EH-WEB-PRACTICAL-CAPSTONE.md) | Assess the three preceding fixtures |
 | [EH-WEB-07](lessons/EH-WEB-07.md) | Filesystem containment |
 | [EH-WEB-08](lessons/EH-WEB-08.md) | Editable-field policy |
+| [EH-WEB-09](lessons/EH-WEB-09.md) | Upload metadata, filename, size and prefix policy boundaries |
+
+EH-WEB-09 requires EH-WEB-08 and operates only on synthetic in-memory records/byte buffers. It implements no upload endpoint, image parser, malware scanner or file storage. Matching its toy checks is not proof of a valid or safe image.
 
 Optional paper extensions:
 - [API authorization case pack](lessons/API-AUTHORIZATION-CASEPACK.md) and [worksheet](lessons/API-AUTHORIZATION-WORKSHEET.md): object-, property- and function-level decisions, linked from EH-WEB-08.
@@ -110,7 +113,7 @@ Requires EH-ASSESS-01, EH-NET-01 and Python reading support. Parse success, fict
 ## Validation and authoring
 Read lesson-specific validation records before making readiness claims. [Home-lab validation](lessons/HOME-LAB-VALIDATION.md) preserves supported-hardware and end-to-end requirements. The existing [home-lab manifest](home-lab-manifest.json) remains conservative and draft-not-published; it is not a complete catalogue of these newer drafts.
 
-The separate [curriculum catalogue](curriculum-catalogue.json) lists 36 draft lesson/capstone IDs and curated prerequisite relationships. This index revision adds the previously omitted EH-LINUX-04, EH-LINUX-05, EH-EVIDENCE-02 and EH-AUTO-01 links so all 36 catalogue entries have a reading link. Supporting bridges, worksheets and case packs are not extra canonical entries. See [catalogue maintainer notes](authoring/CATALOGUE-NOTES.md) for structural and semantic limits. This remains a documentation reconciliation, not an implemented automatic completeness or progression rule.
+The separate [curriculum catalogue](curriculum-catalogue.json) now lists 37 draft lesson/capstone IDs and 65 curated prerequisite edges after adding EH-WEB-09. All 37 entries have reading links in this index. Supporting bridges, worksheets and case packs are not extra canonical entries. See [catalogue maintainer notes](authoring/CATALOGUE-NOTES.md) for structural/semantic limits and historical counts. The standalone [catalogue coverage check](authoring/CATALOGUE-COVERAGE.md) checks simple reading-link coverage, not learner progression or educational sufficiency.
 
 Maintainers with a trusted repository checkout and Python 3.9+ can run `python3 docs/formal-ethical-hacking/authoring/check_index.py` from the repository root. Its isolated tests run from the authoring directory with `python3 -m unittest -v test_check_index`. These are maintainer terminal instructions, not learner-interface commands.
 
@@ -120,4 +123,4 @@ For selected combined checks, run `python3 -B docs/formal-ethical-hacking/author
 
 The separate [Python bridge regression notes](authoring/PYTHON-BRIDGE-REGRESSION.md) describe a standalone named maintainer test covering the original starter, two supplemental cases, a temporary mutation and restoration. That module is not silently added to the combined-runner allowlist. Its results are selected-file local checks, not GitHub CI or student-hardware validation.
 
-No new fixture execution or full-checkout validation was performed for this index-only revision. Existing lesson-specific author records retain their original scope and limitations. These Markdown links are authoring navigation, not the finished learner workspace. No learner slash-command navigation or modal interface is introduced.
+For the new upload-policy exercise, [bounded author validation](lessons/UPLOAD-POLICY-VALIDATION.md) records the ten-method starter and temporary-repair runs. No full-checkout or expanded catalogue/index-checker execution was performed for this curriculum batch. Earlier 36-entry structural/link results retain their original snapshot and do not validate this expanded revision. Existing lesson-specific author records retain their own scope and limitations. These Markdown links are authoring navigation, not the finished learner workspace. No learner slash-command navigation or modal interface is introduced.
