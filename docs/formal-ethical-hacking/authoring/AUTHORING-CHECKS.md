@@ -25,5 +25,10 @@ The tests used temporary synthetic documents and injected child-runner doubles. 
 
 To run only these new regression tests, change into this authoring directory and run `python3 -B -m unittest -v test_check_authoring`. Its temporary files are disposable test data, not real learner evidence.
 
+## Separate selected-practical runner
+The new [practical-check instructions](PRACTICAL-CHECKS.md) describe a standalone 11-entry registry and listing-by-default runner with explicit --run, shell-helper and loopback opt-ins. It can deliberately reproduce known defective teaching starters and verifies their expected assertion names/counts rather than treating every exit 1 as equivalent. Its [execution record](PRACTICAL-CHECK-VALIDATION.md) distinguishes synthetic orchestration tests and one source-matched actual practical from unexecuted registry entries.
+
+This is not added to check_authoring.py or its four-module allowlist. The existing combined runner's behaviour above and historical execution limits remain unchanged. Selected practical execution needs its own reviewed source/setup/effects; the new helper is not a sandbox, CI activation, learner grade or release approval.
+
 ## Release boundary
 Passing selected structural checks does not remove any manifest blocker or establish platform compatibility, isolation, evidence privacy, assessor calibration or learning outcomes. Keep runtime integration and publication disabled until their separate reviewed approvals. No lesson, catalogue, manifest, learner record or teaching-fixture content is changed by this batch.
