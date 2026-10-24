@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "notice": "Invented paper scenarios only. No tickets, keys, directory exports, credentials, packet captures or executed domain observations are present.",
+  "cases": [
+    {"id":"D01","stage":"DIRECTORY","observations":["A fictional Helpdesk group has a scoped reset permission for TrainingUsers only.","No control over other containers or privileged objects is supplied."],"claim":"Helpdesk controls every account in the forest."},
+    {"id":"D02","stage":"AUTHORIZATION","observations":["The scenario explicitly grants one invented user read access to their own application record.","That particular read is supplied as completed."],"claim":"That specific permitted read completed."},
+    {"id":"D03","stage":"AS","observations":["A fictional client has a TGT in its cache.","No target-service exchange or resource permission is supplied."],"claim":"The client is authorised to read every service record."},
+    {"id":"D04","stage":"TGS","observations":["The fictional KDC has issued a ticket for the selected service.","No service acceptance or application response is supplied."],"claim":"The application has accepted the client and returned its data."},
+    {"id":"D05","stage":"AP","observations":["The fictional service is explicitly said to have authenticated the client.","Its separate policy forbids reading another user's private record."],"claim":"Authentication permits reading that other record."},
+    {"id":"D06","stage":"DIAGNOSTICS","observations":["The supplied diagnostic reports a clock-related validation problem.","The exact credential and other protocol checks have not been established."],"claim":"The password is definitely wrong."},
+    {"id":"D07","stage":"DIAGNOSTICS","observations":["The supplied service-name resolution attempt failed.","No completed exchange with the intended KDC/service is supplied."],"claim":"The KDC denied this user's resource permissions."},
+    {"id":"D08","stage":"DIAGNOSTICS","observations":["A supplied ticket request failed and the intended service-principal mapping is unresolved.","No unique failure cause is established."],"claim":"The service secret is the only possible cause."},
+    {"id":"D09","stage":"AUTHORIZATION","observations":["The fictional application policy permits the selected subject to read one training report.","That exact read is supplied as completed; no edit was attempted."],"claim":"The selected read succeeded; edit permission remains unknown."},
+    {"id":"D10","stage":"AP","observations":["The scenario records client authentication at a service.","The client-side evidence needed to establish server authentication is absent."],"claim":"Mutual authentication is proven in both directions."},
+    {"id":"D11","stage":"HANDLING","observations":["A fictional learner proposes publishing ticket/session-key material after hiding a display name.","No actual ticket or key is included in the dataset and no sharing approval is supplied."],"claim":"Removing the display name makes that material safe to publish."},
+    {"id":"D12","stage":"SCOPE","observations":["The supplied approved brief covers the earlier clean workgroup Windows exercise only.","Domain installation, join, directory querying and ticket operations are not approved."],"claim":"The learner may now join the guest to a domain and inspect tickets."}
+  ]
+}
