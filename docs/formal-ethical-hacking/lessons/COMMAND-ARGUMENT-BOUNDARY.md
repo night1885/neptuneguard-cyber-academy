@@ -51,4 +51,7 @@ Provide predictions, actual starter/reference results or blockers, a narrow loca
 
 The [validation record](COMMAND-ARGUMENT-VALIDATION.md) corrects an earlier packaging/CLI claim. Supported guests, other shells, accessibility execution, independent assessment calibration, full repository/CI and certification readiness remain unverified. No grade, course progression, restricted access, publication or award is generated.
 
+## Optional follow-up — executable selection
+The separate [executable-search practical](EXECUTABLE-SEARCH-LAB.md) demonstrates that list arguments and shell=False do not alone select a trustworthy executable. It uses two fixed inert same-identity helpers, child-only PATH and an explicit-path reference; no privilege escalation or global/system configuration change is introduced. Read its distinct files, setup and limits before any approved run. This link does not expand the command-argument exercise's scope or register another canonical lesson.
+
 Sources: https://docs.python.org/3/library/subprocess.html and https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html .
