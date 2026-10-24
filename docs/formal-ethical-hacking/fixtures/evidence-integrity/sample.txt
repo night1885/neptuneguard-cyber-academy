@@ -1,0 +1,3 @@
+SYNTHETIC EXERCISE
+Record: training-note-01
+Observation: local fixture only.
