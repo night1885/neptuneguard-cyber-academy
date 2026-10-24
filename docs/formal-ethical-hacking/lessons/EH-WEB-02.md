@@ -31,7 +31,10 @@ A proper review asks what happens at login, privilege changes, timeout and logou
 ## Evidence discipline
 Treat real session identifiers, Authorization headers, reset links and authentication cookies as sensitive. Do not paste them into tickets, public repositories or course chat. Use fabricated values for conceptual answers and approved redacted excerpts for future authorized practical work. If exposure occurs, follow the actual incident process; deleting a screenshot alone does not invalidate an exposed credential.
 
+## Guided offline case work
+Use the [cookie/session case pack](COOKIE-SESSION-CASEPACK.md), [blank worksheet](COOKIE-SESSION-WORKSHEET.md) and linked fictional JSON to distinguish declared flags, browser behavior and expressly supplied server facts. The optional local reader extracts attributes without printing cookie values; it does not install a cookie, contact an origin, emulate a browser or validate a real session. This support work adds no request budget, real account test, replay permission, prerequisite or compulsory deliverable.
+
 ## Independent work
 Explain the limits of Secure, HttpOnly and SameSite separately. Explain why a cookie is not automatically a login session. Describe what evidence would be needed to assess logout invalidation without proposing use of another person's credentials. Keep all answers fictional; no practical session replay or real account testing is authorized.
 
-Source: MDN, https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies and https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie . Browser-specific validation and assessor calibration remain release work.
+Source: MDN, https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies and https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie . Browser-specific validation and assessor calibration remain release work. The supporting case pack records only local fictional-data parsing checks, not browser/server lifecycle execution.
