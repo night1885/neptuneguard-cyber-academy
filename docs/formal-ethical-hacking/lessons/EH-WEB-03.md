@@ -35,10 +35,13 @@ Paper cases:
 
 For each case, cite the relevant fictional rule and list any missing facts. Do not send requests or access records to answer these cases.
 
+## Offline evidence-reading support
+Use the [fictional authorization evidence pack](AUTHORIZATION-EVIDENCE-CASEPACK.md), its [blank worksheet](AUTHORIZATION-EVIDENCE-WORKSHEET.md) and linked JSON fixture. The exercise separates the policy decision, supplied HTTP status and actual content in the invented response. It includes an allowed owner read; two forbidden-content disclosures carrying different status codes; a 200 with denial text only; an untrusted role claim; and missing ownership context. Its optional reader processes local JSON without requests or imports of the vulnerable teaching policy. This support adds no live test, identifier guessing, new prerequisite, required deliverable or runtime/publication change.
+
 ## Reason about vulnerability claims
-A broken-access-control finding needs evidence that an actual permission boundary was crossed under the applicable policy. An exposed button, error message, 200 status or sequential identifier alone does not prove unauthorized data access. Conversely, a denial page does not establish that every backend operation is protected. Future practical work requires a reviewed fixture, explicit test identities and scoped operations before execution.
+A broken-access-control finding needs evidence that an actual permission boundary was crossed under the applicable policy. An exposed button, error message, 200 status or sequential identifier alone does not prove unauthorized data access. Conversely, a denial page does not establish that every backend operation is protected. Future practical work requires a reviewed fixture, explicit test identities and scoped operations before execution. Never turn a fictional case into a claim about a real user or system.
 
 ## Submission
-Provide a permission matrix and concise explanations. Do not include real user IDs, tokens, submissions or instructor answers. Numeric scoring and formal pass thresholds remain pending; a completed matrix grants no course access or award.
+Provide a permission matrix and concise explanations. Do not include real user IDs, tokens, submissions or instructor answers. Numeric scoring and formal pass thresholds remain pending; a completed matrix grants no course access or award. The supporting pack has only local synthetic-data consistency/reader checks; its cases are not actual request evidence.
 
 Source: OWASP Authorization Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html .
