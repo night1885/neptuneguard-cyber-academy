@@ -37,6 +37,9 @@ The mixed-input test's atomicity concerns this in-memory operation only. It does
 ## Test independently
 Add one legitimate title-only update and one request containing an allowed key plus a new forbidden key. Predict results before running. Also explain, on paper, why a correctly allow-listed update could still be unauthorized if it targets another student's record. Do not combine this mapper with the earlier policy fixture and claim you have built a secure API.
 
+## Optional paper extension — API authorization boundaries
+Use the fictional [API authorization case pack](API-AUTHORIZATION-CASEPACK.md) and [blank worksheet](API-AUTHORIZATION-WORKSHEET.md) to compare object-, property- and function-level decisions. The case pack uses the same explicit whole-request rejection rule for mixed editable/forbidden keys. It adds no live target, practical permission, required deliverable or new prerequisite. No API is implemented or tested, and the existing fixture and test expectations are unchanged.
+
 ## Deliverables and limits
 Submit the field policy, actual baseline and repaired results, minimal diff, independent cases and limitations. Distinguish accepting a field name from validating its value, authorizing a resource and persisting a change. None of those controls substitutes for the others.
 
