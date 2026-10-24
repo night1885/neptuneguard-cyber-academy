@@ -56,4 +56,7 @@ Ask which facts are supplied as trusted assumptions, which operation actually ex
 
 Add one legitimate and one forbidden case using invented records/actors, without broadening network scope or adding real identities. Draw the request/database/policy/response flow and prepare a narrow finding, local repair diff, positive/negative retest and limitations. Record interventions and blockers. Formal grading, platform reproduction, true authentication, concurrency, endpoint integration and advanced-web/certification readiness remain pending. See [the validation record](APPLICATION-OWNERSHIP-VALIDATION.md).
 
+## Optional follow-up: update boundaries
+The separate [application-update practical](APPLICATION-UPDATE-LAB.md) extends the in-process teaching model with text-only field permissions, expected revisions and selected rollback checks. Its synthetic PATCH operation is not added to this read lesson's contract or any network exercise scope. It requires the additional reviewed files and its own stated setup; no actual endpoint, migration, authentication or production workflow is introduced.
+
 Sources: https://docs.python.org/3/library/wsgiref.html and https://docs.python.org/3/library/sqlite3.html and https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html .
