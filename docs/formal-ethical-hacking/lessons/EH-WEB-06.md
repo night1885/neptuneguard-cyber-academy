@@ -37,6 +37,8 @@ HTML text encoding is not a universal encoder for JavaScript, CSS, URLs, arbitra
 
 Framework auto-escaping can help, but unsafe raw-HTML APIs or explicitly trusted-markup wrappers can bypass it. This exercise has no such framework integration and does not establish that an application's other output paths are protected.
 
+For optional paper practice, use the [output-context case pack](OUTPUT-CONTEXT-CASEPACK.md) and [blank worksheet](OUTPUT-CONTEXT-WORKSHEET.md). They compare paragraph text, ordinary quoted attributes, URLs, JavaScript, permitted formatting and presentation options. They do not expand this practical into browser execution, add a required deliverable or change its fixture, tests or prerequisites.
+
 ## Independent work
 Add a case containing both literal ampersands and angle brackets, and a case whose input is already entity-like text. Predict the parsed text and explain why decoding input before output can undo the intended boundary. Show that your repair preserves the original text rather than silently stripping it. Keep the examples inert and local.
 
