@@ -25,7 +25,10 @@ The clean fixture is plain HTTP. It demonstrates protocol observation, not encry
 ## Independent reasoning
 Explain why a 200 response is not evidence of secure authorization. Explain why repeated GET responses can differ while the method remains idempotent. Identify a conclusion that requires more than a server header. Explain why an unexpected redirect is a scope decision before it is a navigation action.
 
+## Offline response-reading support
+Use the [fictional HTTP response pack](HTTP-RESPONSE-CASEPACK.md), [blank worksheet](HTTP-RESPONSE-WORKSHEET.md) and their linked JSON fixture to compare GET/HEAD metadata, HTTP status, curl exit status, timeout and redirect observations without contacting an endpoint. Its optional local reader runs no curl command and follows no URL. The structured records are not native curl output or observations of the clean Python fixture. This supporting work adds no request budget, target, method, configuration change, prerequisite or compulsory deliverable, and it cannot substitute for genuine practical evidence.
+
 ## Assessment and limits
-Submit minimal redacted response excerpts and your explanations, not broad traffic captures. No request replay beyond the stated budget, form submission, scanning or exploitation is introduced. The commands were not executed in this authoring batch; do not substitute expected output for your observations. Formal grading and student-platform reproduction remain pending.
+Submit minimal redacted response excerpts and your explanations, not broad traffic captures. No request replay beyond the stated budget, form submission, scanning or exploitation is introduced. The commands were not executed in this authoring batch; do not substitute expected output for your observations. Formal grading and student-platform reproduction remain pending. The supporting pack records only local fictional-data consistency/reader checks, not HTTP or two-VM validation.
 
 Source: RFC 9110, https://www.rfc-editor.org/rfc/rfc9110.html .
