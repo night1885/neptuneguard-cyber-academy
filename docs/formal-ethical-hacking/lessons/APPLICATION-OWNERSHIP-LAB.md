@@ -59,4 +59,7 @@ Add one legitimate and one forbidden case using invented records/actors, without
 ## Optional follow-up: update boundaries
 The separate [application-update practical](APPLICATION-UPDATE-LAB.md) extends the in-process teaching model with text-only field permissions, expected revisions and selected rollback checks. Its synthetic PATCH operation is not added to this read lesson's contract or any network exercise scope. It requires the additional reviewed files and its own stated setup; no actual endpoint, migration, authentication or production workflow is introduced.
 
+## Optional follow-up: owned loopback transport
+The separate [loopback verification practical](LOOPBACK-HTTP-LAB.md) adds an opt-in, short-lived 127.0.0.1 listener/client over the repaired policy with a fixed synthetic actor. It requires its own execution permission and supported setup; it is not authentication or a public deployment, and does not extend the foundation peer's request budget. See its [selected actual transport checks](LOOPBACK-HTTP-VALIDATION.md). The original exercise above remains in-process only.
+
 Sources: https://docs.python.org/3/library/wsgiref.html and https://docs.python.org/3/library/sqlite3.html and https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html .
