@@ -10,6 +10,9 @@ Use only the provided query_lab.py and test_query_lab.py copies in a fresh dispo
 
 Python 3 with the standard sqlite3 module is required. No pip install, database server, sudo or network is needed. If a dependency is missing, follow the separately reviewed provisioning process; do not connect the isolated guest to the internet as a shortcut.
 
+## Optional SQL reading support
+If tables, SELECT, WHERE, ordering or sqlite3 result rows are unfamiliar, complete the [SQL reading bridge](SQL-READING-BRIDGE.md) before independent repair work. It uses separate, correct starter files and six tests expected to pass. Return here afterward: query_lab.py is intentionally unsafe and its baseline includes expected failures. The bridge does not replace EH-WEB-04, alter this exercise's scope or add a new required deliverable.
+
 ## Review the query path
 The `make_database` helper creates an in-memory table and inserts fixed fictional rows. The insert already uses placeholders; the intentionally unsafe part is `find_notes`. Trace how its owner argument is placed inside a quoted SQL string before SQLite parses it. The same argument can therefore be treated as SQL syntax instead of only as a value.
 
