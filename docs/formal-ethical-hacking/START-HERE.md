@@ -37,3 +37,6 @@ Keep personal records out of this repository. Submit only through the actual app
 Stop for unclear permission, unexpected connections or routes, failed media verification, unknown command destination, exposed secrets, unsupported hardware or unstable operation. Preserve only necessary non-sensitive observations and follow the actual incident/support procedure. Do not test exposed credentials or erase evidence to hide an error.
 
 For later reading, return to the [draft curriculum index](README.md). Maintainers should use the [pilot checklist](authoring/FIRST-JOURNEY-PILOT.md) before claiming this route is reproducible.
+
+## Wider programme planning — maintainers
+The [comprehensive programme blueprint](PROGRAMME-BLUEPRINT.md) proposes the shared foundation, professional penetration-testing and advanced web-specialist pathways toward the stated certification and job-role goals. Its linked candidate map, gap register and assessment/release plan are planning documents, not implemented lessons or verified certification coverage. This first journey remains a bounded entry route rather than the complete programme; none of the wider topics expands its practical permission.
