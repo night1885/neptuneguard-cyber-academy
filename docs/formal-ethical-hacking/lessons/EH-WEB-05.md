@@ -20,8 +20,11 @@ From the fixture directory run:
 ```sh
 python3 -m unittest -v test_query_lab
 result=$?
-printf 'test status=%s\\n' \"$result\"\n```
-The intended baseline includes a failure when a value contains an apostrophe and a failed expectation for the provided logic-like value. With string concatenation, that value changes the meaning of the WHERE expression and returns all synthetic rows. This behavior is confined to the temporary in-memory database. Record actual results; do not copy author output as if it were your run.
+printf 'test status=%s\n' "$result"
+```
+The printed value is the captured unittest exit status. The final printf normally succeeds even when the tests fail; do not confuse the status of that final printing command with the reported test result.
+
+The intended baseline includes a SQL error when a value contains an apostrophe and a failed expectation for the provided logic-like value. With string concatenation, that value changes the meaning of the WHERE expression and returns all synthetic rows. This behavior is confined to the temporary in-memory database. Record actual results; do not copy author output as if it were your run.
 
 A syntax error on one test and a returned extra row on another are different observations. Neither implies data was accessed outside this disposable fixture.
 
