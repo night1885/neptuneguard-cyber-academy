@@ -28,6 +28,9 @@ Read the [candidate competency data](authoring/competency-plan.json), [gap analy
 
 The map is an index-level triage of selected candidate lesson anchors at source commit 9208dc716d3c45226f469d2595b2e029d9321966. It is not a full semantic review of all lessons or an exhaustive certification map. Neither candidate anchors nor source-heading matches establish proficiency, teaching sufficiency, exam eligibility or validated alignment.
 
+## K03 follow-up — supporting Windows foundation drafts
+The new [identity/context lesson](lessons/WINDOWS-FOUNDATIONS-01.md), [one-file ACL lesson](lessons/WINDOWS-FOUNDATIONS-02.md), [process/service lesson](lessons/WINDOWS-FOUNDATIONS-03.md) and [bounded evidence capstone](lessons/WINDOWS-FOUNDATIONS-CAPSTONE.md) begin authoring this gap. The [instructor guide](lessons/WINDOWS-FOUNDATIONS-INSTRUCTOR.md) and [bounded validation record](lessons/WINDOWS-FOUNDATIONS-VALIDATION.md) distinguish paper scenarios, command drafts and unexecuted Windows work. They are supporting documents outside the 37-entry canonical catalogue; no existing prerequisite or execution permission changes. K03 is not marked complete, platform-validated or certification-aligned. The earlier candidate map retains its stated snapshot and canonical-anchor meaning.
+
 ## Delivery and approval boundaries
 Student-built environments remain the proposed delivery model; hosted labs are deferred. Windows/domain/cloud exercises require their own reviewed provisioning, isolation, licensing, cost and permission decisions. No subscription, equipment purchase or public-cloud activity is approved here. No instructional fixtures may be imported into academy runtime.
 

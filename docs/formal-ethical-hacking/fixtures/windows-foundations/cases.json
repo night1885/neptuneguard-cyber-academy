@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "notice": "Invented Windows-foundation teaching records, not native PowerShell output or observed guest behaviour. No Windows command was executed.",
+  "cases": [
+    {"id":"A","lesson":"WIN-F1","observations":["A supplied fictional account record lists membership in Administrators.","No particular object access or effective-token check is supplied."],"claim":"The learner can edit every file."},
+    {"id":"B","lesson":"WIN-F1","observations":["The fictional actor is a standard account.","The scenario explicitly says the selected draft read is permitted and completed."],"claim":"This specific synthetic read completed."},
+    {"id":"C","lesson":"WIN-F2","observations":["A selected fictional ACL excerpt includes an Allow Read entry.","Complete relevant entries, token context and a write observation are absent."],"claim":"The actor can edit the file."},
+    {"id":"D","lesson":"WIN-F2","observations":["The scenario explicitly records creation and a completed content write to one disposable file by the current actor.","No other operation or identity was checked."],"claim":"That actor completed that write; other operations remain unknown."},
+    {"id":"E","lesson":"WIN-F3","observations":["The selected fictional service reports Running.","No service-process mapping, bound-address or client observation is supplied."],"claim":"The intended HTTP endpoint is reachable."},
+    {"id":"F","lesson":"WIN-F3","observations":["The current synthetic PowerShell process is observed.","The selected service is separately observed; no relationship is supplied."],"claim":"The current PowerShell process hosts that service."},
+    {"id":"G","lesson":"WIN-F1","observations":["A fictional identity excerpt contains an account label and SID-like identifier.","No public release or evidence-sharing approval is supplied."],"claim":"Paste the complete identity output into public course chat."},
+    {"id":"H","lesson":"WIN-F2","observations":["The fictional selected ACL read returns Access denied.","Elevation and permission changes are excluded by the brief."],"claim":"The error authorises retrying as administrator."}
+  ]
+}
