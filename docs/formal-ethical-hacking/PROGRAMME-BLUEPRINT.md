@@ -40,6 +40,9 @@ The [command-argument practical](lessons/COMMAND-ARGUMENT-BOUNDARY.md) and [fixt
 ## K13 follow-up — password representations and offline verification
 The [representation lesson](lessons/PASSWORD-REPRESENTATIONS.md) and [offline verifier practical](lessons/PASSWORD-VERIFIER-LAB.md) teach encoding/hash/KDF distinctions, salt/parameter handling and selected verification checks using invented values. The [instructor guide](lessons/PASSWORD-VERIFIER-INSTRUCTOR.md) and [selected validation](lessons/PASSWORD-VERIFIER-VALIDATION.md) distinguish local tests from production crypto/authentication, FIPS, student-platform or certification claims. This adds supporting teaching, not canonical registration, permission to test accounts, a credential store or completion of K13.
 
+## K05/K08/K14 follow-up — application ownership bridge
+The [in-process application lab](lessons/APPLICATION-OWNERSHIP-LAB.md) connects request routing, value-bound in-memory SQL, resource policy and response status/headers/body. It supplies a defective starter, a separate repaired policy and reused application/CLI tests; [selected validation](lessons/APPLICATION-OWNERSHIP-VALIDATION.md) records what ran. Actors are invented trusted harness inputs, not authentication; no listener or real network request is provided. This is a bridge beyond a Boolean model, not a deployable service, canonical registration, actual login flow or complete advanced-web/certification pathway.
+
 ## Delivery and approval boundaries
 Student-built environments remain the proposed delivery model; hosted labs are deferred. Windows/domain/cloud exercises require their own reviewed provisioning, isolation, licensing, cost and permission decisions. No subscription, equipment purchase or public-cloud activity is approved here. No instructional fixtures may be imported into academy runtime.
 
