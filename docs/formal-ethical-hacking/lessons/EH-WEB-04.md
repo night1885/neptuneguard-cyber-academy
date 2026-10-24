@@ -17,7 +17,7 @@ A function is a named operation receiving inputs and returning a result. Here al
 
 The dataclasses are small records. Subject has an ID, role and course tuple; Submission has owner ID, course and state. A one-item tuple includes a trailing comma. Frozen records prevent ordinary field reassignment but do not prove identity or trust. Python annotations describe intended types; they do not authenticate input or enforce all runtime validation.
 
-Read both files before execution. If you cannot yet explain this bridge or use an editor comfortably, complete a guided walkthrough first; no independent Python proficiency is implied by the earlier terminal lessons.
+Read both files before execution. If you cannot yet explain this bridge or use an editor comfortably, complete the [guided Python reading walkthrough](PYTHON-READING-BRIDGE.md) first; no independent Python proficiency is implied by the earlier terminal lessons. That walkthrough uses separate, correct starter files whose tests should pass. Return here afterward: this authorization starter is deliberately defective and its initial policy tests should fail. Completing the walkthrough does not replace EH-WEB-CAPSTONE or this lesson's actual scope and setup checks.
 
 ## Policy for this fixture
 - A student can read or edit only their own draft in an enrolled course.

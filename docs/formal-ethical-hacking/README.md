@@ -7,6 +7,11 @@ The numbered sections propose a reading route through currently authored materia
 
 The course is not complete merely because these documents exist. This is not a claim of production readiness, certification alignment or accreditation. Earlier conversation prototypes and generated test artifacts are not silently imported.
 
+## Begin with the first practical journey
+Read [Start here](START-HERE.md) for the gated route from authorization and clean guest preparation through terminal foundations, two-VM HTTP observation and reporting. Use the blank [first-practical worksheet](FIRST-PRACTICAL-WORKSHEET.md) to distinguish completed, blocked and unattempted work. These documents do not implement a private submission service or approve a real learner pilot.
+
+Maintainers should use the [first-journey pilot plan](authoring/FIRST-JOURNEY-PILOT.md) before claiming end-to-end reproduction. Missing supported setup routes, provisioning instructions, actual support/incident contacts or approved private evidence handling remain blockers, not permission to improvise.
+
 ## 1. Authorization, host setup and terminal foundations
 | Document | Focus |
 |---|---|
@@ -45,6 +50,8 @@ A completed setup page or a failed ping is not proof of isolation. Practical per
 TLS lessons are conceptual and do not convert the clean HTTP fixture into HTTPS. Paper scenarios are not executed practical evidence.
 
 ## 4. Offline security repair practicals
+If the Python in these practicals is unfamiliar, use the [guided Python reading bridge](lessons/PYTHON-READING-BRIDGE.md) after the Linux foundations and before independent repair work. Its small synthetic-record fixture is correct and its eight supplied tests are expected to pass. This support material does not replace the web reasoning capstone or other lesson prerequisites.
+
 | Document | Focus |
 |---|---|
 | [EH-WEB-04](lessons/EH-WEB-04.md) | Ownership decisions |
@@ -54,7 +61,7 @@ TLS lessons are conceptual and do not convert the clean HTTP fixture into HTTPS.
 | [EH-WEB-07](lessons/EH-WEB-07.md) | Filesystem containment |
 | [EH-WEB-08](lessons/EH-WEB-08.md) | Editable-field policy |
 
-The integrated capstone currently covers EH-WEB-04 through EH-WEB-06 only. Later practicals are not silently added to its rubric. Fixtures intentionally contain defects, must remain outside academy runtime and must not be deployed. Their visible starter tests are expected to fail before repair.
+The integrated capstone currently covers EH-WEB-04 through EH-WEB-06 only. Later practicals are not silently added to its rubric. The security-repair fixtures intentionally contain defects, must remain outside academy runtime and must not be deployed. Their visible starter tests are expected to fail before repair; that expectation does not apply to the correct Python-reading starter.
 
 ## 5. Assessment planning and vulnerability triage
 | Document | Focus |
@@ -87,6 +94,12 @@ The fictional application model is not the academy's architecture. The log exerc
 ## Validation and authoring
 Read the lesson-specific validation records before making readiness claims. [Home-lab validation](lessons/HOME-LAB-VALIDATION.md) preserves the supported-hardware and end-to-end requirements. The existing [home-lab manifest](home-lab-manifest.json) remains unchanged, conservative and draft-not-published; it is not a complete catalogue of these newer drafts.
 
+The separate [curriculum catalogue](curriculum-catalogue.json) lists 36 draft lesson/capstone IDs and curated prerequisite relationships. Its [maintainer notes](authoring/CATALOGUE-NOTES.md) explain structural checks and semantic limits. It does not replace the manifest, authorize progression or register the supplementary Python bridge as another lesson. This reading index is not an automated completeness check of the catalogue.
+
 Maintainers with a repository checkout and Python 3.9+ can run `python3 docs/formal-ethical-hacking/authoring/check_index.py` from the repository root. To run its isolated unit tests: `cd docs/formal-ethical-hacking/authoring` then `python3 -m unittest -v test_check_index`. These are maintainer terminal instructions, not learner-interface commands.
 
-The checker examines simple inline local-file links in this README only. It does not execute teaching fixtures, fetch websites, verify fragments, validate prerequisites or approve release. See [index-check notes](authoring/INDEX-VALIDATION.md). No learner slash-command navigation or modal interface is introduced.
+The index checker examines simple inline local-file links in this README only. It does not execute teaching fixtures, fetch websites, verify fragments, validate prerequisites or approve release. See [index-check notes](authoring/INDEX-VALIDATION.md).
+
+For the selected combined checks, run `python3 -B docs/formal-ethical-hacking/authoring/check_authoring.py` from the repository root and read [combined-check instructions and execution limits](authoring/AUTHORING-CHECKS.md). The runner uses an explicit maintainer-test allowlist, not broad teaching-fixture discovery. It does not execute the Python-reading exercise or validate its new links outside the documents it explicitly checks. No full-checkout execution or new fixture run was performed for this navigation-only edit.
+
+These Markdown links are authoring navigation, not the finished learner workspace. No learner slash-command navigation or modal interface is introduced.
