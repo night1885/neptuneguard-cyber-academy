@@ -42,8 +42,11 @@ Do not restart or repeatedly rescan to force a preferred output. If observations
 ## Submission
 Provide your approved plan reference, exact command, version, minimal before/after evidence, listener correlation, source of any service label and at least three limitations. No scan result establishes whole-host security or complete network isolation. Do not copy fictional or author output as your own.
 
+## Offline output-interpretation support
+Use the [fictional observation case pack](NMAP-OUTPUT-CASEPACK.md), [blank worksheet](NMAP-OUTPUT-WORKSHEET.md) and its linked tiny XML fixture to practise state, service-label and evidence reasoning without running Nmap. The wrapper is a teaching format, not native scan output. The local Python reader is optional and requires the approved setup/material route. This supporting task does not replace genuine execution evidence for a released practical, add required deliverables, alter prerequisites or authorize any extra target, port, flag, probe or invocation.
+
 ## Validation state
-No Nmap command or two-VM scan was executed during authoring. Supported versions, offline provisioning, ordinary-user behavior, timing, expected faults and end-to-end learner workflow need reproduction before publication. No new runtime integration or academy-hosted infrastructure is created.
+No Nmap command or two-VM scan was executed during authoring. Supported versions, offline provisioning, ordinary-user behavior, timing, expected faults and end-to-end learner workflow need reproduction before publication. No new runtime integration or academy-hosted infrastructure is created. The supporting case pack records local fictional-XML parsing/field checks separately; those are not scan or platform validation.
 
 Sources:
 https://nmap.org/book/man.html
