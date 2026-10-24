@@ -21,8 +21,9 @@ Maintainers should use the [first-journey pilot plan](authoring/FIRST-JOURNEY-PI
 | [EH-LINUX-01](lessons/EH-LINUX-01.md) | Terminal, paths and safe file handling |
 | [EH-LINUX-02](lessons/EH-LINUX-02.md) | File permissions |
 | [EH-LINUX-03](lessons/EH-LINUX-03.md) | Output, errors and exit status |
+| [EH-LINUX-04](lessons/EH-LINUX-04.md) | Observe a bounded child process you started |
 
-The Linux foundations fit after guest preparation and before practical networking. Software provisioning and material transfer must use a reviewed supported route; the index supplies neither an installer nor universal hardware requirements.
+The first three Linux lessons fit after guest preparation and before practical networking. EH-LINUX-04 additionally introduces its own narrowly scoped process observation and stop rules. Software provisioning and material transfer must use a reviewed supported route; the index supplies neither an installer nor universal hardware requirements.
 
 ## 2. Internal network and protocol observation
 | Document | Focus |
@@ -34,8 +35,9 @@ The Linux foundations fit after guest preparation and before practical networkin
 | [EH-NET-02](lessons/EH-NET-02.md) | TCP endpoints and application observations |
 | [EH-NET-03](lessons/EH-NET-03.md) | DNS concepts and failure boundaries |
 | [Networking capstone](lessons/EH-NET-CAPSTONE.md) | Bounded service troubleshooting |
+| [EH-LINUX-05](lessons/EH-LINUX-05.md) | Relate the known local listener to its process |
 
-A completed setup page or a failed ping is not proof of isolation. Practical permissions remain specific to each released exercise.
+A completed setup page or a failed ping is not proof of isolation. Practical permissions remain specific to each released exercise. EH-LINUX-05 requires EH-LINUX-04, EH-LAB-04 and EH-NET-02; it does not authorize new client requests, scanning, privilege escalation or stopping an unknown process.
 
 ## 3. Web and transport concepts
 | Document | Focus |
@@ -50,7 +52,7 @@ A completed setup page or a failed ping is not proof of isolation. Practical per
 TLS lessons are conceptual and do not convert the clean HTTP fixture into HTTPS. Paper scenarios are not executed practical evidence.
 
 ## 4. Offline security repair practicals
-If the Python in these practicals is unfamiliar, use the [guided Python reading bridge](lessons/PYTHON-READING-BRIDGE.md) after the Linux foundations and before independent repair work. Its small synthetic-record fixture is correct and its eight supplied tests are expected to pass. This support material does not replace the web reasoning capstone or other lesson prerequisites.
+If the Python in these practicals is unfamiliar, use the [guided Python reading bridge](lessons/PYTHON-READING-BRIDGE.md) after the Linux foundations and before independent repair work. Its small synthetic-record fixture is correct and its eight supplied tests are expected to pass. The [SQL reading bridge](lessons/SQL-READING-BRIDGE.md) supplies a separate correct in-memory example and six tests before independent query repair. These supporting walkthroughs do not replace existing web-capstone or practical prerequisites.
 
 | Document | Focus |
 |---|---|
@@ -61,7 +63,11 @@ If the Python in these practicals is unfamiliar, use the [guided Python reading 
 | [EH-WEB-07](lessons/EH-WEB-07.md) | Filesystem containment |
 | [EH-WEB-08](lessons/EH-WEB-08.md) | Editable-field policy |
 
-The integrated capstone currently covers EH-WEB-04 through EH-WEB-06 only. Later practicals are not silently added to its rubric. The security-repair fixtures intentionally contain defects, must remain outside academy runtime and must not be deployed. Their visible starter tests are expected to fail before repair; that expectation does not apply to the correct Python-reading starter.
+Optional paper extensions:
+- [API authorization case pack](lessons/API-AUTHORIZATION-CASEPACK.md) and [worksheet](lessons/API-AUTHORIZATION-WORKSHEET.md): object-, property- and function-level decisions, linked from EH-WEB-08.
+- [Output-context case pack](lessons/OUTPUT-CONTEXT-CASEPACK.md) and [worksheet](lessons/OUTPUT-CONTEXT-WORKSHEET.md): HTML text, attributes, URLs, JavaScript, permitted formatting and presentation choices, linked from EH-WEB-06.
+
+These extensions add no live targets, browser execution or testing permission. The integrated capstone currently covers EH-WEB-04 through EH-WEB-06 only; later practicals and paper packs are not silently added to its rubric. Security-repair fixtures intentionally contain defects, must remain outside academy runtime and must not be deployed. Their visible starter tests are expected to fail before repair; the correct Python- and SQL-reading starters instead should pass unchanged.
 
 ## 5. Assessment planning and vulnerability triage
 | Document | Focus |
@@ -77,29 +83,41 @@ The Nmap exercise requires its own actual lab authorization; it is not included 
 | Document | Focus |
 |---|---|
 | [EH-EVIDENCE-01](lessons/EH-EVIDENCE-01.md) | Synthetic timeline and event correlation |
+| [EH-EVIDENCE-02](lessons/EH-EVIDENCE-02.md) | SHA-256 byte consistency, working-copy change and handling records |
 | [EH-MODEL-01](lessons/EH-MODEL-01.md) | Assets, flows and trust boundaries |
 | [EH-MODEL-02](lessons/EH-MODEL-02.md) | Threat-to-test traceability |
 
-The fictional application model is not the academy's architecture. The log exercise is not live monitoring or learner surveillance.
+The fictional application model is not the academy's architecture. The log exercise is not live monitoring or learner surveillance. EH-EVIDENCE-02 requires EH-EVIDENCE-01 and Python reading support. Its tiny synthetic-file exercise does not establish provenance, factual truth, legal admissibility, forensic acquisition or a real evidence-transfer service.
+
+## 7. Offline input-validation automation
+| Document | Focus |
+|---|---|
+| [EH-AUTO-01](lessons/EH-AUTO-01.md) | Validate an exact address/port input pair without performing a network action |
+
+Requires EH-ASSESS-01, EH-NET-01 and Python reading support. Parse success, fictional pair membership, actual authorization and execution are different decisions. The predicate opens no sockets and must not be connected to a scanner, HTTP client, bot or academy authorization adapter. A True result is not permission or proof of reachability.
 
 ## Supporting assessment material
 - [Network finding and retest worksheet](lessons/NETWORK-FINDING-AND-RETEST.md)
+- [Process and service worksheet](lessons/PROCESS-SERVICE-WORKSHEET.md)
 - [Web report template](lessons/WEB-PRACTICAL-REPORT-TEMPLATE.md)
 - [Draft web rubric](lessons/WEB-PRACTICAL-DRAFT-RUBRIC.md)
 - [Fictional advisory cases](lessons/VULNERABILITY-TRIAGE-CASEPACK.md) and [triage worksheet](lessons/TRIAGE-EVIDENCE-WORKSHEET.md)
 - [TLS cases](lessons/TLS-CERTIFICATE-CASEPACK.md) and [verification worksheet](lessons/TLS-VERIFICATION-WORKSHEET.md)
 - [Timeline worksheet](lessons/LOG-TIMELINE-WORKSHEET.md)
+- [Synthetic evidence handoff worksheet](lessons/EVIDENCE-HANDOFF-WORKSHEET.md)
 - [Fictional modelling scenario](lessons/THREAT-MODEL-SCENARIO.md) and [traceability worksheet](lessons/THREAT-TEST-TRACEABILITY.md)
 
 ## Validation and authoring
-Read the lesson-specific validation records before making readiness claims. [Home-lab validation](lessons/HOME-LAB-VALIDATION.md) preserves the supported-hardware and end-to-end requirements. The existing [home-lab manifest](home-lab-manifest.json) remains unchanged, conservative and draft-not-published; it is not a complete catalogue of these newer drafts.
+Read lesson-specific validation records before making readiness claims. [Home-lab validation](lessons/HOME-LAB-VALIDATION.md) preserves supported-hardware and end-to-end requirements. The existing [home-lab manifest](home-lab-manifest.json) remains conservative and draft-not-published; it is not a complete catalogue of these newer drafts.
 
-The separate [curriculum catalogue](curriculum-catalogue.json) lists 36 draft lesson/capstone IDs and curated prerequisite relationships. Its [maintainer notes](authoring/CATALOGUE-NOTES.md) explain structural checks and semantic limits. It does not replace the manifest, authorize progression or register the supplementary Python bridge as another lesson. This reading index is not an automated completeness check of the catalogue.
+The separate [curriculum catalogue](curriculum-catalogue.json) lists 36 draft lesson/capstone IDs and curated prerequisite relationships. This index revision adds the previously omitted EH-LINUX-04, EH-LINUX-05, EH-EVIDENCE-02 and EH-AUTO-01 links so all 36 catalogue entries have a reading link. Supporting bridges, worksheets and case packs are not extra canonical entries. See [catalogue maintainer notes](authoring/CATALOGUE-NOTES.md) for structural and semantic limits. This remains a documentation reconciliation, not an implemented automatic completeness or progression rule.
 
-Maintainers with a repository checkout and Python 3.9+ can run `python3 docs/formal-ethical-hacking/authoring/check_index.py` from the repository root. To run its isolated unit tests: `cd docs/formal-ethical-hacking/authoring` then `python3 -m unittest -v test_check_index`. These are maintainer terminal instructions, not learner-interface commands.
+Maintainers with a trusted repository checkout and Python 3.9+ can run `python3 docs/formal-ethical-hacking/authoring/check_index.py` from the repository root. Its isolated tests run from the authoring directory with `python3 -m unittest -v test_check_index`. These are maintainer terminal instructions, not learner-interface commands.
 
 The index checker examines simple inline local-file links in this README only. It does not execute teaching fixtures, fetch websites, verify fragments, validate prerequisites or approve release. See [index-check notes](authoring/INDEX-VALIDATION.md).
 
-For the selected combined checks, run `python3 -B docs/formal-ethical-hacking/authoring/check_authoring.py` from the repository root and read [combined-check instructions and execution limits](authoring/AUTHORING-CHECKS.md). The runner uses an explicit maintainer-test allowlist, not broad teaching-fixture discovery. It does not execute the Python-reading exercise or validate its new links outside the documents it explicitly checks. No full-checkout execution or new fixture run was performed for this navigation-only edit.
+For selected combined checks, run `python3 -B docs/formal-ethical-hacking/authoring/check_authoring.py` from the repository root and read [combined-check instructions and execution limits](authoring/AUTHORING-CHECKS.md). The runner uses an explicit maintainer-test allowlist, not broad fixture discovery. It does not execute the reading fixtures or inspect every supporting document.
 
-These Markdown links are authoring navigation, not the finished learner workspace. No learner slash-command navigation or modal interface is introduced.
+The separate [Python bridge regression notes](authoring/PYTHON-BRIDGE-REGRESSION.md) describe a standalone named maintainer test covering the original starter, two supplemental cases, a temporary mutation and restoration. That module is not silently added to the combined-runner allowlist. Its results are selected-file local checks, not GitHub CI or student-hardware validation.
+
+No new fixture execution or full-checkout validation was performed for this index-only revision. Existing lesson-specific author records retain their original scope and limitations. These Markdown links are authoring navigation, not the finished learner workspace. No learner slash-command navigation or modal interface is introduced.
