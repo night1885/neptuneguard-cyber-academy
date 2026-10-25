@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "status": "draft-source-review",
+  "runtimeIntegration": false,
+  "publishable": false,
+  "sourceCommit": "80c7803a147154912ee12b729ce527768f963c2d",
+  "entries": [
+    {
+      "id": "EH-LAB-00",
+      "path": "lessons/EH-LAB-00.md",
+      "gitBlob": "667a660b19f0fc3dab1000b22d85bb73a5cbb311",
+      "sha256": "b0a2eb9bf1f1759ac522968a6c3c368c749736e8775c674ad5a712730cd35852"
+    },
+    {
+      "id": "EH-LAB-01",
+      "path": "lessons/EH-LAB-01.md",
+      "gitBlob": "57f099471b478e123e654756ca29616f430ecd53",
+      "sha256": "4c6a607df922e107622c115deeddb19d86c461985683c309920321e8ca0d3326"
+    },
+    {
+      "id": "EH-LAB-02",
+      "path": "lessons/EH-LAB-02.md",
+      "gitBlob": "75190943022586f0a3186d8f76cdd3738ced17e2",
+      "sha256": "16b3acab32cefa7b7c08d738a8661259f0b7f104a17de07e1697a8624dfde75c"
+    }
+  ]
+}
