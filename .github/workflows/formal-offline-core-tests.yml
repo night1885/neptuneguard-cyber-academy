@@ -1,0 +1,43 @@
+name: Formal offline core fixture tests
+on:
+  push:
+    branches: [formal-ethical-hacking-programme]
+    paths:
+      - 'docs/formal-ethical-hacking/**'
+      - '.github/workflows/formal-offline-core-tests.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    name: offline-${{ matrix.group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: python-foundations
+            directory: docs/formal-ethical-hacking/fixtures/python-foundations
+            command: python -B -m unittest -v test_summary test_summary_additional
+          - group: ownership-read
+            directory: docs/formal-ethical-hacking/fixtures/application-ownership
+            command: python -B -m unittest -v test_reference test_cli test_application_additional
+          - group: ownership-update
+            directory: docs/formal-ethical-hacking/fixtures/application-ownership
+            command: python -B -m unittest -v test_update_reference test_update_cli test_updates_additional
+          - group: collection-export
+            directory: docs/formal-ethical-hacking/fixtures/collection-export
+            command: python -B -m unittest -v test_reference test_cli
+          - group: search-contracts
+            directory: docs/formal-ethical-hacking/fixtures/executable-search
+            command: python -B -m unittest -v test_search_contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run explicit offline group
+        working-directory: ${{ matrix.directory }}
+        run: ${{ matrix.command }}

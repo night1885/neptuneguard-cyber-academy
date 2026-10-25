@@ -32,6 +32,29 @@ a learner-owned copy, retest, then communicate bounded impact and uncertainty. L
 result source-predicted, observed, blocked or unattempted. Historical test totals and supplied
 answers are not a learner's observations. Record interventions and reference-solution access.
 
+## Supporting transfer extension and selected automation
+
+A newly authored [collection-export exercise](../../fixtures/collection-export/README.md)
+adds a separate fixed in-memory example: permission to read a shared item is not permission
+to export it, and selection/projection require separate review. It retains this route's
+prerequisites and introduces no canonical ID, required pass gate, endpoint, network action,
+real export destination or runtime adapter. Use its own reviewed setup and scope; do not
+silently add its tasks to an already issued assessment brief.
+
+The new folder contains a visible reference and instructor notes. Treat the complete folder
+as maintainer material, not a protected exam or learner bundle to publish wholesale. New
+authorship does not establish unfamiliarity to a learner. Record prior exposure and help;
+actual supported reproduction, independent semantic review and assessment calibration are
+still required. The existing investigation remains the ownership/update task unless a
+separate reviewed brief explicitly selects the transfer extension.
+
+The proposed formal-offline-core-tests.yml workflow checks named positive Python groups
+in separate fixture working directories. It excludes broad discovery, deliberately red
+starter suites, actual executable-search helper runs and loopback transport. Its read-only
+repository permissions and test selection are not a deployment, privacy workflow or course
+release approval. See [the integration record](OFFLINE-CORE-CI-REVIEW.md) for exact scope.
+Configuration and earlier local package runs do not establish a successful hosted CI run.
+
 ## Background sources
 
 OWASP Secure Code Review Cheat Sheet:

@@ -85,8 +85,11 @@ score merely because a test failed.
 These applications, references and detailed walkthroughs are visible teaching material.
 Performance here can evidence work on a familiar task, with assistance/reference exposure
 recorded. It cannot alone establish independent performance on an unfamiliar application.
-A later original variant needs separate authoring, scope review and assessment calibration;
-this extension does not claim such a variant was delivered or piloted.
+A separately authored [collection-export transfer example](../../fixtures/collection-export/README.md)
+is now available as draft supporting material, not an activated part of this task. Its
+visible source/reference and local author tests do not establish that it is unfamiliar to
+a learner, independently assessed, supported on learner hardware or calibrated. An actual
+unfamiliar-task assessment still requires its own reviewed brief and validation.
 
 Record whether explanations, test additions and repair decisions were made before or after
 hints/reference inspection. Unknown assistance history stays unknown; an empty hint log is
