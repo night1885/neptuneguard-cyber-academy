@@ -23,6 +23,17 @@ Create one fictional narrative combining identity, a selected file, own process 
 
 Write a short report with scope, observations, supported conclusions, uncertainty and safe next decision. Add a legitimate-operation control and an excluded-operation example. If you have an actual separately approved guest run, keep it in a distinct section with its real version, commands, blockers and cleanup/final state. Do not mix invented outputs into that transcript.
 
+## Proposed additional command-reading checkpoint
+This is a proposed revision for the supporting draft, not an activated requirement, changed grading gate or additional execution budget. Use the commands already printed in WIN-F1/F2/F3 as text; do not perform new operations.
+
+1. Classify each as a native program invocation, cmdlet, object/property expression or .NET method call. Explain why their result/error signals are not interchangeable.
+2. Trace the generated scratch-file reference through creation, write, descriptor retrieval and narrow cleanup. Explain the safe response if creation fails while an older variable value remains in the session.
+3. Explain what the pipeline and selected properties preserve, and what they leave unobserved. Do not treat display columns as a complete authorization model.
+4. Separate the current native identity, current PowerShell process and separately selected service. Identify which relationships the existing commands do not establish.
+5. Revise one overconfident claim into an evidence-bounded conclusion. Describe an additional evidence request only as a proposal requiring its own scope review.
+
+Feedback should address explanation and uncertainty, not exact memorized prose. Real output remains separate from fictional records. A paper answer and a document-structure test cannot establish Windows execution, independent practical competence or release readiness.
+
 ## Review and limits
 Use the [instructor guide](WINDOWS-FOUNDATIONS-INSTRUCTOR.md) after independent reasoning. Visible answers are learning aids, not protected examination material. Proposed review dimensions are scope, interpretation, evidence minimisation, honest blockers and preservation of intended use. No calibrated pass mark, automatic progression, award, restricted-lab grant or employment/certification outcome follows.
 

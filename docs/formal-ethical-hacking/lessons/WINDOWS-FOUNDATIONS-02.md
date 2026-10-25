@@ -32,6 +32,26 @@ $acl.Access | Select-Object IdentityReference, FileSystemRights, AccessControlTy
 
 Before each line, predict its effect. Distinguish the completed write from the retrieved metadata. Do not invent the owner, inherited entries or exact rights: record what your approved guest actually supplies. Real principal/path details stay private; use redacted summaries. If an operation errors, record the blocker and use the approved cleanup/support route, not permission changes or retries as administrator.
 
+## Follow the data from creation to cleanup
+Treat this as a one-shot sequence in the reviewed ordinary guest session. Before starting, account for any previous incomplete attempt through the approved support process. If creation fails, do not reuse a `$scratchFile` value left from an earlier attempt. Do not rerun creation or write steps repeatedly to force a desired result. These instructions do not authorize searching or deleting old temporary files.
+
+| Expression | What it does | What it does not establish |
+|---|---|---|
+| `$scratchFile = ...GetTempFileName()` | Calls a static .NET method, creates one file and stores its path | A harmless unused name, encryption, or permission for another file |
+| `[System.IO.File]::WriteAllText(...)` | Calls a static method to write the fixed fabricated text to that path | A generic safe-write policy or another identity's access |
+| `$acl = Get-Acl -LiteralPath ...` | Retrieves the descriptor into a variable, treating the path literally | A complete effective-access calculation |
+| `$acl | Select-Object Owner` | Passes the descriptor object through a property selection | A separate test of content read/write permission |
+| `$acl.Access | Select-Object ...` | Selects properties from the supplied access-rule collection | A complete policy decision from the first displayed row |
+
+A variable holds a value; it is not permanently bound to the original object or authorization. If you lose or overwrite the reference, stop instead of constructing a replacement path from memory. Dot notation selects a member. The `::` syntax calls a static member on the named .NET type. A comma separates arguments or listed properties in these particular expressions. The single-quoted fabricated text is a literal string, not a real credential or learner record.
+
+PowerShell pipelines normally carry objects, not simply the visible table text. `Select-Object` chooses properties for resulting objects; the console formats those objects for display. A neat display is not proof the underlying permission question was answered. `-ErrorAction Stop` on `Get-Acl` requests terminating handling of its non-terminating errors; it is not an instruction to repair the ACL, retry as administrator or continue after failure. Do not assume that one command's error setting applies universally to every .NET call or later operation.
+
+## Failure and evidence record
+For each existing operation record: predicted effect; actual result or BLOCKED; affected file reference kept private; one limited interpretation; and whether cleanup is confirmed, uncertain or not attempted. Do not copy a full ACL containing unrelated real principals into a public channel. A reviewer should be able to distinguish creation, content write, metadata retrieval and deletion without pretending one proves the others.
+
+If writing or metadata access fails after file creation, retain the exact reference privately and use the approved cleanup/support decision. Do not infer that a partially completed sequence left no file. Do not run broader inventory, change ownership or ACL entries, disable protection, or delete anything outside that one known newly created file.
+
 ## Narrow cleanup
 Only if the variable still identifies the exact file newly created by this activity, use:
 

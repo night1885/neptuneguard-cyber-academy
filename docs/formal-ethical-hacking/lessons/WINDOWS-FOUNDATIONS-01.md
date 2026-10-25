@@ -23,11 +23,30 @@ In the approved guest and ordinary learner session, confirm the command destinat
 ```powershell
 $PSVersionTable.PSVersion
 whoami.exe /user
+$identityExitCode = $LASTEXITCODE
+$identityExitCode
 ```
 
 Record the actual version and whether the identity command succeeded. If either command fails, stop and record the error; do not substitute expected text or infer the missing result. This fixed native command is for the reviewed guest toolchain, not arbitrary executables downloaded from a tutorial. Local command selection is not proof of zero background traffic or network isolation.
 
 Write a short explanation without posting the raw account/SID publicly: the observation describes this context at this time; it does not establish a particular file right, service identity, HTTP access, instructor role or another account's authority. No account change, group change, credential collection, domain query or elevation is introduced.
+
+## Read the syntax and success signal
+`$PSVersionTable` is a PowerShell-provided table; `.PSVersion` selects its version value. This is an object/property expression, not a request to install or upgrade PowerShell. `whoami.exe` is a native Windows program; `/user` requests the current user identity information. Do not substitute a similarly named downloaded executable or infer a service account from your interactive identity.
+
+`$identityExitCode = $LASTEXITCODE` copies the native program's exit code immediately after that invocation. The following `$identityExitCode` expression displays the saved value. It introduces no additional identity query. Record the actual code with the actual output. If the invocation failed, was not found, or the result is ambiguous, stop rather than treat an old variable value or remembered output as success. Native exit status, PowerShell cmdlet error behavior and application authorization are different concepts.
+
+Native exit code zero supports that this invocation reported success; it does not grant a file right, identify all groups/privileges, establish another process's token or authorize future work. Do not append PowerShell's `-ErrorAction Stop` to `whoami.exe` as if it were a native flag. Do not change execution policy, native-error preferences or session privileges to complete this draft. Available behavior still requires reproduction on the approved toolchain.
+
+Before the approved observation, predict which output is the PowerShell version, which is native identity output and which is the saved numeric status. Afterwards, explain the strongest claim supported by each separately. If the account label is redacted, retain enough context in the approved private record to distinguish the observation without publishing its underlying identity.
+
+## Troubleshooting without expanding the exercise
+- Command not found or unexpected executable selection: report the approved-toolchain discrepancy; do not search for or download a replacement.
+- Access denied: record the error and stop; this lesson does not permit elevation or account changes.
+- Unexpected account or session: stop and confirm the guest/session with support before file or service work.
+- Missing version or exit status: report the missing observation. Do not invent a compatibility claim or success code.
+
+Documentation: Microsoft Learn about_Automatic_Variables and about_Error_Handling. These support explanation of native status, not validation of this guest.
 
 ## Fictional reasoning and review
 Read A, B and G in the [case fixture](../fixtures/windows-foundations/cases.json). A group-membership statement is insufficient for an all-files claim. A specifically supplied successful permitted read supports that read only. Unapproved public identity-output sharing is not an acceptable evidence workflow.

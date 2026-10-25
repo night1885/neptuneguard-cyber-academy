@@ -37,6 +37,25 @@ Get-Service -Name $serviceName -ErrorAction Stop | Select-Object Name, Status, S
 
 Use only the trusted brief value and unchanged reviewed code. This small guard is not a general input-security or authorisation adapter. A missing/inaccessible service is a blocker, not a reason to query all services, elevate, install one or change configuration. Do not start/restart/stop it or terminate its process. Real identity/service details stay in the approved private workflow.
 
+## Explain the query before interpreting the result
+In `Get-Process -Id $PID`, `Get-Process` is the cmdlet and `-Id` supplies the current session's process identifier. `$PID` is the PowerShell automatic variable for the process hosting that session. `-ErrorAction Stop` requests terminating handling of that cmdlet's non-terminating errors. `Select-Object Id, ProcessName` selects those two properties from the resulting object; it neither observes every process nor proves that the selected process owns a service or listener.
+
+The service sequence assigns a trusted exact name to `$serviceName`, checks the unchanged placeholder, rejects wildcard syntax, queries that one name and selects Name, Status and ServiceType. A variable assignment is not authentication or authorization. The placeholder is deliberately not a runnable target. Do not replace it using a guessed display name, an internet example or an all-services discovery command. The guard is narrow reviewed teaching code, not a general sanitizer or an access-control implementation.
+
+A command that returns a selected status is different from one that changes status. This lesson contains no service start/stop/restart, configuration update or account query. Process ID, process name, service name, display name, service status, service account and listening endpoint are separate fields or relationships; do not fill unobserved fields from a name match. ServiceType alone does not supply a service-to-process mapping.
+
+## Prediction and troubleshooting table
+| Condition | Bounded interpretation | Next decision within this lesson |
+|---|---|---|
+| Current-process query succeeds | The selected current-process properties were observed | Record only those properties and limitations |
+| Current-process query errors | The intended observation was not established | Stop and report the error, not a remembered PID |
+| Placeholder guard fires | No reviewed exact service value was supplied | Use the paper task; request the actual brief |
+| Wildcard guard fires | Proposed name is outside this exact-name exercise | Do not remove the guard or broaden discovery |
+| Service missing or inaccessible | This query did not supply its intended service record | Record the blocker without elevation or installing a service |
+| Service status is Running | A supplied service status was observed | Do not claim port reachability or application health |
+
+Documentation: Microsoft Learn Select-Object, Get-Process, Get-Service and about_Error_Handling. Documentation review is not a Windows execution result.
+
 ## Interpret only the evidence supplied
 The two commands do not map the service to a PID or establish a listening socket. A service-to-process or process-to-listener link would need its own approved observations; it is not supplied by a shared name. This lesson does not authorise obtaining those extra observations. It teaches how to identify a missing edge.
 
