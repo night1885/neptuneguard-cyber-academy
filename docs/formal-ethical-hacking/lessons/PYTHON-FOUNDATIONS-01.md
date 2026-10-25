@@ -14,6 +14,15 @@ A Path identifies a local filesystem reference, not testing permission. load_rec
 
 Trace status_group(404): it is not None, integer division gives 4, and the formatted result is 4xx. Trace None separately: not-recorded describes the dataset field, not proof that no server response ever existed. A08's 100 is an informational status label; these records are not complete HTTP transactions. A07 deliberately combines a recorded 200 with nonzero client exit; recorded response metadata does not imply a completed transfer.
 
+## Trace one record through every representation
+Start with A03 in the reviewed file rather than inventing a new request. On disk its status is the JSON number 404. UTF-8 decoding creates text, and JSON parsing creates a dictionary entry whose Python value is an integer. Validation checks the record before any grouping. `status_group` receives 404, returns the string `4xx`, and `summarize` increments that group's counter. Serialization later turns the whole report back into JSON text for stdout. Neither conversion authenticates the record.
+
+Trace A04 separately: JSON null becomes None, selects not-recorded, and its embedded client exit contributes to the nonzero count. Compare A07, which supplies 200 and a nonzero embedded client exit. The summary describes both fields without declaring the transfer complete. Do not infer a captured protocol timeline from the fixture order.
+
+`dict.fromkeys(GROUPS, 0)` initializes each counter with integer zero. Each increment replaces that key's integer value. `sum(record['client_exit'] != 0 for record in records)` counts true comparisons; it does not add the numeric exit codes. `sort_keys=True` controls JSON key ordering for presentation, not event chronology or ranking. Returning the report dictionary does not print it; main supplies the printing effect.
+
+The validated tuple contains copied dictionaries, not immutable records. Changing a source record afterwards does not change the copy's primitive fields, but a caller can still edit a dictionary held inside the tuple. The intended workflow validates and summarizes without intervening edits. Do not expose these helpers as general trusted-input APIs or mistake copied data for secure evidence storage.
+
 ## Predict and run
 Before execution, predict the number of records, each group count and the nonzero client-exit count. Then, only in the disposable fixture directory:
 

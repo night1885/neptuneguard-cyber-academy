@@ -24,6 +24,15 @@ Preserve the correct files/output first. In a separate disposable copy only, rep
 
 A second reasoning exercise is replacing status_group's normal numeric grouping with a constant 2xx. The author observed five failure events, including subtests, not five independent methods. This demonstrates selected coverage, not a complete mutation score. Syntax failures or imports blocked before assertions do not establish semantic detection. Do not preserve a counterexample as completed code.
 
+## Choose evidence that distinguishes behaviors
+For each proposed test, name its input, operation, expected result and the alternative implementation it would distinguish. A negative client exit tests a lower bound that the existing 256 case does not. Invalid UTF-8 tests decoding, not JSON syntax. An exact byte-boundary acceptance test complements an oversized rejection. Keep file tests inside their own temporary directory and never overwrite the reviewed fixture to manufacture a passing outcome.
+
+Test a valid control alongside a rejected case, then check that the original inputs were preserved. A copied-dictionary test and a tuple-immutability claim are not interchangeable: the current helper copies dictionaries but callers can still edit those copies. Treat internal call-order assumptions as limitations, not newly discovered execution permission.
+
+Mutation reasoning requires a semantic test failure. First run the unchanged baseline. Change one condition only in a disposable copy, identify the failing assertion rather than an import or syntax error, then restore and rerun the unchanged source. A failing subtest event is not necessarily another test method. Do not add baseline, expanded, mutant and restored run counts together and present them as distinct independent test coverage.
+
+The author batch supplied with this proposed revision reran the 20-method baseline, ran a separate 12-method maintainer supplement together with it, reproduced the two selected mutations against the original baseline, and reran the restored expanded suite. The original learner command and the supplied baseline tests remain unchanged. The supplement is review support, not an automatically added learner requirement or a new pass threshold. Read its execution record before quoting any result.
+
 ## Deliverable
 Provide scope, predictions, actual starter/test results or blockers, two added cases, explanation of any disposable mutation and limitations. A green suite does not establish trusted provenance, actual client behaviour, HTTP authorisation, deployed privacy, supported hardware or every malformed-input case. Continue with the [capstone](PYTHON-FOUNDATIONS-CAPSTONE.md).
 

@@ -8,6 +8,13 @@ Draw bytes → UTF-8 text → parsed object → validated records → grouped re
 ## Task 2 — interpret the eight fictional records
 Explain how a 404/client-zero record differs from a missing-status/nonzero-client record, and why a recorded 200/nonzero-client record does not establish a complete successful transfer. Interpret the informational 100 without treating the file as a complete protocol trace. These are independent invented records, not a timeline of executed requests.
 
+## Proposed reasoning checkpoint before the extension
+This supporting draft addition is not an activated grading or progression gate and adds no network action or practical target. For one chosen field, explain its representation in bytes, parsed data and the report. Then identify one acceptance boundary, one rejection boundary and one assumption the helper does not check.
+
+Explain why sum of nonzero comparisons is a count rather than the sum of embedded exit codes. Explain why a tuple of copied dictionaries is not deep immutability. Propose a test that distinguishes a selected valid input from its nearest invalid counterpart, and a regression that would be detected by that test. Preserve a positive control and describe restoration after any disposable mutation.
+
+Conclude with three separate statements: what the code reported, what the local execution demonstrated and what remains unknown about actual client behavior or application security. Do not treat correct processing of invented records as a new HTTP observation or certification outcome.
+
 ## Task 3 — test and extend
 Run the correct starter and named suite after prediction; record actual results or blockers. Add the two PY-F3 cases in a local copy. Design one further positive and negative example with fictional data without connecting the helper to any execution tool. Do not edit expected values to match a defect or use a general JSON dump as a substitute for the fixed contract.
 

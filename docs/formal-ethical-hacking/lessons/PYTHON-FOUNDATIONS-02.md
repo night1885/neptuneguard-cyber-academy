@@ -17,6 +17,23 @@ load_records bounds its initial read and validates everything before a report is
 ## Errors and presentation
 main catches expected OSError/ValueError families for this route and emits a fixed diagnostic to stderr with process status 2, without echoing raw field values. A successful summary goes to stdout with status 0. Invalid JSON raises JSONDecodeError, a ValueError subclass. Unexpected programming errors are not concealed with a catch-everything success response. An empty valid collection yields zero observations, not a clean security assessment.
 
+## Separate the failure layers
+| Layer | Example | What the selected program does |
+|---|---|---|
+| File access | Adjacent fixture missing | Expected OSError reaches the fixed CLI rejection path |
+| Byte bound | More than MAX_BYTES | Rejects before parsing the oversized teaching file |
+| Text decoding | Invalid UTF-8 bytes | Decoding fails before JSON validation |
+| JSON syntax | Unclosed object | Parser raises JSONDecodeError, in the ValueError family |
+| Parsed shape | A record lacks http_status | Exact-field validation rejects it |
+| Field type/range | Negative client_exit | Selected contract rejects it |
+| Aggregation | Already validated records | Groups fields under the helper's call-order assumptions |
+
+An exact-boundary test matters as well as an oversize rejection. A reviewed JSON document padded with trailing whitespace to exactly MAX_BYTES remains within the initial byte bound; a thirteenth valid record exceeds the record bound. Do not assume every rejection test proves that an adjacent valid input is accepted. The byte check is a teaching limit, not complete resource protection for hostile nesting, filesystems or concurrent changes.
+
+Unknown effective fields, repeated record IDs and duplicate textual JSON keys are three different questions. The standard decoder can retain the last value for a repeated textual key before this validator sees the dictionary. This selected limitation remains intentionally documented; do not call the program a strict arbitrary-JSON importer. A test that records the limitation is not a fix or permission to ingest real logs.
+
+The CLI's fixed diagnostic avoids echoing the rejected invented ID in the selected invalid-ID run. That single check is not a comprehensive privacy review. Do not broaden the accepted path/arguments, add real records or connect this helper to network tools merely because its small fixture contract is explicit.
+
 ## Work
 On paper, trace wrong root type, unknown field, duplicate ID, boolean exit, string status, missing status and oversized file. Identify the rejection stage and which facts remain unknown. Use only fabricated values; do not replace observations.json with real output or cause a network operation to generate records. The next lesson uses test-owned in-memory copies and temporary files, not ad hoc endpoint observations.
 
