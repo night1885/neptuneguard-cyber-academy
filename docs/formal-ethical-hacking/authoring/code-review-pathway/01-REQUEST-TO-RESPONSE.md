@@ -44,6 +44,90 @@ Then compare test_nonowner, test_nonowner_body and test_unknown_same_denial: sta
 of fictional protected text, and selected absent/denied presentation are distinct assertions.
 These checks do not establish timing indistinguishability or complete protocol conformance.
 
+## Build a causal trace, not a list of tool names
+
+For the same-course nonowner example, distinguish these values and decisions:
+
+| Step | Input or operation | Evidence boundary |
+|---|---|---|
+| Harness context | ALICE supplied as ng.actor | A trusted fictional assumption, not a real authenticated session |
+| Route selection | /notes/note-b becomes key note-b | Choosing an object does not authorize reading it |
+| Database lookup | Key bound as the SELECT parameter | Treating input as a SQL value does not implement ownership |
+| Loaded row | student-b, course-a, draft | Facts to compare with the actor and policy, not a disclosure grant |
+| Starter student branch | Student role and draft state | Missing owner equality admits the selected nonowner |
+| Repaired student branch | subject_id equals owner as well as existing conditions | Blocks this route while preserving legitimate policy cases |
+| Response | Selected status, headers and encoded body | Inspect returned data and metadata, not only a Boolean or status |
+
+Trace the exact branch in source before reading an expected answer. In the first denial
+condition, `or` permits early rejection; later, `note is None or not self.policy(...)`
+short-circuits the policy call for a missing row. The classmate disclosure requires an
+existing row and an allowed starter policy decision. Do not claim the problem is an
+unrestricted SQL query simply because lookup returns a row: the query is parameterized
+and selects one key, while the missing comparison is an authorization defect.
+
+The reference changes the injected policy, not routing, SQL binding or body serialization.
+The factory chooses that function through reviewed source, not a request field. A narrowly
+scoped finding should identify the missing subject/resource relationship and the returned
+fictional note, then explain which control remains assumed. No conclusion about real
+session forgery, a live endpoint or all application records follows from this fixture.
+
+## Explain a repair with legitimate controls
+
+Rejecting every request can suppress the forbidden disclosure and still fail the intended
+application contract. Compare four questions: does the owner retain access; does the assigned
+instructor retain access under the fictional course/state rule; is the nonowner denied; and
+is the denied response free of note data? Preserve other-course and lifecycle restrictions
+instead of weakening them to make one positive test pass.
+
+The selected author rerun reproduced four starter assertion failures and separately tested
+a disposable deny-all policy against the reused reference requirements. That counterexample
+also produced four failures, this time from broken legitimate behavior. Equal failure counts
+do not mean equal defects, adequate coverage or four separate vulnerabilities. Identify the
+actual failing assertions and source cause, restore the correct policy and rerun. No mutant
+or deny-all change belongs in the published correct reference.
+
+## Test response construction and call order explicitly
+
+A HEAD result has no body bytes in this fixture but still has a policy decision and headers.
+Compare allowed and denied HEAD with their corresponding GET representations; an empty body
+alone would conceal an incorrect allowed status. Content-Length here is derived from the
+encoded JSON representation. The Unicode supplement checks the decoded fictional text and
+actual serialized byte length; default json.dumps escaping means it does not prove that raw
+non-ASCII characters travelled unescaped on a network.
+
+Route/method/query rejection can occur before the actor gate in this handler. The supplement
+records that call order; it does not promote this arrangement into a universal production
+security policy. Likewise matching absent/denied status and body does not establish equal
+timing, identical infrastructure behavior or complete resource non-enumeration.
+
+The harness permits only HTTP_-prefixed entries in its optional header map. A proposed
+ng.actor override through that map is rejected by the harness before an application request.
+This is one test-harness input distinction, not an authenticated proxy deployment. Actor's
+annotations and isinstance check do not validate every field value; reviewed callers must
+still respect the stated contract. Do not expand the input surface or use real principals
+to fill those gaps.
+
+The additional source-path checks use actual in-memory calls, not mocked network success.
+Some policy-call assertions use a test double to establish whether the policy was reached;
+that result does not replace the real repaired-policy tests. Read-only request checks compare
+stored rows before and after the selected read. They are not transaction, concurrency or
+persistence validation. Selected missing-table handling remains only a generic dependency
+response check, not a full logging or privacy audit.
+
+## Proposed independent review checkpoint
+
+This draft addition is not an activated grading gate or new practical scope. Before adding
+a case, record the rule, the closest permitted control, the value that changes, the expected
+branch, the data that must be absent, and one untested assumption. Keep the original tests
+and correct reference unchanged. Use only invented actors/records and the existing approved
+in-process setup; no listener or client request is needed.
+
+For a handover, separate source prediction, actual in-process observation, local repair,
+positive/negative retest and remaining real-world assumptions. State that identity trust,
+server integration, database persistence/concurrency and a supported learner toolchain have
+not been established by these selected checks. Source-based reasoning and a green reference
+suite do not complete the advanced-web pathway or validate a production academy policy.
+
 ## Guided outputs
 
 For owner, same-course nonowner, student submitted-note read, other-course instructor,
