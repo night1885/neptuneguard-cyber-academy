@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "courseId": "formal-ethical-hacking",
+  "mode": "draft-review-only",
+  "runtimeIntegration": false,
+  "publishable": false,
+  "pages": [
+    {
+      "id": "workspace-scope",
+      "title": "Course workspace scope",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Draft review: this private reading workspace grants no lab permission, saved progress, course completion or award. Use only separately approved exercises and supported setup. No real learner evidence is collected by this prototype."
+    },
+    {
+      "id": "before-practical",
+      "title": "Before a practical",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Identify the exact authorized exercise, environment, exclusions, stop conditions and support route. Missing approved provisioning, recovery or private evidence handling means BLOCKED. Reading these pages does not authorize a network request or a change to a live system."
+    },
+    {
+      "id": "evidence-status",
+      "title": "Describe evidence precisely",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Distinguish source-predicted, observed, blocked and unattempted work. Historical test results and supplied fictional cases are not your own observations. Record interventions and legitimate controls. Do not submit credentials, real account details, instructor answers or unrelated device reports."
+    }
+  ]
+}
