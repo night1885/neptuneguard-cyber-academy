@@ -1,6 +1,6 @@
 # Local browser training-site baseline (draft)
 
-Separate read-only teaching candidate. Not deployed, learner-activated, authenticated or intentionally vulnerable. The company domain neptuneguard.com and every external target are excluded. No academy/runtime, Discord, database, catalogue, CI or hosting integration is added.
+Separate read-only teaching candidate. Not deployed, learner-activated, authenticated or intentionally vulnerable. The company domain neptuneguard.com and every external target are excluded. No academy/runtime, Discord, database, catalogue or hosting integration is added. A separate scoped PR workflow runs only the named application tests; it is not live HTTP/browser validation.
 
 ## Scope and assumptions
 The application always assumes the same fictional learner; this is not a login. Only invented notes are stored in memory. The own-note view permits that assumed learner, while other-note and missing-note checks return the same selected generic 404 body. HTML text is escaped. There are no forms, scripts, external assets, uploads, disk serving, write/delete handlers, credentials or external requests.
@@ -29,7 +29,14 @@ In a temporary exact-file layout, Python 3.12.8 under effective UID 0 ran:
 
 All 25 methods passed with exit 0. They execute actual in-process HTML/policy checks, escaping, HEAD length, selected headers, method/path/query rejection, fixed actor, request budget and fresh-instance reset. Server startup/cleanup/failure checks use test doubles. An actual root CLI invocation was rejected before binding. No real listener, HTTP exchange or browser run occurred. The root-specific CLI method is conditionally skipped when not root; report actual counts there. The tests target this POSIX candidate, not universal OS support.
 
-No GitHub CI or full repository suite was run for this batch. Source/test files are a reviewed reconstruction of the earlier standalone draft, not an automatic import of all prior attachments. Earlier offline/loopback records keep their own scope.
+The initial local author batch did not run GitHub CI or the full repository suite. Source/test files are a reviewed reconstruction of the earlier standalone draft, not an automatic import of all prior attachments. Earlier offline/loopback records keep their own scope.
+
+## Scoped PR checks (configuration, not a passing result)
+.github/workflows/local-training-site-tests.yml is configured for pull requests targeting formal-ethical-hacking-programme when this fixture directory or that workflow changes. It uses an Ubuntu runner, Python 3.12, contents: read, checkout without persisted credentials and a five-minute timeout. It records the actual Python version/effective UID, then runs only test_training_site. Existing workflows and their explicit allowlists remain unchanged. No push, manual-dispatch, deployment or pull_request_target trigger is introduced.
+
+The configured suite uses in-process application calls and mocked server lifecycle paths. Its actual CLI case runs only when the process is root and must reject before binding. On a non-root runner that method is skipped; the other 24 methods should run. Read actual job logs for pass/failure/skip counts. The workflow does not switch users, weaken the launcher guard, start the training server, invoke a browser, contact a testing target or use deployment credentials. Actions checkout/setup still require runner services/downloads; this is not an air-gapped job.
+
+Configuration and a locally parsed YAML file are not a successful Actions run. At the pre-change inspection of commit 16215930d3be2bc836a5e1cbf5e314e7b3f648c4, PR #21 had zero check runs and zero commit-status entries. Verify actual checks after an eligible event; no green result is claimed here. The 35 additional local review cases are not silently added to this named 25-method suite. Even a green named job does not establish the full repository, live transport/browser behavior or learner readiness.
 
 Before learner use, separately reproduce actual non-root bind, printed address, HTTP/HEAD behavior, browser-generated requests and budget, normal shutdown/listener closure and restart/reset in a supported guest. Crash/forced termination, malicious local clients, browser accessibility and supported student hardware remain unvalidated. A mocked server closure is not a genuine transport result.
 
