@@ -40,3 +40,6 @@ Evidence should show the intended regular file, actual mode observations, reason
 GNU symbolic permissions: https://www.gnu.org/software/coreutils/manual/html_node/Setting-Permissions.html
 GNU chmod behavior: https://www.gnu.org/software/coreutils/manual/html_node/chmod-invocation.html
 Local sandbox checks observed 600 then 400 for the owned fixture. Access denial as a separate non-root user, ACL behavior and supported student guests were not tested.
+
+## Reading-only follow-up — privilege-boundary reasoning
+After the follow-up's stated prerequisite reading, use [Linux privilege boundaries](LINUX-PRIVILEGE-BOUNDARIES.md) to distinguish writable-object observations from evidence of a higher-authority consumer. Its four fictional investigation cases add no command execution or escalation permission. All original limits of this lesson remain unchanged; an authorized, validated privilege-escalation practical is still separate work.
