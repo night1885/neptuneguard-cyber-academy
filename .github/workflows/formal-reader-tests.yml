@@ -24,4 +24,4 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Run pinned-source and interaction checks
         working-directory: docs/formal-ethical-hacking/authoring/discord-workspace-prototype
-        run: node --test readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs
+        run: node --test readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs foundation-interactions.test.mjs
