@@ -16,8 +16,10 @@ SCRIPTS = {
 
 
 def require_runtime():
-    if os.name != "posix" or not Path("/bin/sh").is_file():
-        raise RuntimeError("Reviewed POSIX lab required")
+    effective_uid = getattr(os, "geteuid", None)
+    if (os.name != "posix" or not callable(effective_uid) or effective_uid() == 0
+            or not Path("/bin/sh").is_file()):
+        raise RuntimeError("Reviewed non-root POSIX lab required")
 
 
 def prepare_layout(workspace):
