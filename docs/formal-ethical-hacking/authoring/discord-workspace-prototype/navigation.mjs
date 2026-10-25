@@ -1,5 +1,6 @@
 // Standalone synthetic navigation slice. Not attached to the academy client.
 import { randomBytes } from 'node:crypto';
+import { buildCardFrame } from './cards.mjs';
 
 const OPEN = 'fws:open';
 const NOTICE = 'Workspace unavailable. Use the course entry button to reopen.';
@@ -7,10 +8,10 @@ const neutral = () => ({ content: NOTICE, embeds: [], components: [], allowedMen
 const privateMessage = message => message?.flags?.has?.(64) === true;
 
 export function createWorkspace({ enabled = false, guildId, entryChannelId, courseId,
-  pages = 3, ttlMs = 600000, maxSessions = 128, dependencyTimeoutMs = 2000, authorize, render,
+  allowCards = false, pages = 3, ttlMs = 600000, maxSessions = 128, dependencyTimeoutMs = 2000, authorize, render,
   clock = Date.now, makeToken = () => randomBytes(16).toString('hex') } = {}) {
   if (enabled !== true) return { handle: async () => false, dispose() {} };
-  if (![guildId, entryChannelId].every(value => /^[0-9]{17,20}$/.test(value ?? '')) ||
+  if (typeof allowCards !== 'boolean' || ![guildId, entryChannelId].every(value => /^[0-9]{17,20}$/.test(value ?? '')) ||
       typeof courseId !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(courseId) ||
       !Number.isInteger(pages) || pages < 1 || pages > 100 ||
       !Number.isInteger(ttlMs) || ttlMs < 1000 || ttlMs > 840000 ||
@@ -44,18 +45,28 @@ export function createWorkspace({ enabled = false, guildId, entryChannelId, cour
   const frame = async row => {
     await check(row);
     const content = await bounded(() => render({ courseId, page: row.page }));
-    if (typeof content !== 'string' || !content.trim() || content.length > 1800) throw new Error('Unavailable');
+    let payload, choices = [];
+    if (typeof content === 'string') {
+      if (!content.trim() || content.length > 1800) throw new Error('Unavailable');
+      payload = { content, embeds: [], attachments: [] };
+    } else {
+      if (!allowCards) throw new Error('Unavailable');
+      ({ payload, choices } = buildCardFrame(content, { pages }));
+    }
     await check(row);
-    return { content, embeds: [], allowedMentions: { parse: [] }, components: [{
-      type: 1, components: ['prev', 'home', 'next'].map((action, index) => ({
-        type: 2, style: 2, label: ['Previous', 'Home', 'Next'][index],
-        custom_id: `fws:${row.token}:${row.version}:${action}`,
-        disabled: action === 'prev' && row.page === 0 || action === 'next' && row.page === pages - 1
-      }))
-    }] };
+    const components = [{ type: 1, components: ['prev', 'home', 'next'].map((action, index) => ({
+      type: 2, style: 2, label: ['Previous', 'Home', 'Next'][index],
+      custom_id: `fws:${row.token}:${row.version}:${action}`,
+      disabled: action === 'prev' && row.page === 0 || action === 'next' && row.page === pages - 1
+    })) }];
+    if (choices.length) components.push({ type: 1, components: choices.map(choice => ({
+      type: 2, style: 1, label: choice.label,
+      custom_id: `fws:${row.token}:${row.version}:open-${choice.page}`
+    })) });
+    return { payload: { ...payload, allowedMentions: { parse: [] }, components }, choicePages: choices.map(choice => choice.page) };
   };
   const deny = async interaction => {
-    if (interaction.deferred || interaction.replied) await interaction.editReply(neutral());
+    if (interaction.deferred || interaction.replied) await interaction.editReply({ ...neutral(), attachments: [] });
     else await interaction.reply({ ...neutral(), flags: 64 });
   };
   async function handle(interaction) {
@@ -83,25 +94,27 @@ export function createWorkspace({ enabled = false, guildId, entryChannelId, cour
             sessions.size + pending >= maxSessions) throw new Error('Unavailable');
         pending++; reserved = true;
         row = { actorId, token, page: 0, version: 0, expires: clock() + ttlMs, messageId: null };
-        const payload = await frame(row);
+        const { payload, choicePages } = await frame(row);
         const message = await interaction.editReply(payload);
         if (!privateMessage(message) || !/^[0-9]{17,20}$/.test(message.id ?? '') || stopped) throw new Error('Unavailable');
-        row.messageId = message.id;
+        row.messageId = message.id; row.choicePages = choicePages;
         sessions.set(token, row); actors.set(actorId, token);
       } else {
-        const match = /^fws:([a-f0-9]{32}):([0-9]{1,6}):(prev|home|next)$/.exec(interaction.customId);
+        const match = /^fws:([a-f0-9]{32}):([0-9]{1,6}):(prev|home|next|open-[0-9]{1,3})$/.exec(interaction.customId);
         row = match && sessions.get(match[1]);
         if (!row || row.actorId !== actorId || !privateMessage(interaction.message) ||
             interaction.message.id !== row.messageId || Number(match[2]) !== row.version) {
           row = undefined; await deny(interaction); return true;
         }
         await interaction.deferUpdate();
-        const page = match[3] === 'home' ? 0 : row.page + (match[3] === 'next' ? 1 : -1);
+        const open = match[3].startsWith('open-');
+        const page = open ? Number(match[3].slice(5)) : match[3] === 'home' ? 0 : row.page + (match[3] === 'next' ? 1 : -1);
+        if (open && !row.choicePages.includes(page)) throw new Error('Unavailable');
         if (page < 0 || page >= pages || row.version >= 999999) throw new Error('Unavailable');
         const candidate = { ...row, page, version: row.version + 1 };
-        const payload = await frame(candidate);
+        const { payload, choicePages } = await frame(candidate);
         await interaction.editReply(payload);
-        Object.assign(row, { page, version: candidate.version });
+        Object.assign(row, { page, version: candidate.version, choicePages });
       }
     } catch {
       if (row) drop(row);
