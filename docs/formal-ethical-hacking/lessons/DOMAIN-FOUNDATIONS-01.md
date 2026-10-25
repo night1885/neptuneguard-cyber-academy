@@ -17,6 +17,27 @@ FICTIONAL example: Helpdesk may perform a selected reset task in TrainingUsers. 
 ## Connect identity to a service
 Domain controllers provide directory/security services; Windows integrates its Kerberos KDC with domain-controller services and the AD DS account database. These roles explain a trust dependency, not a general access grant. A service still needs its resource/operation authorisation. Cross-system trust and delegation must be understood specifically; a trust relationship is not shorthand for universal administrative authority. Cloud identity/hybrid designs need separate treatment rather than treating every directory as interchangeable.
 
+## Keep names, containers and authority distinct
+| Item | What to put in the paper model | What not to infer |
+|---|---|---|
+| User principal | The participating identity named by the scenario | Rights over every object after sign-in |
+| Computer object | A directory identity representing a computer | Proof of the current host's configuration or physical identity |
+| Security group | Membership relevant to an applicable permission decision | Universal administrator authority from a familiar group label |
+| OU | A container used for administration, delegation and policy organization | Security-group membership merely from location in the container |
+| Service account | The identity used by a particular service deployment | The interactive user's identity or every service on the host |
+| Resource operation | A specific read, update or delegated task on a named scope | Every other operation on that resource |
+
+Use role labels such as learner, Helpdesk, training user and report service in the diagram, not real account names. Draw containment separately from membership and permission edges. Being inside a container, belonging to a group and possessing an applicable right are distinct statements. A redrawn diagram must not silently turn one into another.
+
+A useful fictional delegation record names subject, requested task, object scope, exclusions, applicable permission evidence and observation status. For example, a supplied reset permission over training-user objects does not by itself cover group-membership edits, a different container or a service-account change. This is reasoning about supplied facts, not instructions to test those changes.
+
+## Understand a service principal name without querying one
+In Windows Kerberos, an SPN identifies a service instance and associates it with the account used for that service's sign-in. The service name, its account and its network address answer related but different questions. A hostname resolving successfully does not establish a correct SPN mapping, possession of the right key, service acceptance or application permission.
+
+The application may need to request the intended service identity without knowing the underlying account name. That is why a service-identity mapping matters in the Kerberos flow. This lesson supplies no real SPN, command, directory search or registration procedure. Treat aliases and changes as design questions for an approved lab, not permission to modify production identity data.
+
+Documentation for this addition: https://learn.microsoft.com/en-us/windows/win32/ad/service-principal-names and https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/delegation-control-wizard . Documentation explains the mechanism, not a reviewed course lab.
+
 ## Work and review
 Draw an invented forest/domain/OU/group/user/computer/service map. Add three precise delegated-task edges and one excluded object. Mark which facts are given, inferred or missing. Explain why finding a principal differs from authenticating it, and why authenticating it differs from permission to read/update an object. Use D01/D02 in the [fictional cases](../fixtures/domain-foundations/cases.json).
 
