@@ -13,3 +13,7 @@ One actual source-matched practical was run through the new runner: python-summa
 The other ten entries were not collectively executed through this runner in this batch. Their lesson-specific historical records retain their own snapshots; registration is not fresh execution evidence. No full checkout, combined-authoring rerun, all-practical test run, GitHub CI, supported student platform, new network/listener activity, real credentials/evidence, learner workflow or release approval occurred.
 
 The runner parses selected unittest summaries and failing test-method names. It is not a complete semantic checker, malicious-code sandbox, general hostile-output parser, anti-cheating system or grade/progress adapter. Effect categories are reviewed metadata, not OS containment. Catalogue/prerequisites, manifests, runtime/publication, Community Learning and learner state remain unchanged. Existing check_authoring.py code/allowlist are not modified or expanded.
+
+## Later direct-execution checkpoint
+
+The [2026-10-25 direct-execution checkpoint](PRACTICAL-DIRECT-EXECUTION-CHECKPOINT.md) records matching individual observations for all eleven selected entries at a later pinned source commit. Those were separate direct unittest runs, not collective execution through this runner. This historical runner record and its original limits remain unchanged; the later checkpoint is not a deployment or publication approval.
