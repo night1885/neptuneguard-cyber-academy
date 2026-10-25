@@ -24,10 +24,16 @@ export function createCardRenderer({ courseId, bundle } = {}) {
 }
 
 export function buildCardFrame(view, { pages } = {}) {
-  if (!shape(view, 'cards,heading,kind') || view.kind !== 'review-cards-v1' ||
+  if (!(shape(view, 'cards,heading,kind') || shape(view, 'cards,heading,kind,routes')) || view.kind !== 'review-cards-v1' ||
       typeof view.heading !== 'string' || !view.heading.trim() || view.heading.length > 120 ||
-      !Number.isInteger(pages) || pages < 2 || pages > 4 || !Array.isArray(view.cards) ||
+      !Number.isInteger(pages) || pages < 2 || pages > 100 || !Array.isArray(view.cards) ||
       view.cards.length < 1 || view.cards.length > 3) throw new Error('Invalid card frame');
+  let routes;
+  if (Object.hasOwn(view, 'routes')) {
+    if (!shape(view.routes, 'home,next,prev') || !Number.isInteger(view.routes.home) ||
+        Object.values(view.routes).some(page => page !== null && (!Number.isInteger(page) || page < 0 || page >= pages))) throw new Error('Invalid card routes');
+    routes = Object.freeze({ prev: view.routes.prev, home: view.routes.home, next: view.routes.next });
+  }
   const embeds = [], choices = [], files = new Map(), targets = new Set();
   let total = 0;
   for (const card of view.cards) {
@@ -52,5 +58,5 @@ export function buildCardFrame(view, { pages } = {}) {
     }
   }
   if (total > 5500) throw new Error('Card text exceeds reviewed bounds');
-  return { payload: { content: view.heading, embeds, attachments: [], files: [...files.values()] }, choices };
+  return { payload: { content: view.heading, embeds, attachments: [], files: [...files.values()] }, choices, routes };
 }

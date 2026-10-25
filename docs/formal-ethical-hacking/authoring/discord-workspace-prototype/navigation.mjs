@@ -45,25 +45,26 @@ export function createWorkspace({ enabled = false, guildId, entryChannelId, cour
   const frame = async row => {
     await check(row);
     const content = await bounded(() => render({ courseId, page: row.page }));
-    let payload, choices = [];
+    let payload, choices = [], routes;
     if (typeof content === 'string') {
       if (!content.trim() || content.length > 1800) throw new Error('Unavailable');
       payload = { content, embeds: [], attachments: [] };
     } else {
       if (!allowCards) throw new Error('Unavailable');
-      ({ payload, choices } = buildCardFrame(content, { pages }));
+      ({ payload, choices, routes } = buildCardFrame(content, { pages }));
     }
     await check(row);
+    routes ??= Object.freeze({ prev: row.page > 0 ? row.page - 1 : null, home: 0, next: row.page + 1 < pages ? row.page + 1 : null });
     const components = [{ type: 1, components: ['prev', 'home', 'next'].map((action, index) => ({
       type: 2, style: 2, label: ['Previous', 'Home', 'Next'][index],
       custom_id: `fws:${row.token}:${row.version}:${action}`,
-      disabled: action === 'prev' && row.page === 0 || action === 'next' && row.page === pages - 1
+      disabled: routes[action] === null
     })) }];
     if (choices.length) components.push({ type: 1, components: choices.map(choice => ({
       type: 2, style: 1, label: choice.label,
       custom_id: `fws:${row.token}:${row.version}:open-${choice.page}`
     })) });
-    return { payload: { ...payload, allowedMentions: { parse: [] }, components }, choicePages: choices.map(choice => choice.page) };
+    return { payload: { ...payload, allowedMentions: { parse: [] }, components }, choicePages: choices.map(choice => choice.page), routes };
   };
   const deny = async interaction => {
     if (interaction.deferred || interaction.replied) await interaction.editReply({ ...neutral(), attachments: [] });
@@ -94,10 +95,10 @@ export function createWorkspace({ enabled = false, guildId, entryChannelId, cour
             sessions.size + pending >= maxSessions) throw new Error('Unavailable');
         pending++; reserved = true;
         row = { actorId, token, page: 0, version: 0, expires: clock() + ttlMs, messageId: null };
-        const { payload, choicePages } = await frame(row);
+        const { payload, choicePages, routes } = await frame(row);
         const message = await interaction.editReply(payload);
         if (!privateMessage(message) || !/^[0-9]{17,20}$/.test(message.id ?? '') || stopped) throw new Error('Unavailable');
-        row.messageId = message.id; row.choicePages = choicePages;
+        row.messageId = message.id; row.choicePages = choicePages; row.routes = routes;
         sessions.set(token, row); actors.set(actorId, token);
       } else {
         const match = /^fws:([a-f0-9]{32}):([0-9]{1,6}):(prev|home|next|open-[0-9]{1,3})$/.exec(interaction.customId);
@@ -108,13 +109,13 @@ export function createWorkspace({ enabled = false, guildId, entryChannelId, cour
         }
         await interaction.deferUpdate();
         const open = match[3].startsWith('open-');
-        const page = open ? Number(match[3].slice(5)) : match[3] === 'home' ? 0 : row.page + (match[3] === 'next' ? 1 : -1);
+        const page = open ? Number(match[3].slice(5)) : row.routes[match[3]];
         if (open && !row.choicePages.includes(page)) throw new Error('Unavailable');
-        if (page < 0 || page >= pages || row.version >= 999999) throw new Error('Unavailable');
+        if (!Number.isInteger(page) || page < 0 || page >= pages || row.version >= 999999) throw new Error('Unavailable');
         const candidate = { ...row, page, version: row.version + 1 };
-        const { payload, choicePages } = await frame(candidate);
+        const { payload, choicePages, routes } = await frame(candidate);
         await interaction.editReply(payload);
-        Object.assign(row, { page, version: candidate.version, choicePages });
+        Object.assign(row, { page, version: candidate.version, choicePages, routes });
       }
     } catch {
       if (row) drop(row);
