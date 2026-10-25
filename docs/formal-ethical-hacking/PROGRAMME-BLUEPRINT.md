@@ -52,3 +52,6 @@ Student-built environments remain the proposed delivery model; hosted labs are d
 Discord versus web delivery remains unresolved. The proposed private identity, course authorization, evidence, review and persistence contract must be implemented and tested separately. Community Learning is excluded. A staged delivery rehearsal must not shrink the final educational ambition or be advertised as the complete programme.
 
 Next implementation work should close the prioritised gaps and release blockers rather than continually add optional case packs. Completion dates, pass marks, certification outcomes and employment rates require evidence; none is invented by this plan.
+
+## K05/K06/K14 follow-up — guided application code review
+The supporting [application code-review pathway](authoring/code-review-pathway/README.md) connects the existing read/update applications to request tracing, writable-field analysis and an independent source-investigation handover. It includes instructor author notes and a bounded validation record. Existing ownership/update prerequisites and execution boundaries remain mandatory. This adds no canonical lesson IDs, live endpoints, learner grading or execution permission; it does not complete K14 or establish advanced-web/certification readiness. Independent semantic review, learner walkthrough and assessment calibration remain pending.
