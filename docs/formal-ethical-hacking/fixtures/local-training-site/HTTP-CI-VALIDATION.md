@@ -1,0 +1,20 @@
+# Bounded HTTP CI probe: separate proposed author scope
+
+Draft. This adds an explicitly separate author-CI transport check, not a learner authorization or public deployment. Earlier README/PR/local records retain their historical scope. The existing offline CI workflow, application, 20-attempt application budget, root gate and older six-attempt managed fixture remain unchanged.
+
+## Explicit effects requiring approval
+The new scoped PR workflow uses a disposable GitHub-hosted Ubuntu runner, read-only repository permissions, Python 3.12 and a five-minute job timeout. It runs test_training_site_http only. Each execution attempts one owned 127.0.0.1 listener on an OS-selected port, a worker thread and six sequential HTTP exchanges: GET /, GET /exercise/own, HEAD /exercise/own, GET /exercise/other, GET /exercise/missing and one POST /exercise/own to verify rejection. This author-only POST check does not expand the manual learner GET/HEAD brief. No host/path/port/credential arguments, scanner, redirect-following, proxy, external testing destination, browser, public bind or port forwarding is provided.
+
+The existing runtime gate executes before app construction/binding. Root or unsupported runtime fails the transport test rather than skipping it or switching users. The source has no privilege or guard bypass. The positive transport method uses no mocks. Two separate guard/contract methods do not connect. Approval enables eligible future PR executions as configured and may consume Actions minutes. Runner checkout/setup uses network services; the job is not air-gapped and loopback is not complete host isolation.
+
+## Selected observations the probe would establish
+The six fixed responses check home labelling, own-note content, HEAD body/representation length, selected denied/missing status/body equality, absence of the other fictional note and POST 405/Allow. Client attempts and application calls must both equal six. The application is then closed and the owned server descriptor and worker termination are checked without reconnecting to a released port. A computed JSON summary records Python/effective UID, counts and boolean checks without printing raw note bodies.
+
+This constructs the same TrainingSite/LocalServer classes but does not execute run_local, test the CLI printed URL, open a browser or simulate Ctrl-C. It is normal managed transport/cleanup evidence only, not crash recovery, resource containment, hostile-client hardening, login validation, TLS, restart/reset reproduction or supported learner hardware. The server shutdown API can block on a faulty handler; the CI timeout is a job limit, not proof of graceful cleanup. Any worker/cleanup/count error must not be reported as a completed successful run.
+
+## Actual status before commit
+Only Python syntax, workflow YAML structure and the two guard/contract methods were checked locally, with Python 3.12.8 under effective UID 0. The application source used for those checks matched Git blob 7947f0f140bdedd702701b22e1fe0fa6e0ed4e0f. No local listener, HTTP exchange, positive transport method or browser was executed. This environment's root gate was not bypassed. No GitHub run of this new workflow has been observed; configuration is not a passing result.
+
+The previously successful Named in-process and mocked checks job belongs to the separate offline workflow at b7b637074474d630af47d12bafb9a5ecc20aab12. It does not validate this new probe. After approval/commit, inspect the new job and actual summary before claiming six completed exchanges or cleanup. Learner guest setup, browser behavior, real launcher/Ctrl-C, reset, accessibility, private evidence handling and support/recovery remain separate gates even if this job succeeds.
+
+Nothing here merges PR #21, publishes a vulnerable application, changes Discord/Render/PostgreSQL/academy runtime, enables learners or authorizes neptuneguard.com or another external/company system. The PR description will need a separately approved update when actual new CI results exist.
