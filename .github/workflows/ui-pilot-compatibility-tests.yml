@@ -1,0 +1,37 @@
+name: Synthetic UI pilot compatibility
+on:
+  push:
+    branches: [fix/general-chat-ui-pilot-compatibility]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Fixed UI, pilot, owner-decision and startup regressions
+        run: >-
+          node --test
+          test-certification-ui-pilot-compatibility.mjs
+          test-certification-manual-review-decision-runtime.mjs
+          test-certification-manual-review-decision-pilot-policy.mjs
+          test-certification-manual-review-decision-config.mjs
+          test-certification-registration-pilot-guard.mjs
+          test-certification-runtime-formal-review.mjs
+          test-certification-runtime-formal-stack.mjs
+          test-certification-restored-application.mjs
+          docs/formal-ethical-hacking/authoring/discord-workspace-prototype/general-chat-ui-review.test.mjs
