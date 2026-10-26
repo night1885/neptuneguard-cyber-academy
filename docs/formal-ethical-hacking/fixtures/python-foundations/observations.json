@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "records": [
+    {"id":"A01","method":"GET","http_status":200,"client_exit":0},
+    {"id":"A02","method":"HEAD","http_status":200,"client_exit":0},
+    {"id":"A03","method":"GET","http_status":404,"client_exit":0},
+    {"id":"A04","method":"GET","http_status":null,"client_exit":28},
+    {"id":"A05","method":"GET","http_status":302,"client_exit":0},
+    {"id":"A06","method":"GET","http_status":500,"client_exit":0},
+    {"id":"A07","method":"GET","http_status":200,"client_exit":28},
+    {"id":"A08","method":"GET","http_status":100,"client_exit":0}
+  ]
+}

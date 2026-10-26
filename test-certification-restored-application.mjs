@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { createRestoredCertificationApplication } from './certification-restored-application.js';
+import { GENERAL_CHAT_UI_TARGET, readGeneralChatUiReviewFlag, createGeneralChatUiReviewOptions } from './docs/formal-ethical-hacking/authoring/discord-workspace-prototype/general-chat-ui-review.mjs';
 const admin = '111111111111111111', guildId = '333333333333333333', channelId = '444444444444444444';
 const environment = { CERTIFICATION_ENABLED: 'true', CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED: 'false', ACADEMY_OWNER_ID: admin, ACADEMY_ADMIN_CHANNEL_ID: channelId,
   CERTIFICATION_ENROLLMENT_MANIFEST_JSON: JSON.stringify({ agreementVersion: 'v1', agreementSha256: 'a'.repeat(64), comprehensionCheck: { version: 'check1', questions: [{ prompt: 'Type A.' }], correctAnswers: ['A'] } }) };
@@ -109,10 +110,12 @@ test('default executable selects the restored factory using the configured guild
   const calls = [], options = Object.freeze({ fixture: true }); let client;
   runInNewContext(body, {
     process: { env: { DISCORD_TOKEN: 'fixture-token', GUILD_ID: guildId } },
+    readGeneralChatUiReviewFlag, createGeneralChatUiReviewOptions,
     createInstructorClientOptions() { calls.push('options'); return options; },
     Client: class { constructor(value) { assert.equal(value, options); client = this; calls.push('client'); } },
     createRestoredCertificationApplication(value) {
-      assert.equal(value.client, client); assert.equal(value.guildId, guildId); calls.push('restored');
+      assert.equal(value.client, client); assert.equal(value.guildId, guildId);
+      assert.equal(Object.hasOwn(value, 'attachRuntime'), false); calls.push('restored');
       return { start(value) { assert.equal(value, 'fixture-token'); calls.push('start'); } };
     }
   });
@@ -125,5 +128,58 @@ for (const token of [undefined, '', '   ']) test(`default executable rejects mis
     createInstructorClientOptions() { constructed++; }, Client: class { constructor() { constructed++; } },
     createRestoredCertificationApplication() { constructed++; }
   }), /Explicit Discord token required/);
+  assert.equal(constructed, 0);
+});
+
+test('explicit false UI flag preserves the ordinary restored entry without an override', async () => {
+  const entry = await readFile(new URL('./restoration.js', import.meta.url), 'utf8');
+  const calls = []; let client;
+  runInNewContext(entry.replace(/^import [^\n]*\n/gm, ''), {
+    process: { env: { DISCORD_TOKEN: 'fixture-token', GUILD_ID: guildId, GENERAL_CHAT_UI_REVIEW_ENABLED: 'false' } },
+    readGeneralChatUiReviewFlag, createGeneralChatUiReviewOptions,
+    createInstructorClientOptions() { calls.push('options'); return {}; },
+    Client: class { constructor() { client = this; calls.push('client'); } },
+    attachCertificationRuntime() { assert.fail('Disabled UI must not replace the normal runtime'); },
+    createRestoredCertificationApplication(value) {
+      assert.equal(value.client, client); assert.equal(value.guildId, guildId); assert.equal(Object.hasOwn(value, 'attachRuntime'), false);
+      calls.push('restored'); return { start(token) { assert.equal(token, 'fixture-token'); calls.push('start'); } };
+    }
+  });
+  assert.deepEqual(calls, ['options', 'client', 'restored', 'start']);
+});
+test('explicit UI opt-in forwards the shared client and existing router factory once', async () => {
+  const entry = await readFile(new URL('./restoration.js', import.meta.url), 'utf8');
+  const env = { DISCORD_TOKEN: 'fixture-token', GUILD_ID: GENERAL_CHAT_UI_TARGET.guildId, GENERAL_CHAT_UI_REVIEW_ENABLED: 'true' };
+  const snapshot = Object.freeze({ ...env }), baseRouter = () => {}, marker = {}, runtime = {};
+  const calls = []; let client;
+  runInNewContext(entry.replace(/^import [^\n]*\n/gm, ''), {
+    process: { env }, readGeneralChatUiReviewFlag, createGeneralChatUiReviewOptions,
+    createInstructorClientOptions() { calls.push('options'); return {}; },
+    Client: class { constructor() { client = this; calls.push('client'); } },
+    attachCertificationRuntime(actual, pool, guild, settings, options) {
+      assert.equal(actual, client); assert.equal(pool, undefined); assert.equal(guild, GENERAL_CHAT_UI_TARGET.guildId); assert.equal(settings, snapshot);
+      assert.equal(options.createRouter, baseRouter); assert.equal(options.marker, marker);
+      assert.equal(options.formalReview.enabled, true); assert.equal(options.formalReview.reviewOnly, true); assert.equal(options.formalReview.mode, 'review');
+      assert.equal(typeof options.formalReview.createRoute, 'function'); assert.ok(Object.isFrozen(options.formalReview)); calls.push('attach'); return runtime;
+    },
+    createRestoredCertificationApplication(value) {
+      assert.equal(value.client, client); assert.equal(value.guildId, GENERAL_CHAT_UI_TARGET.guildId); assert.equal(typeof value.attachRuntime, 'function');
+      calls.push('restored'); assert.equal(value.attachRuntime(client, undefined, value.guildId, snapshot, { createRouter: baseRouter, marker }), runtime);
+      return { start(token) { assert.equal(token, 'fixture-token'); calls.push('start'); } };
+    }
+  });
+  assert.deepEqual(calls, ['options', 'client', 'restored', 'attach', 'start']);
+});
+for (const env of [
+  { GENERAL_CHAT_UI_REVIEW_ENABLED: 'yes', GUILD_ID: GENERAL_CHAT_UI_TARGET.guildId },
+  { GENERAL_CHAT_UI_REVIEW_ENABLED: 'true', GUILD_ID: guildId },
+  { GENERAL_CHAT_UI_REVIEW_ENABLED: 'true' }
+]) test(`invalid UI startup fails before client construction: ${JSON.stringify(env)}`, async () => {
+  const entry = await readFile(new URL('./restoration.js', import.meta.url), 'utf8'); let constructed = 0;
+  assert.throws(() => runInNewContext(entry.replace(/^import [^\n]*\n/gm, ''), {
+    process: { env: { DISCORD_TOKEN: 'fixture-token', ...env } }, readGeneralChatUiReviewFlag, createGeneralChatUiReviewOptions,
+    createInstructorClientOptions() { constructed++; }, Client: class { constructor() { constructed++; } },
+    createRestoredCertificationApplication() { constructed++; }
+  }), /Explicit UI-review flag and confirmed guild required/);
   assert.equal(constructed, 0);
 });

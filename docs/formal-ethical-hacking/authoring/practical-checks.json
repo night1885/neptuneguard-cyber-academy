@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "status": "draft-maintainer-only",
+  "runtimeIntegration": false,
+  "publishable": false,
+  "checks": [
+    {"id":"python-summary","fixture":"fixtures/python-foundations","selectors":["test_summary"],"effects":"offline","expected":{"exit":0,"methods":20,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}},
+    {"id":"password-verifier","fixture":"fixtures/password-verifier","selectors":["test_verifier"],"effects":"offline","expected":{"exit":0,"methods":17,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}},
+    {"id":"ownership-reference","fixture":"fixtures/application-ownership","selectors":["test_reference","test_cli"],"effects":"offline","expected":{"exit":0,"methods":22,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}},
+    {"id":"ownership-starter","fixture":"fixtures/application-ownership","selectors":["test_application"],"effects":"offline","expected":{"exit":1,"methods":20,"failures":4,"errors":0,"skipped":0,"failure_tests":["test_head_nonowner","test_nonowner","test_nonowner_body","test_unknown_same_denial"]}},
+    {"id":"update-reference","fixture":"fixtures/application-ownership","selectors":["test_update_reference","test_update_cli"],"effects":"offline","expected":{"exit":0,"methods":29,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}},
+    {"id":"update-starter","fixture":"fixtures/application-ownership","selectors":["test_updates"],"effects":"offline","expected":{"exit":1,"methods":27,"failures":3,"errors":0,"skipped":0,"failure_tests":["test_course_field","test_owner_field","test_state_field"]}},
+    {"id":"arguments-reference","fixture":"fixtures/command-argument","selectors":["test_repaired_reference","test_cli_contract"],"effects":"shell-helpers","expected":{"exit":0,"methods":15,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}},
+    {"id":"arguments-starter","fixture":"fixtures/command-argument","selectors":["test_arguments"],"effects":"shell-helpers","expected":{"exit":1,"methods":12,"failures":3,"errors":0,"skipped":0,"failure_tests":["test_instruction_text_is_literal","test_no_marker","test_spaces_preserved"]}},
+    {"id":"executable-reference","fixture":"fixtures/executable-search","selectors":["test_search.ReferenceTests","test_search.CliTests"],"effects":"shell-helpers","expected":{"exit":0,"methods":14,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}},
+    {"id":"executable-starter","fixture":"fixtures/executable-search","selectors":["test_search.StarterTests"],"effects":"shell-helpers","expected":{"exit":1,"methods":12,"failures":1,"errors":0,"skipped":0,"failure_tests":["test_untrusted_first"]}},
+    {"id":"loopback-http","fixture":"fixtures/application-ownership","selectors":["test_loopback"],"effects":"loopback","expected":{"exit":0,"methods":12,"failures":0,"errors":0,"skipped":0,"failure_tests":[]}}
+  ]
+}

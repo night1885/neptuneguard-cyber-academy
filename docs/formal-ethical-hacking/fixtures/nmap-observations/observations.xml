@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FICTIONAL teaching cases. No scan was executed. Not native Nmap output. -->
+<teaching-observations synthetic="true">
+  <case id="A" label="Fictional open observation">
+    <host>
+      <address addr="192.0.2.20" addrtype="ipv4" />
+      <ports>
+        <port protocol="tcp" portid="8000">
+          <state state="open" />
+          <service name="http-alt" method="table" conf="3" />
+        </port>
+      </ports>
+    </host>
+  </case>
+  <case id="B" label="Fictional closed observation">
+    <host>
+      <address addr="192.0.2.20" addrtype="ipv4" />
+      <ports>
+        <port protocol="tcp" portid="8000">
+          <state state="closed" />
+        </port>
+      </ports>
+    </host>
+  </case>
+  <case id="C" label="Fictional filtered observation">
+    <host>
+      <address addr="192.0.2.20" addrtype="ipv4" />
+      <ports>
+        <port protocol="tcp" portid="8000">
+          <state state="filtered" />
+        </port>
+      </ports>
+    </host>
+  </case>
+</teaching-observations>

@@ -1,0 +1,94 @@
+{
+  "synthetic": true,
+  "notice": "FICTIONAL structured teaching records, not curl output or observed Python-server behavior. No requests were executed.",
+  "client_profile": {
+    "follow_redirects": false,
+    "fail_on_http_error": false,
+    "content_decoding": false,
+    "assumption": "No configuration-file, wrapper or additional-option overrides in these fictional cases."
+  },
+  "cases": [
+    {
+      "id": "A",
+      "request": {
+        "method": "GET",
+        "url": "http://192.0.2.20:8000/"
+      },
+      "curl_exit": 0,
+      "response": {
+        "http_version": "HTTP/1.1",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Length": "32"
+        },
+        "body_text": "Authorized foundation exercise.\n"
+      },
+      "error": null
+    },
+    {
+      "id": "B",
+      "request": {
+        "method": "HEAD",
+        "url": "http://192.0.2.20:8000/"
+      },
+      "curl_exit": 0,
+      "response": {
+        "http_version": "HTTP/1.1",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Length": "32"
+        },
+        "body_text": ""
+      },
+      "error": null
+    },
+    {
+      "id": "C",
+      "request": {
+        "method": "GET",
+        "url": "http://192.0.2.20:8000/"
+      },
+      "curl_exit": 0,
+      "response": {
+        "http_version": "HTTP/1.1",
+        "status": 404,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Length": "11"
+        },
+        "body_text": "Not found.\n"
+      },
+      "error": null
+    },
+    {
+      "id": "D",
+      "request": {
+        "method": "GET",
+        "url": "http://192.0.2.20:8000/"
+      },
+      "curl_exit": 28,
+      "response": null,
+      "error": "FICTIONAL timeout: a time limit was reached; the phase is not supplied."
+    },
+    {
+      "id": "E",
+      "request": {
+        "method": "GET",
+        "url": "http://192.0.2.20:8000/"
+      },
+      "curl_exit": 0,
+      "response": {
+        "http_version": "HTTP/1.1",
+        "status": 302,
+        "headers": {
+          "Location": "https://outside.example.invalid/",
+          "Content-Length": "0"
+        },
+        "body_text": ""
+      },
+      "error": null
+    }
+  ]
+}

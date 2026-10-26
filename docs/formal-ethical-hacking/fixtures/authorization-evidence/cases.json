@@ -1,0 +1,66 @@
+{
+  "synthetic": true,
+  "notice": "FICTIONAL authorization evidence. Context is supplied as trusted scenario data, not authenticated by this file. Response objects are invented, not raw HTTP or executed requests.",
+  "cases": [
+    {
+      "id": "A",
+      "trusted_context": {
+        "subject": {"id": "student-a", "role": "student", "courses": ["demo-course"]},
+        "action": "read",
+        "resource": {"kind": "submission", "owner_id": "student-a", "course": "demo-course", "state": "draft"}
+      },
+      "untrusted_request_claims": {},
+      "response": {"status": 200, "body": {"draft": "FICTIONAL own draft"}}
+    },
+    {
+      "id": "B",
+      "trusted_context": {
+        "subject": {"id": "student-a", "role": "student", "courses": ["demo-course"]},
+        "action": "read",
+        "resource": {"kind": "submission", "owner_id": "student-b", "course": "demo-course", "state": "draft"}
+      },
+      "untrusted_request_claims": {},
+      "response": {"status": 200, "body": {"draft": "FICTIONAL classmate draft"}}
+    },
+    {
+      "id": "C",
+      "trusted_context": {
+        "subject": {"id": "student-a", "role": "student", "courses": ["demo-course"]},
+        "action": "read",
+        "resource": {"kind": "submission", "owner_id": "student-b", "course": "demo-course", "state": "draft"}
+      },
+      "untrusted_request_claims": {},
+      "response": {"status": 403, "body": {"draft": "FICTIONAL classmate draft"}}
+    },
+    {
+      "id": "D",
+      "trusted_context": {
+        "subject": {"id": "student-a", "role": "student", "courses": ["demo-course"]},
+        "action": "read",
+        "resource": {"kind": "submission", "owner_id": "student-b", "course": "demo-course", "state": "draft"}
+      },
+      "untrusted_request_claims": {},
+      "response": {"status": 200, "body": {"error": "Access denied"}}
+    },
+    {
+      "id": "E",
+      "trusted_context": {
+        "subject": {"id": "student-a", "role": "student", "courses": ["demo-course"]},
+        "action": "read",
+        "resource": {"kind": "submission", "owner_id": "student-b", "course": "demo-course", "state": "draft"}
+      },
+      "untrusted_request_claims": {"role": "instructor"},
+      "response": null
+    },
+    {
+      "id": "F",
+      "trusted_context": {
+        "subject": {"id": "student-a", "role": "student", "courses": ["demo-course"]},
+        "action": "read",
+        "resource": {"kind": "submission", "owner_id": null, "course": "demo-course", "state": "draft"}
+      },
+      "untrusted_request_claims": {},
+      "response": {"status": 200, "body": {"message": "FICTIONAL response with no submission content"}}
+    }
+  ]
+}

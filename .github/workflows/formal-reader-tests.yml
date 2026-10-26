@@ -1,0 +1,27 @@
+name: Detached formal reader tests
+on:
+  push:
+    branches: [formal-ethical-hacking-programme]
+    paths:
+      - 'docs/formal-ethical-hacking/**'
+      - '.github/workflows/formal-reader-tests.yml'
+permissions:
+  contents: read
+jobs:
+  reader:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run pinned-source and interaction checks
+        working-directory: docs/formal-ethical-hacking/authoring/discord-workspace-prototype
+        run: node --test readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs foundation-interactions.test.mjs

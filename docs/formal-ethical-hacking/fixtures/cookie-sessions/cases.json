@@ -1,0 +1,50 @@
+{
+  "synthetic": true,
+  "notice": "FICTIONAL cookie declarations and explicitly supplied server facts only. No account, credential, browser cookie or session was used.",
+  "cases": [
+    {
+      "id": "A",
+      "origin_label": "https://portal.example.invalid/",
+      "set_cookie": "demo_session=FICTIONAL-A; Path=/; Secure; HttpOnly; SameSite=Lax",
+      "server_facts": {}
+    },
+    {
+      "id": "B",
+      "origin_label": "https://portal.example.invalid/",
+      "set_cookie": "demo_session=FICTIONAL-B; Path=/; HttpOnly",
+      "server_facts": {}
+    },
+    {
+      "id": "C",
+      "origin_label": "https://portal.example.invalid/",
+      "set_cookie": "demo_session=FICTIONAL-C; Domain=example.invalid; Path=/; Secure; HttpOnly; SameSite=Lax",
+      "server_facts": {}
+    },
+    {
+      "id": "D",
+      "origin_label": "https://portal.example.invalid/course-a/",
+      "set_cookie": "demo_session=FICTIONAL-D; Path=/course-a; Secure; HttpOnly; SameSite=Lax",
+      "server_facts": {}
+    },
+    {
+      "id": "E",
+      "origin_label": "https://portal.example.invalid/",
+      "set_cookie": "demo_session=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax",
+      "server_facts": {
+        "logout_session_invalidated": false,
+        "note": "The fictional server still accepts its previous session identifier after logout. No replay was performed."
+      }
+    },
+    {
+      "id": "F",
+      "origin_label": "https://portal.example.invalid/",
+      "set_cookie": "demo_session=FICTIONAL-F; Path=/; Secure; HttpOnly; SameSite=Lax",
+      "server_facts": {
+        "pre_auth_session_ref": "DEMO-F",
+        "post_auth_session_ref": "DEMO-F",
+        "same_identifier_asserted": true,
+        "note": "The references explicitly represent the same fictional server identifier, not merely the same cookie name or independently redacted values."
+      }
+    }
+  ]
+}
