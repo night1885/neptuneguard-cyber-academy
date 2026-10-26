@@ -1,0 +1,39 @@
+name: Local training site browser and CLI checks
+on:
+  pull_request:
+    branches: [formal-ethical-hacking-programme]
+    paths:
+      - 'docs/formal-ethical-hacking/fixtures/local-training-site/**'
+      - '.github/workflows/local-training-site-browser-tests.yml'
+permissions:
+  contents: read
+jobs:
+  browser:
+    name: Sandboxed Chromium and owned CLI restart
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require ordinary-user setup
+        run: python -c "import os; assert os.geteuid() != 0"
+      - name: Install pinned browser tooling without elevation
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.64.1
+          python -m playwright install chromium
+      - name: Run pure guards and browser smoke check
+        working-directory: docs/formal-ethical-hacking/fixtures/local-training-site
+        run: |
+          python -B -m unittest -v test_browser_smoke
+          python -B browser_smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-training-site-browser-report
+          path: docs/formal-ethical-hacking/fixtures/local-training-site/browser-smoke-report.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,0 +1,23 @@
+# Browser/CLI CI candidate: separate author scope
+
+Draft, not executed in a browser yet. This candidate adds a third, separate scoped PR job. Existing application, root gate, offline/HTTP jobs and manual learner scope remain unchanged. No merge, public hosting, production/company testing or learner activation is authorized.
+
+## Effects to approve
+The disposable Ubuntu runner downloads Playwright 1.64.1 and its Chromium build, without apt/sudo or user switching, and retains only a computed JSON report as an Actions artifact for seven days. The primary library version is pinned, not every transitive dependency or the runner image. Tool setup/artifact upload uses external services and Actions minutes. No deployment credentials or personal browser profile is supplied. Missing OS/browser dependencies or sandbox support must fail the job, not trigger an elevated install or sandbox bypass.
+
+The script checks the existing non-root runtime gate before importing Playwright or launching a child. Chromium is requested with chromium_sandbox=True; no --no-sandbox, CSP bypass or guard bypass is configured. It starts only the exact owned training_site.py CLI with no application arguments, reads its printed URL and accepts only the expected numeric 127.0.0.1 origin and valid ephemeral port.
+
+There are two sequential owned CLI sessions. Session one makes 21 fixed GET navigations: the four fixture pages, then 17 own-note requests; request 21 must show the 429 budget page after 20 permitted application attempts. Session two makes only the four fixture GET navigations and must serve normally again after restart. This is a new author-only 25-navigation scope, not permission to exceed the manual learner budget or to scan, fuzz, submit data or contact another host. No retries or additional readiness/client probes are provided.
+
+Each session uses a fresh non-persistent browser context. Its route handler permits one armed main-frame document GET at a time to the exact owned origin/path, enforces the planned count, and aborts other intercepted context requests (including favicon/background page requests). Service workers are blocked, downloads disabled and browser cache is disabled by routing. These controls are not OS-level egress isolation and do not cover every browser-process background connection. No company URL is supplied to any browser or client.
+
+The source checks rendered training/no-login labels, own-note text, denied/missing response statuses, absence of the other note on denied pages, and the budget page. It then sends SIGINT to the exact owned child PID and requires exit 0 with empty stderr. SIGINT exercises the CLI's KeyboardInterrupt path; it is not a human terminal-key or accessibility test. A forced kill is a bounded fallback for that owned child only, marks cleanup forced and must not count as success. No reconnection to a released port or unrelated process manipulation is attempted. Normal child exit is selected cleanup evidence, not a general host-listener audit or crash-recovery proof.
+
+## Current evidence and limits
+Only syntax, YAML structure and three pure URL/navigation/plan guard methods were checked locally. No Playwright installation, browser download, CLI child, listener, HTTP exchange, SIGINT stop, restart or artifact upload occurred locally. No new GitHub check has been observed. A generated package or parsed workflow is not a browser result.
+
+The existing two successful jobs at 1f03b7fb4ac06f5497e7ab0f113a8d2d1803c538 validate their earlier distinct scopes, not this candidate. After approval/commit, inspect the new job and JSON report before claiming browser/launcher/budget/reset success. Only boolean/status/count/version information and bounded exception diagnostics from the synthetic run are recorded, not raw note bodies, personal profiles, passwords or traces. The artifact is author-test output, not a private learner evidence/retention service.
+
+A passing headless Chromium job would still not validate supported student hardware, native Windows, every browser, human navigation, accessibility, real login, hostile local clients, complete isolation or learner readiness. Learner guest provisioning, support/recovery, private evidence handling and any deliberately vulnerable practical remain separate reviewed milestones. The PR description should be updated separately against actual results, not anticipated outcomes.
+
+References: https://pypi.org/project/playwright/ ; https://playwright.dev/python/docs/browsers ; https://playwright.dev/python/docs/api/class-browsertype ; https://playwright.dev/python/docs/api/class-browsercontext .
