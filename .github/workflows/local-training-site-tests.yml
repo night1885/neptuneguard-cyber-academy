@@ -23,4 +23,4 @@ jobs:
         run: python -c "import os, sys; print('Python:', sys.version); print('Effective UID:', os.geteuid())"
       - name: Run named training-site suite without serving
         working-directory: docs/formal-ethical-hacking/fixtures/local-training-site
-        run: python -B -m unittest -v test_training_site
+        run: python -B -m unittest -v test_training_site test_training_site_regression test_browser_smoke test_browser_smoke_failure
