@@ -77,11 +77,16 @@ test('disposable PostgreSQL 16 formal policy and restricted-reader integration',
     });
     await t.test('default read-only transaction blocks writes',async()=>{await assert.rejects(worker.query("UPDATE certification_enrollments SET status='revoked' WHERE discord_user_id=$1",[ACTOR]),error=>['25006','42501'].includes(error.code));});
     await t.test('table ACLs still block writes if the login changes its transaction default',async()=>{
-      await worker.query('SET default_transaction_read_only=off');
+      const connection=await worker.connect();let discard=false;
       try{
-        await assert.rejects(worker.query("UPDATE certification_enrollments SET status='revoked' WHERE discord_user_id=$1",[ACTOR]),error=>error.code==='42501');
-        await assert.rejects(worker.query('CREATE TABLE public.blocked_fixture (id int)'),error=>error.code==='42501');
-      }finally{await worker.query('SET default_transaction_read_only=on');}
+        await connection.query('SET default_transaction_read_only=off');
+        assert.equal((await connection.query('SHOW transaction_read_only')).rows[0].transaction_read_only,'off');
+        await assert.rejects(connection.query("UPDATE certification_enrollments SET status='revoked' WHERE discord_user_id=$1",[ACTOR]),error=>error.code==='42501');
+        await assert.rejects(connection.query('CREATE TABLE public.blocked_fixture (id int)'),error=>error.code==='42501');
+      }finally{
+        try{await connection.query('SET default_transaction_read_only=on');}catch(error){discard=true;throw error;}
+        finally{connection.release(discard);}
+      }
     });
     await t.test('ungranted audit data is not readable by the policy login',async()=>{await assert.rejects(worker.query('SELECT * FROM certification_audit_events'),error=>error.code==='42501');});
     await t.test('server-side statement deadline interrupts a stalled driver request',async()=>{

@@ -51,4 +51,25 @@ jobs:
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Real migrated policy and restricted reader checks
-        run: node --test test-formal-review-postgres.mjs
+        shell: bash
+        run: |
+          set +e
+          node --test --test-reporter=tap test-formal-review-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-pg.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const lines = readFileSync(process.env.RUNNER_TEMP + '/formal-pg.log', 'utf8').split(/\r?\n/);
+          const failed = lines.map((line, index) => /^\s*not ok\b/.test(line) ? index : -1).filter(index => index >= 0);
+          const starts = failed.length ? failed.slice(0, 3) : [0];
+          for (const start of starts) {
+            let text = lines.slice(start, start + 32).join('\n')
+              .replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi, '[redacted-connection-url]')
+              .replace(/\bPASSWORD\s+'[^']*'/gi, "PASSWORD '[redacted]'").slice(0, 6000);
+            text = text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+            console.log('::error title=Formal PostgreSQL test failure::' + text);
+          }
+          NODE
+          fi
+          exit "$status"
