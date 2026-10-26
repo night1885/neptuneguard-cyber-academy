@@ -4,6 +4,8 @@ on:
     branches: [formal-ethical-hacking-programme]
     paths:
       - 'scripts/formal-workspace-sdk-compatibility.test.mjs'
+      - 'certification-runtime.js'
+      - 'test-certification-runtime*.mjs'
       - '.github/workflows/formal-workspace-validation.yml'
       - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/**'
@@ -33,6 +35,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Report and verify installed SDK
         run: node --input-type=module -e "import { version } from 'discord.js'; if (version !== '14.27.0') throw new Error('Review changed SDK'); console.log('discord.js', version);"
+      - name: Actual runtime admission and shutdown regressions
+        run: node --test test-certification-runtime.mjs test-certification-runtime-course-authorization.mjs test-certification-runtime-formal-review.mjs
       - name: Existing detached workspace, adapters, readers and content tests
         working-directory: docs/formal-ethical-hacking/authoring/discord-workspace-prototype
         run: node --test navigation.test.mjs route-boundary.test.mjs trusted-route.test.mjs adapters.test.mjs trusted-readers.test.mjs cards.test.mjs catalogue.test.mjs readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs foundation-interactions.test.mjs

@@ -16,7 +16,7 @@ import { replyRetentionHold } from './certification-retention-hold.js';
 import { createClosureRuntimeRouter, readApplicationClosureFlag } from './certification-application-closure-runtime.js';
 import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
 
-export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter, createDecisionHandler } = {}) {
+export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter, createDecisionHandler, formalReview } = {}) {
   const config = loadCertificationConfig(env);
   const readOnlyPreview = readReadOnlyPreviewFlag(env);
   const pilot = env.CERTIFICATION_REGISTRATION_PILOT === undefined ? Object.freeze({ enabled: false }) : readRegistrationPilotOptions(env);
@@ -30,10 +30,18 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       pilot.guildId !== guildId || pilot.ownerId !== config.ownerId || pilot.adminChannelId !== config.adminChannelId)) {
     throw new Error('Pilot identity, agreement and disabled-feature requirements are not satisfied');
   }
+  if (formalReview !== undefined && (!formalReview || typeof formalReview !== 'object' || Array.isArray(formalReview) ||
+      typeof formalReview.enabled !== 'boolean')) throw new Error('Explicit formal review options required');
+  const formal = formalReview?.enabled === true ? Object.freeze({ ...formalReview }) : null;
+  if (formal && (formal.reviewOnly !== true || formal.mode !== 'review' || typeof formal.createRoute !== 'function' ||
+      !config.enabled || !config.activeAgreementVersion || readOnlyPreview || pilot.enabled || closureEnabled || courses.enabled)) {
+    throw new Error('Formal review requires isolated explicit review mode and current certification readiness');
+  }
   if (!config.enabled) return { enabled: false, detach() {} };
   const connection = loadCertificationDatabaseConnection(env);
   const backing = readOnlyPreview ? createPool(connection, { readOnly: true }) : createPool(connection);
-  let database, service, route, ownerDecisions;
+  let database, service, route, ownerDecisions, formalRoute;
+  let ready = false; let detached = false; let initializing = null; let closing = null;
   try {
     database = readOnlyPreview || pilot.enabled ? createReadOnlyPreviewPool(backing) : backing;
     service = createCertificationService(database, config);
@@ -53,13 +61,24 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
         route = createRegistrationPilotRouter({ settings: pilot, readViews: route, ...handlers, ownerDecisionsEnabled: true, ownerDecisions });
       } else route = createRegistrationPilotRouter({ settings: pilot, readViews: route, ...handlers });
     }
+    if (formal) {
+      const candidate = formal.createRoute({ client, guildId, config: Object.freeze({ ...config }), isReady: () => ready && !detached });
+      if (candidate && typeof candidate.then === 'function') {
+        void Promise.resolve(candidate).then(value => value?.dispose?.()).catch(() => {});
+        throw new Error('Synchronous formal review factory required');
+      }
+      formalRoute = candidate;
+      if (formalRoute?.enabled !== true || typeof formalRoute.handle !== 'function' || typeof formalRoute.dispose !== 'function') {
+        throw new Error('Enabled disposable formal review route required');
+      }
+    }
   } catch (error) {
+    try { void Promise.resolve(formalRoute?.dispose?.()).catch(() => {}); } catch {}
     try { if (typeof ownerDecisions?.dispose === 'function') void Promise.resolve(ownerDecisions.dispose()).catch(() => { console.error('Owner-decision construction cleanup requires attention.'); }); }
     catch { console.error('Owner-decision construction cleanup requires attention.'); }
     void backing.end().catch(() => {});
     throw error;
   }
-  let ready = false; let detached = false; let initializing = null; let closing = null;
   const active = new Set();
 
   async function initialize() {
@@ -115,17 +134,29 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
     };
     try {
+      if (formal && interaction.customId?.startsWith('fws:')) {
+        if (!ready || detached || !formalRoute || interaction.isButton?.() !== true) {
+          if (!interaction.deferred && !interaction.replied) await respond('Formal review workspace is unavailable.');
+          return;
+        }
+        if (await formalRoute.handle(interaction) !== true && !interaction.deferred && !interaction.replied) await respond('Formal review workspace is unavailable.');
+        return;
+      }
       if (!ready || detached) { await replyRetentionHold(interaction); return; }
       if (!await route(interaction)) await respond('This action is unavailable. Reopen the Admin Dashboard or your student panel.');
     } catch {
       console.error('Certification interaction failed.');
-      try { await respond('This action could not be completed. Reopen the dashboard or student panel and check the current status before retrying.'); }
-      catch { console.error('Certification error reply failed.'); }
+      try {
+        if (formal && interaction.customId?.startsWith('fws:')) {
+          if (!interaction.deferred && !interaction.replied) await respond('Formal review workspace is unavailable.');
+        } else await respond('This action could not be completed. Reopen the dashboard or student panel and check the current status before retrying.');
+      } catch { console.error('Certification error reply failed.'); }
     }
   }
 
   function onInteraction(interaction) {
-    if (detached || !(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.()) || !interaction.customId?.startsWith('cert:')) return;
+    if (detached || !(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.()) ||
+        !(interaction.customId?.startsWith('cert:') || (formal && interaction.customId?.startsWith('fws:')))) return;
     const task = handleInteraction(interaction); active.add(task);
     void task.finally(() => active.delete(task)).catch(() => {
       console.error('Certification reply failed.');
@@ -136,6 +167,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   client.once(Events.ClientReady, initialize);
   if (client.isReady()) void initialize();
   return { enabled: true, readOnlyPreview, registrationPilot: pilot.enabled, get ready() { return ready; },
+    get formalReviewReady() { return ready && !detached && formalRoute?.enabled === true; },
     get manualReviewDecisionsReady() { return ready && !detached && ownerDecisions?.ready === true; }, getCourseAuthorization,
     detach() {
       detached = true; ready = false;
@@ -145,9 +177,16 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
         let disposal = Promise.resolve();
         try { if (typeof route.dispose === 'function') disposal = Promise.resolve(route.dispose()).catch(() => { console.error('Certification route shutdown requires attention.'); }); }
         catch { console.error('Certification route shutdown requires attention.'); }
+        let formalDisposal = Promise.resolve();
+        if (formalRoute) {
+          try { formalDisposal = Promise.resolve(formalRoute.dispose()).then(result => {
+            if (result?.drained !== true) throw new Error('Formal review drain incomplete');
+          }); } catch { formalDisposal = Promise.reject(new Error('Formal review disposal failed')); }
+        }
         closing = (async () => {
-          await Promise.allSettled([...active, ...(initializing ? [initializing] : []), disposal]);
+          const results = await Promise.allSettled([...active, ...(initializing ? [initializing] : []), disposal, formalDisposal]);
           await database.end();
+          if (results.at(-1).status === 'rejected') throw new Error('Formal review shutdown requires attention');
         })();
       }
       return closing;
