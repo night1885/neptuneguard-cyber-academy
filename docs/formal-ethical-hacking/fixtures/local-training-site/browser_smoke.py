@@ -100,13 +100,14 @@ def main():
         print("Browser smoke blocked by runtime gate", file=sys.stderr)
         return 2
     report = {"synthetic": True, "passed": False, "python": sys.version.split()[0],
-              "effective_uid": os.geteuid(), "sessions": []}
+              "effective_uid": os.geteuid(), "browser_channel": "chrome",
+              "sandbox_requested": True, "sessions": []}
     try:
         from importlib.metadata import version
         from playwright.sync_api import sync_playwright
         report["playwright"] = version("playwright")
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True, chromium_sandbox=True, timeout=15000)
+            browser = playwright.chromium.launch(channel="chrome", headless=True, chromium_sandbox=True, timeout=15000)
             try:
                 report["browser"] = browser.version
                 phase(browser, FIRST, report["sessions"])
