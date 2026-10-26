@@ -1,3 +1,4 @@
+import { isGeneralChatUiReviewOptions } from './docs/formal-ethical-hacking/authoring/discord-workspace-prototype/general-chat-ui-review.mjs';
 import { readRegistrationPilotOptions, createRegistrationPilotPolicy, createRegistrationPilotRouter } from './certification-registration-pilot-guard.js';
 import { createProvenancePilotHandlers as createRegistrationPilotHandlers } from './certification-provenance-pilot-handlers.js';
 import { createProvenanceOwnerRegistrationHandler as createOwnerRegistrationHandler } from './certification-provenance-pilot-handlers.js';
@@ -34,7 +35,8 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       typeof formalReview.enabled !== 'boolean')) throw new Error('Explicit formal review options required');
   const formal = formalReview?.enabled === true ? Object.freeze({ ...formalReview }) : null;
   if (formal && (formal.reviewOnly !== true || formal.mode !== 'review' || typeof formal.createRoute !== 'function' ||
-      !config.enabled || !config.activeAgreementVersion || readOnlyPreview || pilot.enabled || closureEnabled || courses.enabled)) {
+      !config.enabled || !config.activeAgreementVersion || readOnlyPreview ||
+      (pilot.enabled && !isGeneralChatUiReviewOptions(formalReview, guildId)) || closureEnabled || courses.enabled)) {
     throw new Error('Formal review requires isolated explicit review mode and current certification readiness');
   }
   if (!config.enabled) return { enabled: false, detach() {} };

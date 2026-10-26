@@ -2,6 +2,10 @@
 import { createWorkspace } from './navigation.mjs';
 import { createFormalReviewRoute } from './route-boundary.mjs';
 export const GENERAL_CHAT_UI_TARGET = Object.freeze({ guildId: '1330353166830665859', channelId: '1330353167371735094', courseId: 'formal-ui-review' });
+const issuedUiReviewOptions = new WeakSet();
+export function isGeneralChatUiReviewOptions(value, guildId) {
+  return guildId === GENERAL_CHAT_UI_TARGET.guildId && issuedUiReviewOptions.has(value);
+}
 export function readGeneralChatUiReviewFlag(env = {}) {
   const value = env?.GENERAL_CHAT_UI_REVIEW_ENABLED;
   if (value === undefined || value === 'false') return false;
@@ -24,7 +28,7 @@ export function createGeneralChatUiReviewOptions(options = {}) {
   if (!options || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).some(key => key !== 'enabled') ||
       (options.enabled !== undefined && typeof options.enabled !== 'boolean')) throw new TypeError('Only explicit UI-preview enablement is accepted');
   if (options.enabled !== true) return Object.freeze({ enabled: false });
-  return Object.freeze({ enabled: true, reviewOnly: true, mode: 'review', createRoute({ client, guildId, isReady } = {}) {
+  const issued = Object.freeze({ enabled: true, reviewOnly: true, mode: 'review', createRoute({ client, guildId, isReady } = {}) {
     if (guildId !== GENERAL_CHAT_UI_TARGET.guildId || typeof client?.guilds?.fetch !== 'function' || typeof isReady !== 'function') {
       throw new TypeError('Confirmed guild, trusted SDK client and parent readiness required');
     }
@@ -55,4 +59,6 @@ export function createGeneralChatUiReviewOptions(options = {}) {
         return { handle: interaction => workspace.handle(interaction), dispose() { disposed = true; workspace.dispose(); } };
       } });
   } });
+  issuedUiReviewOptions.add(issued);
+  return issued;
 }
