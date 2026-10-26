@@ -1,0 +1,22 @@
+# Browser/CLI CI: sandbox-preserving Chrome-channel candidate
+
+Draft; no successful browser result yet. The initial browser job at f02b39246531e64747442b52dff9283a37ac4355 failed. The user supplied a report showing Python 3.12.15, Playwright 1.64.1, effective UID 1001, TargetClosedError, Chromium sandboxing failed and sessions: []. Three pure guard tests passed. The failure occurred before an owned CLI session or page check began. The exact kernel/AppArmor cause is not established by that truncated browser log.
+
+## Proposed environment correction
+Use Playwright's supported channel="chrome" with chromium_sandbox=True instead of its downloaded headless-shell build. The workflow checks for the existing executable /opt/google/chrome/chrome and readable /etc/apparmor.d/chrome profile, then records the installed browser version. It does not install Chrome, download bundled Chromium, change AppArmor/sysctl policy, elevate, switch users or add --no-sandbox. It still downloads pinned Playwright 1.64.1 and dependencies. The installed Chrome version and transitive dependencies/runner image are not pinned; compatibility and effective launch remain to be demonstrated by CI.
+
+Chromium documentation describes Ubuntu user-namespace restrictions for downloaded/developer builds and a profile for Chrome's standard installation path. A profile file being present is not proof that it is loaded or sufficient. Missing prerequisites or another launch failure must remain a failed job, not trigger a security bypass. Report fields browser_channel and sandbox_requested record configuration, not independent verification of all sandbox layers.
+
+## Unchanged approved exercise
+Two sequential owned non-root training_site.py CLI sessions, 25 fixed main-frame GET navigations total: 21 in the first session (four fixture pages then 17 own-note requests, with request 21 expected to return 429), and four fixture pages after restart. This author-only scope does not expand the manual learner budget. The strict printed 127.0.0.1 URL/port parser, one-armed-navigation route guard, context request-count cap, blocked service workers, disabled downloads, fresh contexts and no personal profile remain unchanged. Other intercepted requests are aborted; browser-process background networking is not OS-isolated.
+
+Rendered labels, selected ownership/denial pages and budget page are checked. SIGINT targets only the exact owned CLI child and requires exit 0 with empty stderr. Forced child cleanup cannot count as success. There is no released-port reconnection, extra readiness probe, scanner, public bind, external/company target or unrelated process manipulation. SIGINT is not a human terminal-key test, and selected child exit/restart evidence is not crash recovery or a general host-listener audit.
+
+## Evidence and release boundary
+Only source syntax, workflow YAML structure, launch-option inspection and three equivalent pure URL/navigation/plan guards were checked locally for this patch. No browser, CLI child, listener, HTTP exchange, sandbox/policy change or package installation was executed locally. The committed guard-test file, application, root guard, offline and HTTP workflows are unchanged. A corrected configuration is not a passing browser result.
+
+The workflow keeps read-only repository permissions, checkout without persisted credentials, a five-minute timeout and the computed JSON report artifact with seven-day retention. Reports contain selected statuses/counts/versions, requested channel/sandbox settings and bounded exception diagnostics, not raw notes, passwords or personal profiles. Setup/artifact services use network access and Actions minutes. This is author test output, not a learner evidence/retention service.
+
+Inspect actual new CI results and the report before claiming browser, launcher, budget or restart success. Supported learner guests, hardware/browsers, accessibility, support/recovery, private evidence handling and deliberately vulnerable practicals remain separate gates. No merge, deployment, learner activation, grade/award, Discord/Render/PostgreSQL change or company-site testing is included. Update the PR description separately against actual results.
+
+Sources: https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md ; https://playwright.dev/python/docs/api/class-browsertype#browser-type-launch-option-channel .

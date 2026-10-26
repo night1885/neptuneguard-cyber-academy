@@ -1,0 +1,26 @@
+name: Local training site offline checks
+on:
+  pull_request:
+    branches: [formal-ethical-hacking-programme]
+    paths:
+      - 'docs/formal-ethical-hacking/fixtures/local-training-site/**'
+      - '.github/workflows/local-training-site-tests.yml'
+permissions:
+  contents: read
+jobs:
+  application:
+    name: Named in-process and mocked checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Record Python and effective UID
+        run: python -c "import os, sys; print('Python:', sys.version); print('Effective UID:', os.geteuid())"
+      - name: Run named training-site suite without serving
+        working-directory: docs/formal-ethical-hacking/fixtures/local-training-site
+        run: python -B -m unittest -v test_training_site test_training_site_regression test_browser_smoke test_browser_smoke_failure test_validate_browser_report
