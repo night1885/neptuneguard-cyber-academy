@@ -35,7 +35,7 @@ jobs:
         run: node --input-type=module -e "import { version } from 'discord.js'; if (version !== '14.27.0') throw new Error('Review changed SDK'); console.log('discord.js', version);"
       - name: Existing detached workspace, adapters, readers and content tests
         working-directory: docs/formal-ethical-hacking/authoring/discord-workspace-prototype
-        run: node --test navigation.test.mjs adapters.test.mjs trusted-readers.test.mjs cards.test.mjs catalogue.test.mjs readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs foundation-interactions.test.mjs
+        run: node --test navigation.test.mjs route-boundary.test.mjs adapters.test.mjs trusted-readers.test.mjs cards.test.mjs catalogue.test.mjs readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs foundation-interactions.test.mjs
       - name: Existing synthetic review and workspace regression
         working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
         run: node --test workspace.test.mjs review.test.mjs review-recovery.test.mjs controls.test.mjs journey.test.mjs action-presenter.test.mjs session-journey.test.mjs authorization.test.mjs build-browser-demo.test.mjs
