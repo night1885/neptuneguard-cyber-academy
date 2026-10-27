@@ -1,0 +1,58 @@
+name: Synthetic review persistence (disposable only)
+on:
+  push:
+    branches: [feat/synthetic-review-postgres, main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
+      - '.github/workflows/synthetic-review-postgres.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
+      - '.github/workflows/synthetic-review-postgres.yml'
+      - 'package.json'
+      - 'package-lock.json'
+permissions:
+  contents: read
+concurrency:
+  group: synthetic-review-postgres-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: synthetic_review_admin
+          POSTGRES_PASSWORD: ci-disposable-only
+          POSTGRES_DB: synthetic_review_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U synthetic_review_admin -d synthetic_review_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SYNTHETIC_REVIEW_CI: 'true'
+      SYNTHETIC_PG_MAJOR: '${{ matrix.postgres }}'
+      SYNTHETIC_REVIEW_DATABASE_URL: postgresql://synthetic_review_admin:ci-disposable-only@127.0.0.1:5432/synthetic_review_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Guard, transaction, authority and recovery fixture tests
+        run: node --test docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs
