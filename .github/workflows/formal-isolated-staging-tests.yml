@@ -43,5 +43,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Offline local-profile and composition unit tests
         run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging.test.mjs docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging-cleanup.test.mjs
+      - name: Draft first-journey reading constraints
+        run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/first-journey-reading.test.mjs
       - name: Actual application runtime and policy with synthetic providers
         run: node --test test-certification-isolated-staging.mjs
