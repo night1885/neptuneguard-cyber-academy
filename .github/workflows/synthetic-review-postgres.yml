@@ -1,7 +1,7 @@
 name: Synthetic review persistence (disposable only)
 on:
   push:
-    branches: [feat/synthetic-review-postgres, main]
+    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
       - '.github/workflows/synthetic-review-postgres.yml'
@@ -55,4 +55,4 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Guard, transaction, authority and recovery fixture tests
-        run: node --test docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs
+        run: node --test --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs
