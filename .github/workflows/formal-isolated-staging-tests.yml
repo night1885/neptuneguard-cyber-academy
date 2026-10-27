@@ -42,6 +42,6 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Offline local-profile and composition unit tests
-        run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging.test.mjs
+        run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging.test.mjs docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging-cleanup.test.mjs
       - name: Actual application runtime and policy with synthetic providers
         run: node --test test-certification-isolated-staging.mjs

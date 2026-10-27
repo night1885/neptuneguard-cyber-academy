@@ -47,20 +47,63 @@ export function createIsolatedFormalStagingApplication({ client, env, production
   let environment;
   try { environment = inspect(env, productionBoundary, loadConfig); }
   catch { throw new Error('Invalid isolated staging configuration'); }
-  let attached = false;
-  const application = createApplication({ ...lifecycle, client, env: environment, guildId: environment.GUILD_ID,
+  let attached = false, retired = false, poolAttempted = false, pool, runtime, application;
+  let closingPool, poolClosing = false, cleanup;
+  let closePool = async () => {};
+  const clean = () => {
+    retired = true;
+    if (!cleanup) {
+      cleanup = (async () => {
+        let timer;
+        try {
+          await Promise.race([
+            (async () => {
+              try {
+                if (runtime) {
+                  if (typeof runtime.detach !== 'function') throw new Error('Runtime cleanup unavailable');
+                  await runtime.detach();
+                }
+              } finally { await closePool(); }
+            })(),
+            new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Cleanup deadline')), 1000); })
+          ]);
+        } catch { throw new Error('Isolated staging cleanup requires attention'); }
+        finally { clearTimeout(timer); }
+      })();
+      void cleanup.catch(() => {});
+    }
+    return cleanup;
+  };
+  try {
+  application = createApplication({ ...lifecycle, client, env: environment, guildId: environment.GUILD_ID,
     attachCommunity: () => Object.freeze({ enabled: false, ready: false, detach: async () => {} }),
     attachRuntime(actualClient, ignored, guildId, actualEnv) {
-      if (attached || actualClient !== client || guildId !== environment.GUILD_ID ||
+      if (retired || attached || actualClient !== client || guildId !== environment.GUILD_ID ||
           JSON.stringify(Object.entries(actualEnv).sort()) !== JSON.stringify(Object.entries(environment).sort())) throw new Error('Unexpected staging runtime context');
       attached = true;
-      let pool;
-      return attachRuntime(client, undefined, guildId, environment, {
+      runtime = attachRuntime(client, undefined, guildId, environment, {
         createPool(connection) {
-          if (pool) throw new Error('Staging pool already constructed');
-          pool = createPool(connection, { readOnly: true, max: 2, connectionTimeoutMs: 1000,
+          if (poolAttempted || retired) throw new Error('Staging pool already constructed or retired');
+          poolAttempted = true;
+          const raw = createPool(connection, { readOnly: true, max: 2, connectionTimeoutMs: 1000,
             statementTimeoutMs: 1000, lockTimeoutMs: 500, idleTransactionTimeoutMs: 2000 });
-          if (typeof pool?.query !== 'function' || typeof pool.end !== 'function') throw new Error('Owned staging reader pool required');
+          closePool = () => {
+            if (!poolClosing) {
+              poolClosing = true;
+              closingPool = Promise.resolve(raw).then(value => {
+                if (typeof value?.end !== 'function') throw new Error('Pool cleanup unavailable');
+                return value.end();
+              });
+              void closingPool.catch(() => {});
+            }
+            return closingPool;
+          };
+          if (typeof raw?.query !== 'function' || typeof raw.end !== 'function') throw new Error('Owned staging reader pool required');
+          pool = new Proxy(raw, { get(target, key) {
+            if (key === 'end') return closePool;
+            const value = Reflect.get(target, key, target);
+            return typeof value === 'function' ? value.bind(target) : value;
+          } });
           return pool;
         },
         createRouter: () => async interaction => {
@@ -74,14 +117,24 @@ export function createIsolatedFormalStagingApplication({ client, env, production
           return createRoute({ enabled: true, reviewOnly: true, mode: 'review', client, guildId,
             config: context.config, entryChannelId: environment.FORMAL_STAGING_ENTRY_CHANNEL_ID,
             verifiedRoleId: environment.VERIFIED_ROLE_ID, readPool: pool, bundle,
-            isReady: () => { try { return client.user?.id === environment.FORMAL_STAGING_BOT_ID && context.isReady() === true; } catch { return false; } } });
+            isReady: () => { try { return !retired && client.user?.id === environment.FORMAL_STAGING_BOT_ID && context.isReady() === true; } catch { return false; } } });
         } }
       });
+      return runtime;
     }
   });
+  if (application && typeof application.then === 'function') {
+    void Promise.resolve(application).catch(() => {});
+    throw new Error('Synchronous staging application factory required');
+  }
   if (!application || typeof application.start !== 'function' || typeof application.shutdown !== 'function') throw new Error('Staging application lifecycle required');
+  } catch {
+    const error = new Error('Isolated staging construction failed');
+    Object.defineProperty(error, 'cleanup', { value: clean() });
+    throw error;
+  }
   return Object.freeze({ get enabled() { return application.enabled === true; },
-    get ready() { return application.ready === true && client.user?.id === environment.FORMAL_STAGING_BOT_ID; },
+    get ready() { return !retired && application.ready === true && client.user?.id === environment.FORMAL_STAGING_BOT_ID; },
     get stopping() { return application.stopping === true; }, get communityReady() { return false; },
-    start: token => application.start(token), shutdown: () => application.shutdown() });
+    start: token => application.start(token), shutdown: () => { retired = true; return application.shutdown(); } });
 }
