@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "courseId": "formal-ethical-hacking",
+  "mode": "draft-review-only",
+  "runtimeIntegration": false,
+  "publishable": false,
+  "pages": [
+    {
+      "id": "journey-purpose",
+      "title": "First journey: purpose",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "DRAFT CONTENT REVIEW ONLY. This reading packet is not an activated course, a permission record, or evidence that a practical ran. The first journey is to explain an authorization boundary, prepare clean student-owned guests through an approved route, observe a narrowly permitted HTTP service, stop it, and report what actually happened. It is not a vulnerability hunt. Reading pages grants no lab permission, saved progress, completion or award. No real learner answers or evidence are collected here."
+    },
+    {
+      "id": "access-and-permission",
+      "title": "EH-LAB-00: access is not permission",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Technical access is not authorization. A Verified role, enrollment approval, specific-course assignment, installed tool or reachable address does not give general testing permission. Course admission, course assignment, lab authorization and awards are separate decisions. Before a practical action, use the actual current approved lab brief. If authorization or the target identity is unclear, stop and clarify. A different reachable system is not an authorized substitute."
+    },
+    {
+      "id": "read-the-brief",
+      "title": "EH-LAB-00: read the current brief",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Identify the objective; authorized environment, target and service; permitted actions; exclusions; setup checks; time window; evidence rules; stop conditions; support contact; and reset procedure. Missing details require clarification rather than guessed permission. Do not reuse an old exercise authorization or assume that an address belongs to the academy. This packet supplies no operational time window, real target authorization or support contact."
+    },
+    {
+      "id": "boundary-and-readiness",
+      "title": "EH-LAB-00: systems and readiness",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Draw the host, hypervisor, learner guest, clean peer and external connections. Label permitted and prohibited paths. A diagram alone does not prove isolation. Record only a minimal readiness inventory when an approved private workflow exists: OS/version, CPU architecture, available memory/storage, virtualization availability, installation permission and relevant restrictions. Exclude serial numbers, credentials and unrelated personal files. A managed device needs the owner-approved installation route. EH-LAB-00 itself establishes no hardware minimum; use a validated course configuration."
+    },
+    {
+      "id": "stop-and-protect",
+      "title": "EH-LAB-00: stop conditions",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Stop for uncertain targets or permission, a network differing from the approved setup, an unexplained external route, an action beyond scope, exposed sensitive data, failed verification or unstable operation. Preserve only necessary non-sensitive observations and follow the actual approved support/incident process. Do not test apparent credentials, copy more data, bypass device controls or erase evidence to hide a mistake. If the required escalation process is absent, record the blocker instead of inventing a contact or continuing practical work."
+    },
+    {
+      "id": "fictional-scenarios",
+      "title": "EH-LAB-00: fictional scenario exercise",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "FICTIONAL ANALYSIS ONLY - these cases grant no real permission and are not executed evidence. For each, choose proceed within stated scope, stop and clarify, or stop and escalate. Explain decisive evidence, unknowns and the next permitted action.\n1. The exact peer, setup checks and proposed request match the current approved brief.\n2. A scanning tool is installed, but no target or scanning permission is named.\n3. Unexpected output contains an apparent password; testing it is not authorized.\n4. A guest has an unexplained physical-home-network connection.\n5. Managed-device installation approval is missing.\n6. A proposed screenshot exposes a serial number and personal files.\n7. The chosen setup guide does not support the host CPU architecture.\nDo not put real responses, identities or instructor marking guidance in this repository."
+    },
+    {
+      "id": "route-to-practical",
+      "title": "First journey: practical prerequisites",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "After EH-LAB-00, installation permission, a reproduced supported route and actual support/incident procedures must be available before EH-LAB-01. Follow the reviewed EH-LAB-01/02 setup and provisioning route, then EH-LINUX-01/02/03 terminal foundations, before EH-LAB-03 two-guest configuration and controlled recovery. Required tools and material transfer must not depend on ad hoc NAT, bridging or unsafe sharing. Inspect all adapters and relevant IPv4/IPv6 routes. A snapshot does not prove restoration works, and failed ping does not prove isolation. Missing prerequisites mean planning only; do not buy equipment to satisfy unfinished guidance."
+    },
+    {
+      "id": "bounded-http-observation",
+      "title": "First journey: narrow HTTP observation",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "EH-LAB-04 requires the approved preceding setup and available Python 3/curl. Its stated client scope is GET / and HEAD / on NG-Peer TCP port 8000, not scanning, credential testing, path enumeration or uploads. The draft names NG-Learner 192.0.2.10 and NG-Peer 192.0.2.20 on NG-FOUNDATION. Those labels and addresses do not independently authorize a run. The peer serves only a disposable clean exercise directory; a listening address does not replace topology checks. Record actual listener state, permitted request observations and relevant peer logs. Follow the stop procedure, recheck the listener, and make only the permitted stopped-service observation. A timeout is not proof of isolation, and a response header is not proof of a vulnerability. No practical action is authorized by this reading alone."
+    },
+    {
+      "id": "report-and-feedback",
+      "title": "First journey: evidence and feedback",
+      "audience": "learner",
+      "kind": "reading",
+      "text": "Use the first-practical worksheet and EH-LAB-05 only through an approved private workflow. Mark steps completed, blocked or not attempted. Label actual minimal excerpts E01, E02 and so on; separate observed facts, interpretations, alternatives and unresolved questions. Record interventions and final/reset state. Never invent output or contemporaneous timestamps. Keep fictional analysis labelled FICTIONAL and separate from executed evidence. A reviewer may request clarification or a bounded repeat; draft review dimensions are not a calibrated pass mark. Without approved private evidence handling and retention/deletion rules, collect no new learner submission. Feedback, reading or filling a worksheet does not automatically grant progression, lab access, completion or awards."
+    }
+  ]
+}
