@@ -1,7 +1,18 @@
 name: Formal PostgreSQL restricted-reader validation
 on:
   push:
-    branches: [formal-ethical-hacking-programme]
+    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, main]
+    paths:
+      - 'test-formal-review-postgres.mjs'
+      - '.github/workflows/formal-postgres-validation.yml'
+      - 'migrations/**'
+      - 'certification-*.js'
+      - 'certification-*.mjs'
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
     paths:
       - 'test-formal-review-postgres.mjs'
       - '.github/workflows/formal-postgres-validation.yml'

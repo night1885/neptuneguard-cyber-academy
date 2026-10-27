@@ -1,7 +1,20 @@
 name: Formal workspace consolidated validation
 on:
   push:
-    branches: [formal-ethical-hacking-programme]
+    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, main]
+    paths:
+      - 'scripts/formal-workspace-sdk-compatibility.test.mjs'
+      - 'certification-runtime.js'
+      - 'restoration.js'
+      - 'test-certification-runtime*.mjs'
+      - 'test-certification-restored-application.mjs'
+      - '.github/workflows/formal-workspace-validation.yml'
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
     paths:
       - 'scripts/formal-workspace-sdk-compatibility.test.mjs'
       - 'certification-runtime.js'
