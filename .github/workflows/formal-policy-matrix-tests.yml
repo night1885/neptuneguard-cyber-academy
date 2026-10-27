@@ -1,0 +1,49 @@
+name: Formal course policy matrix
+on:
+  push:
+    branches: [main, feat/protected-workspace-integration]
+    paths:
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'certification-course-lifecycle.js'
+      - 'certification-account-acknowledgment.js'
+      - 'certification-age-declaration.js'
+      - 'certification-manual-review-data.mjs'
+      - 'package.json'
+      - '.github/workflows/formal-policy-matrix-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'certification-course-lifecycle.js'
+      - 'certification-account-acknowledgment.js'
+      - 'certification-age-declaration.js'
+      - 'certification-manual-review-data.mjs'
+      - 'package.json'
+      - '.github/workflows/formal-policy-matrix-tests.yml'
+permissions:
+  contents: read
+concurrency:
+  group: formal-policy-matrix-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  policy:
+    name: policy-node-${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Report runtime
+        run: node --version
+      # These policy modules import only local source and Node built-ins.
+      # No npm install, bot login, database, or secrets are required.
+      - name: Run actual policy implementation with synthetic rows
+        run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/formal-read-policy-matrix.test.mjs

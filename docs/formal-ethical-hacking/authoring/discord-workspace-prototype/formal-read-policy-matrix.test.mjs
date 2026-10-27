@@ -23,16 +23,23 @@ function approved() {
     course_status: 'active', authorized_course_key: COURSE,
     application_closed_at: null, application_closed_by: null, application_closed_as: null };
 }
-function harness(t, rows) {
+function harness(t, rows, { expectedCalls = 1, beforeResult } = {}) {
   const calls = [];
   const authorize = createFormalReviewAuthorization({ enabled: true, reviewOnly: true, config,
     readPool: { async query(sql, values) {
-      assert.equal(isFormalRead(sql, values), true);
-      assert.deepEqual(values, [ACTOR, COURSE]);
-      calls.push({ sql, values: [...values] });
+      calls.push({ sql, values: structuredClone(values) });
+      if (beforeResult) await beforeResult();
       return { rows: structuredClone(rows) };
     } } });
-  t.after(() => authorize.dispose());
+  // Check outside the production catch boundary so assertion failures cannot become denials.
+  t.after(() => {
+    authorize.dispose();
+    assert.equal(calls.length, expectedCalls);
+    for (const call of calls) {
+      assert.equal(isFormalRead(call.sql, call.values), true);
+      assert.deepEqual(call.values, [ACTOR, COURSE]);
+    }
+  });
   return { authorize, calls };
 }
 
@@ -58,6 +65,13 @@ const denials = [
   ['stale agreement version', { agreement_version: 'SYNTHETIC-old' }],
   ['stale agreement hash', { agreement_content_sha256: 'b'.repeat(64) }],
   ['stale comprehension version', { comprehension_check_version: 'SYNTHETIC-old' }],
+  ['missing approval time', { approved_at: null }],
+  ['missing acknowledgment', { acknowledged_at: null }],
+  ['missing read confirmation', { learner_confirmed_read_at: null }],
+  ['missing comprehension evidence', { comprehension_passed_at: null }],
+  ['ineligible age declaration', { age_eligible: false }],
+  ['missing age declaration time', { age_declared_at: null }],
+  ['stale age declaration', { age_declaration_version: 'SYNTHETIC-old' }],
   ['closure timestamp', { application_closed_at: TIME }],
   ['closure actor', { application_closed_by: OWNER }],
   ['closure classification', { application_closed_as: 'synthetic-closed' }]
@@ -86,15 +100,68 @@ test('missing, duplicate, and foreign-subject rows deny', async t => {
 });
 
 test('invalid actor and foreign course cause no policy query', async t => {
-  const h = harness(t, [approved()]);
+  const h = harness(t, [approved()], { expectedCalls: 0 });
   assert.equal(await h.authorize('invalid', COURSE), null);
   assert.equal(await h.authorize(ACTOR, 'other-course'), null);
   assert.equal(h.calls.length, 0);
 });
 
 test('disposal blocks further policy reads', async t => {
-  const h = harness(t, [approved()]);
+  const h = harness(t, [approved()], { expectedCalls: 0 });
   h.authorize.dispose();
   assert.equal(await h.authorize(ACTOR, COURSE), null);
   assert.equal(h.calls.length, 0);
+});
+
+test('backend exception is a denial and never a grant', async t => {
+  const h = harness(t, [approved()], { beforeResult() { throw new Error('SYNTHETIC PRIVATE ERROR'); } });
+  assert.equal(await h.authorize(ACTOR, COURSE), null);
+});
+
+test('disposal while a policy read is pending rejects its late result', async t => {
+  let entered, release;
+  const started = new Promise(resolve => { entered = resolve; });
+  const blocked = new Promise(resolve => { release = resolve; });
+  const h = harness(t, [approved()], { async beforeResult() { entered(); await blocked; } });
+  const pending = h.authorize(ACTOR, COURSE);
+  await started;
+  h.authorize.dispose();
+  release();
+  assert.equal(await pending, null);
+});
+
+test('each authorization reads current enrollment rather than retaining a prior grant', async t => {
+  const rows = [approved()];
+  const h = harness(t, rows, { expectedCalls: 2 });
+  assert.deepEqual(await h.authorize(ACTOR, COURSE),
+    { student_id: 'SYNTHETIC-STUDENT', course_key: COURSE });
+  rows[0].status = 'revoked';
+  assert.equal(await h.authorize(ACTOR, COURSE), null);
+});
+
+test('default-off policy never consults a provider', async () => {
+  let calls = 0;
+  const authorize = createFormalReviewAuthorization({
+    readPool: { async query() { calls++; throw new Error('Unexpected read'); } } });
+  assert.equal(await authorize(ACTOR, COURSE), null);
+  assert.equal(calls, 0);
+  authorize.dispose();
+});
+
+test('approved manual-review acknowledgment returns no reviewer guide fields', async t => {
+  const row = { ...approved(), comprehension_passed_at: null, comprehension_submitted_at: TIME,
+    comprehension_review_snapshot: { formatVersion: 'manual-review-v1',
+      checkVersion: config.comprehensionCheck.version,
+      items: [{ question: 'SYNTHETIC QUESTION', response: 'SYNTHETIC RESPONSE', expectedAnswer: 'SYNTHETIC GUIDE' }] } };
+  const h = harness(t, [row]);
+  assert.deepEqual(await h.authorize(ACTOR, COURSE),
+    { student_id: 'SYNTHETIC-STUDENT', course_key: COURSE });
+});
+
+test('malformed manual-review snapshot cannot authorize an otherwise approved account', async t => {
+  const row = { ...approved(), comprehension_passed_at: null, comprehension_submitted_at: TIME,
+    comprehension_review_snapshot: { formatVersion: 'manual-review-v1',
+      checkVersion: config.comprehensionCheck.version, items: [] } };
+  const h = harness(t, [row]);
+  assert.equal(await h.authorize(ACTOR, COURSE), null);
 });
