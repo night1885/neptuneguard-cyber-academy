@@ -1,0 +1,47 @@
+name: Isolated formal staging composition
+on:
+  push:
+    branches: [feat/protected-workspace-integration, main]
+    paths:
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'test-certification-isolated-staging.mjs'
+      - 'certification-*.js'
+      - 'certification-*.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/formal-isolated-staging-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'test-certification-isolated-staging.mjs'
+      - 'certification-*.js'
+      - 'certification-*.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/formal-isolated-staging-tests.yml'
+permissions:
+  contents: read
+concurrency:
+  group: formal-isolated-staging-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  composition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Offline local-profile and composition unit tests
+        run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging.test.mjs docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging-cleanup.test.mjs
+      - name: Actual application runtime and policy with synthetic providers
+        run: node --test test-certification-isolated-staging.mjs
