@@ -1,0 +1,13 @@
+# Connected intake rehearsal — disposable CI only
+
+Baseline 601a7f18088a91470592ae2c3b99abb1c43093a0. One connected journey reuses the actual no-modal button boundary/coordinator and all three existing SQL fixtures. No live SDK client, real identity, production schema or academy runtime is attached.
+
+The only SQL addition is a restricted binding projection through existing fixture authority locks. A fixed harness maps two fictional numeric actors to demo-learner/demo-reviewer. Request keys use deterministic truncated SHA-256 translation to the existing demo-* namespace; this is not authentication or mathematically collision-free identity. State/submission/review reads and writes use the restricted worker. The disposable admin installs/cleans the fixture, seeds assignments, advances the controlled clock, scripts copy outcomes and invokes simulated purge.
+
+Six journey stages cover button preparation/preview, submission and duplicate-click replay, coordinator review, exact expiry denial, scripted external-copy failure, and successful scripted retry plus real fixture database purge. Channel provisioning/privacy and reviewer-copy delivery/deletion are scripted in memory, not verified Discord behavior. Reviewer action invokes the coordinator directly; no reviewer button UI is implemented. Cache-delivery denial is a harness deadline check, not a production renderer or recall guarantee. Successful database deletion is not evidence of provider erasure.
+
+Fixed in-memory provisioning and copy state are not durable recovery. Draft deletion providers deliberately throw; draft expiry/owner-only settings are explicit rehearsal proposals, not approved policy. Source reuse after purge, shared records, backups/log/cache rules, live identity, privacy/accessibility and staging/live approval remain unresolved. No indefinite tombstones or live flags are added.
+
+Preparation validation: the new JavaScript test syntax passed; two helper tests extracted from it passed locally without coordinator imports or PostgreSQL. Workflow YAML parsed and comparison verified retained non-command job settings. The complete connected journey and SQL execution have not run locally; require the existing Node 20/22 by PostgreSQL 16/18 disposable CI matrix. Existing suites remain serial and unchanged. No new workflow or service is introduced.
+
+Finish line for this batch: execute and review this connected fictional journey; do not automatically expand into production adapters, policy activation or another feature. No deployment, real learner content, live database connection, Discord publication or destructive production action is authorized.

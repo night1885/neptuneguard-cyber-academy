@@ -1,9 +1,10 @@
 name: Synthetic review persistence (disposable only)
 on:
   push:
-    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, feat/synthetic-intake-storage, main]
+    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, feat/synthetic-intake-storage, feat/intake-end-to-end-rehearsal, main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake*.mjs'
       - '.github/workflows/synthetic-review-postgres.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -11,6 +12,7 @@ on:
     branches: [main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake*.mjs'
       - '.github/workflows/synthetic-review-postgres.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -58,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          node --test --test-reporter=tap --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/source-provenance.test.mjs 2>&1 | tee "$RUNNER_TEMP/synthetic-postgres.log"
+          node --test --test-reporter=tap --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/source-provenance.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/intake-rehearsal.test.mjs 2>&1 | tee "$RUNNER_TEMP/synthetic-postgres.log"
           codes=("${PIPESTATUS[@]}")
           set -e
           status=${codes[0]}
