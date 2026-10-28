@@ -88,7 +88,8 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
     submit:(ctx,token,requestId)=>run(async()=>{
       const p=previews.get(token);if(!p||p.actorId!==ctx?.actorId||!key(requestId))return deny();
       if(now()>=p.until){forget(token);return deny();}
-      const b=await binding(ctx,'submit',p.b);await channel(b);
+      const b=await binding(ctx,'submit',p.b);
+      if(await channel(b)!==p.channelId){forget(token);return deny('refresh-required');}
       const old=await call('receipt',b,requestId);
       if(old!==null){
         if(old?.sourceMessageId!==p.messageId||old?.sourceChannelId!==p.channelId||old?.sourceCreatedAtMs!==p.createdAtMs)return deny();
@@ -105,6 +106,7 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
       if(!key(reportId)||!Number.isSafeInteger(expectedRevision)||expectedRevision<0||!['changes-requested','review-recorded'].includes(decision)||!text(feedback))return deny();
       const b=await binding(ctx,'review'),report=await call('readReport',b,reportId);
       if(report?.ok!==true||report.reportId!==reportId||report.recordId!==b.recordId||report.learnerId!==b.learnerId||!text(report.body))return deny();
+      if(digest(report.body)!==report.digest)return deny();
       ack(report,b,report.digest);await binding(ctx,'review',b);
       const presentation=Object.freeze(Object.fromEntries(['reportId','recordId','learnerId','body','submittedAtMs','expiresAtMs','digest','revision'].map(k=>[k,report[k]])));
       const view=await call('publishTrackedReview',b,presentation);

@@ -14,10 +14,10 @@ function fixture(patch={}){
     verifyPrivate:async()=>f.private,admitLearner:async()=>{f.calls.push('admit');},
     latest:async()=>({...f.message}),exact:async()=>({...f.message}),receipt:async(b,k)=>f.receipts.get(k)||null,
     submit:async(b,p)=>{f.calls.push('submit');if(f.claimed||f.sources.has(p.channelId+':'+p.messageId))throw new Error();if(p.expectedRevision!==f.revision)throw new Error();
-      f.submitted=true;f.revision++;f.receipt={ok:true,reportId:'demo-report',recordId:b.recordId,learnerId:b.learnerId,digest:p.digest,
+      f.storedBody=p.body;f.submitted=true;f.revision++;f.receipt={ok:true,reportId:'demo-report',recordId:b.recordId,learnerId:b.learnerId,digest:p.digest,
         revision:f.revision,submittedAtMs:f.now,expiresAtMs:f.now+DAY,sourceMessageId:p.messageId,sourceChannelId:p.channelId,sourceCreatedAtMs:p.createdAtMs};
       f.sources.add(p.channelId+':'+p.messageId);f.receipts.set(p.requestId,{...f.receipt});return{...f.receipt};},
-    readReport:async()=>f.receipt?{...f.receipt,body:'Fictional stored report'}:null,
+    readReport:async()=>f.receipt?{...f.receipt,body:f.storedBody}:null,
     publishTrackedReview:async(b,r)=>({tracked:true,expiresAtMs:r.expiresAtMs}),
     review:async(b,p)=>{f.calls.push('review');if(p.expectedRevision!==f.revision)throw new Error();f.revision++;return{...f.receipt,revision:f.revision};},
     claimDraft:async(b,p)=>{if(f.sources.has(p.channelId+':'+p.messageId)||f.claimed)return{claimed:false};f.claimed=true;return{claimed:true,token:'demo-claim'};},
@@ -107,8 +107,10 @@ test('late final authorization cannot release an expired submission acknowledgme
   assert.equal((await x.engine.submit(x.learner,p.token,'demo-request')).ok,false);x.engine.dispose();});
 test('expired control ownership requires private re-entry, not unowned edits',async()=>{const x=fixture();const b=boundary({enabled:true,guildId:G,entryChannelId:ENTRY,isReady:()=>true,coordinator:x.engine,readNow:()=>x.f.now});
   await b.handle(interaction('nmi:prepare'));x.f.now+=300000;const i=interaction('nmi:preview');await b.handle(i);assert.deepEqual(i.calls,['deny']);assert.equal(i.edits.length,0);b.dispose();});
-test('unsettled provider work is bounded even after caller timeouts',async()=>{const x=fixture({latest:()=>new Promise(()=>{})});await x.engine.prepare(x.learner);
-  for(let n=0;n<22;n++)assert.equal((await x.engine.preview(x.learner)).ok,false);x.engine.dispose();});
+test('unsettled provider work is bounded even after caller timeouts and recovers after settlement',async t=>{let started=0;const releases=[];const x=fixture({latest:()=>{started++;return new Promise(r=>releases.push(r));}});t.after(()=>x.engine.dispose());await x.engine.prepare(x.learner);
+  for(let n=0;n<22;n++)assert.equal((await x.engine.preview(x.learner)).ok,false);
+  assert.equal(started,20);for(const release of releases)release(x.f.message);await new Promise(r=>setImmediate(r));
+  x.ports.latest=async()=>({...x.f.message});assert.equal((await x.engine.preview(x.learner)).ok,true);});
 
 test('receipt for a different source with identical text is not accepted',async()=>{const x=fixture();let p=await previewed(x);await x.engine.submit(x.learner,p.token,'demo-request');
   x.f.message.id='100000000000000010';p=await x.engine.preview(x.learner);
@@ -119,6 +121,17 @@ test('persistent-provider source uniqueness prevents a new request resetting the
 
 test('review presentation projects approved fields rather than instructor/private extras',async()=>{let seen;const x=fixture({publishTrackedReview:async(b,r)=>{seen=r;return{tracked:true,expiresAtMs:r.expiresAtMs};}});
   const p=await previewed(x);await x.engine.submit(x.learner,p.token,'demo-request');
-  x.ports.readReport=async()=>({...x.f.receipt,body:'Fictional stored report',instructorGuide:'PRIVATE FIXTURE GUIDE'});
+  x.ports.readReport=async()=>({...x.f.receipt,body:x.f.storedBody,instructorGuide:'PRIVATE FIXTURE GUIDE'});
   assert.equal((await x.engine.review(x.owner,'demo-report',1,'review-recorded','Fictional feedback')).ok,true);
   assert.equal(Object.hasOwn(seen,'instructorGuide'),false);assert.equal(Object.isFrozen(seen),true);x.engine.dispose();});
+
+test('changed journal channel invalidates preview before receipt or source access',async t=>{const x=fixture();t.after(()=>x.engine.dispose());const p=await previewed(x);let receipts=0,exact=0;
+  x.ports.receipt=async()=>{receipts++;return null;};x.ports.exact=async()=>{exact++;return x.f.message;};x.f.journal.channelId=OTHER;
+  assert.equal((await x.engine.submit(x.learner,p.token,'demo-request')).reason,'refresh-required');assert.equal(receipts,0);assert.equal(exact,0);assert.equal(x.f.calls.includes('submit'),false);
+  x.f.journal.channelId=C;assert.equal((await x.engine.submit(x.learner,p.token,'demo-request')).ok,false);});
+test('changed journal channel blocks an existing receipt replay',async t=>{const x=fixture();t.after(()=>x.engine.dispose());const p=await previewed(x);assert.equal((await x.engine.submit(x.learner,p.token,'demo-request')).ok,true);let reads=0;
+  x.ports.receipt=async()=>{reads++;return x.f.receipt;};x.f.journal.channelId=OTHER;
+  assert.equal((await x.engine.submit(x.learner,p.token,'demo-request')).reason,'refresh-required');assert.equal(reads,0);assert.equal(x.f.calls.filter(k=>k==='submit').length,1);});
+test('stored body digest mismatch denies presentation and feedback mutation',async t=>{let presented=0;const x=fixture({publishTrackedReview:async()=>{presented++;return{tracked:true};}});t.after(()=>x.engine.dispose());
+  const p=await previewed(x);assert.equal((await x.engine.submit(x.learner,p.token,'demo-request')).ok,true);x.ports.readReport=async()=>({...x.f.receipt,body:'Altered fictional stored report'});
+  assert.equal((await x.engine.review(x.owner,'demo-report',1,'review-recorded','Fictional feedback')).ok,false);assert.equal(presented,0);assert.equal(x.f.calls.includes('review'),false);});
