@@ -70,6 +70,38 @@ test('source provenance disposable PostgreSQL acceptance',{timeout:120000},async
    assert.deepEqual(await call('review_source_report',['demo-reviewer',...ctx,id,1,'demo-review','Fictional feedback.','review-recorded',s.reportId]),denied);
    await advance(1);assert.deepEqual(await receipt(id),denied);
   });
+  await t.test('review wrapper preserves provenance and deadline across success, retry, conflict and revocation',async()=>{
+   const record=await create();const submitted=await submit(record,{m:'100000000000000014'});assert.equal(submitted.ok,true);
+   const review=(actor='demo-reviewer',body='Fictional wrapper feedback.')=>call('review_source_report',[actor,...ctx,record,1,'demo-review-wrapper',body,'changes-requested',submitted.reportId]);
+   await admin.query('INSERT INTO synthetic_review_ci.reviewers VALUES($1,$2,true)',[record,'demo-reviewer']);
+   assert.deepEqual(await review('demo-learner'),denied);assert.deepEqual(await review('demo-other'),denied);
+   const result=await review();assert.equal(result.ok,true);assert.equal(result.revision,2);
+   for(const field of ['reportId','recordId','learnerId','digest','submittedAtMs','expiresAtMs','sourceGuildId','sourceChannelId','sourceMessageId','sourceCreatedAtMs'])assert.equal(result[field],submitted[field]);
+   await advance(1000);assert.deepEqual(await review(),result);assert.deepEqual(await review('demo-reviewer','Changed fictional feedback.'),conflict);
+   assert.deepEqual(await receipt(record),submitted);assert.equal((await read(record,submitted.reportId)).body,'Fictional source report.');
+   assert.equal((await admin.query('SELECT count(*)::int AS n FROM synthetic_review_ci.report_feedback WHERE report_id=$1',[submitted.reportId])).rows[0].n,1);
+   await admin.query('UPDATE synthetic_review_ci.reviewers SET active=false WHERE record_id=$1',[record]);assert.deepEqual(await review(),denied);
+  });
+  await t.test('provenance purge failure rolls back cascades; retry removes only the expired report',async()=>{
+   const record=await create();const first=await submit(record,{m:'100000000000000016'});assert.equal(first.ok,true);
+   await admin.query('INSERT INTO synthetic_review_ci.reviewers VALUES($1,$2,true)',[record,'demo-reviewer']);
+   assert.equal((await call('review_source_report',['demo-reviewer',...ctx,record,1,'demo-purge-review','Fictional revision request.','changes-requested',first.reportId])).ok,true);
+   await advance(1000);const second=await submit(record,{v:2,k:'demo-newer',m:'100000000000000017',body:'Fictional newer source report.'});assert.equal(second.ok,true);
+   const now=Number((await admin.query('SELECT (extract(epoch FROM at_time)*1000)::bigint AS ms FROM synthetic_review_ci.report_clock')).rows[0].ms);await advance(first.expiresAtMs-now);
+   const purge=()=>call('purge_report',[first.reportId],admin);assert.deepEqual(await purge(),{ok:false,reason:'deletion-pending'});
+   await admin.query("UPDATE synthetic_review_ci.report_copy SET state='confirmed' WHERE report_id=$1",[first.reportId]);
+   const counts=async()=>{const result={};for(const table of ['report_snapshots','report_sources','report_feedback','report_audit','report_receipts','report_copy'])result[table]=(await admin.query(`SELECT count(*)::int AS n FROM synthetic_review_ci.${table} WHERE ${table==='report_snapshots'?'id':'report_id'}=$1`,[first.reportId])).rows[0].n;return result;};
+   const before=await counts();assert.equal(before.report_sources,1);assert.equal(before.report_receipts,2);
+   await admin.query('CREATE TRIGGER injected_delete_failure BEFORE DELETE ON synthetic_review_ci.report_sources FOR EACH ROW EXECUTE FUNCTION synthetic_review_ci.provenance_failure()');
+   try{assert.deepEqual(await purge(),denied);assert.deepEqual(await counts(),before);assert.deepEqual(await read(record,first.reportId),denied);assert.equal((await read(record,second.reportId)).ok,true);}
+   finally{await admin.query('DROP TRIGGER injected_delete_failure ON synthetic_review_ci.report_sources');}
+   assert.deepEqual(await purge(),{ok:true,outcome:'deleted'});for(const n of Object.values(await counts()))assert.equal(n,0);
+   assert.equal(await receipt(record),null);assert.deepEqual(await receipt(record,'demo-newer'),second);assert.equal((await read(record,second.reportId)).body,'Fictional newer source report.');
+   assert.equal((await admin.query('SELECT count(*)::int AS n FROM synthetic_review_ci.report_sources WHERE report_id=$1',[second.reportId])).rows[0].n,1);
+   assert.equal((await admin.query('SELECT current_report FROM synthetic_review_ci.report_state WHERE record_id=$1',[record])).rows[0].current_report,second.reportId);
+   assert.equal((await admin.query('SELECT count(*)::int AS n FROM synthetic_review_ci.records WHERE id=$1',[record])).rows[0].n,1);
+   assert.equal((await admin.query('SELECT active FROM synthetic_review_ci.assignments WHERE actor=$1',['demo-learner'])).rows[0].active,true);
+  });
  }finally{
   try{if(worker)await worker.end();}finally{try{if(installed){await admin.query('DROP SCHEMA synthetic_review_ci CASCADE');await admin.query('DROP OWNED BY synthetic_review_worker');await admin.query('DROP ROLE synthetic_review_worker');}}finally{await admin.end();}}
  }
