@@ -1,8 +1,15 @@
 name: Formal workspace consolidated validation
 on:
   push:
-    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, feat/report-retention-boundaries, feat/no-modal-intake, main]
+    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, feat/report-retention-boundaries, feat/no-modal-intake, feat/formal-first-journey-navigation, main]
     paths:
+      - 'formal-*.mjs'
+      - 'docs/formal-ethical-hacking/START-HERE.md'
+      - 'docs/formal-ethical-hacking/lessons/**'
+      - 'certification-course-lifecycle.js'
+      - 'certification-account-acknowledgment.js'
+      - 'certification-age-declaration.js'
+      - 'certification-manual-review-data.mjs'
       - 'scripts/formal-workspace-sdk-compatibility.test.mjs'
       - 'certification-runtime.js'
       - 'restoration.js'
@@ -16,6 +23,13 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'formal-*.mjs'
+      - 'docs/formal-ethical-hacking/START-HERE.md'
+      - 'docs/formal-ethical-hacking/lessons/**'
+      - 'certification-course-lifecycle.js'
+      - 'certification-account-acknowledgment.js'
+      - 'certification-age-declaration.js'
+      - 'certification-manual-review-data.mjs'
       - 'scripts/formal-workspace-sdk-compatibility.test.mjs'
       - 'certification-runtime.js'
       - 'restoration.js'
@@ -86,3 +100,5 @@ jobs:
           exit "$status"
       - name: Installed SDK compatibility with existing navigation controller
         run: node --test scripts/formal-workspace-sdk-compatibility.test.mjs
+      - name: Default-off candidate, actual lesson text and installed SDK/service contract
+        run: node --test --test-reporter=tap --test-concurrency=1 formal-first-journey-navigation.test.mjs formal-first-journey-source.test.mjs formal-first-journey-compatibility.test.mjs
