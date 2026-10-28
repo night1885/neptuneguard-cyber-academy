@@ -1,7 +1,7 @@
 name: Formal workspace consolidated validation
 on:
   push:
-    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, feat/report-retention-boundaries, feat/no-modal-intake, feat/formal-first-journey-navigation, main]
+    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, feat/report-retention-boundaries, feat/no-modal-intake, feat/formal-first-journey-navigation, feat/formal-rendering-audit, main]
     paths:
       - 'formal-*.mjs'
       - 'docs/formal-ethical-hacking/START-HERE.md'
@@ -102,3 +102,8 @@ jobs:
         run: node --test scripts/formal-workspace-sdk-compatibility.test.mjs
       - name: Default-off candidate, actual lesson text and installed SDK/service contract
         run: node --test --test-reporter=tap --test-concurrency=1 formal-first-journey-navigation.test.mjs formal-first-journey-source.test.mjs formal-first-journey-compatibility.test.mjs
+      - name: Bounded draft rendering audit tests
+        run: node --test --test-reporter=tap formal-render-audit.test.mjs
+      - name: Draft source rendering findings (not release approval)
+        if: ${{ !cancelled() }}
+        run: node formal-render-audit-cli.mjs
