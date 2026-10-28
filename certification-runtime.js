@@ -196,7 +196,8 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
             await database.end();
             if(results.at(-1).status==='rejected')throw new Error('Formal review shutdown requires attention');
           })();
-          let timer;try{return await(formal&&formalPrefix==='fnv:'?Promise.race([complete,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('First-practical shutdown incomplete; reconcile outstanding work')),formalDrainMs);})]):complete);}finally{clearTimeout(timer);}
+          if(!formal||formalPrefix!=='fnv:')return complete;
+          let timer;try{return await Promise.race([complete,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('First-practical shutdown incomplete; reconcile outstanding work')),formalDrainMs);})]);}finally{clearTimeout(timer);}
         })();
       }
       return closing;
