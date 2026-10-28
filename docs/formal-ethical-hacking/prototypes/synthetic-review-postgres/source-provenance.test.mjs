@@ -42,9 +42,12 @@ test('source provenance disposable PostgreSQL acceptance',{timeout:120000},async
   await t.test('same source under another request or record cannot reset retention',async()=>{assert.deepEqual(await submit(id,{k:'demo-new'}),conflict);const other=await create();assert.deepEqual(await submit(other),conflict);});
   await t.test('source constraint failure rolls back underlying snapshot, audit, receipt and state',async()=>{
    const other=await create();await admin.query("CREATE FUNCTION synthetic_review_ci.provenance_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Fictional provenance failure'; END $$");
+   const totals=async()=>{const counts={};for(const table of ['report_audit','report_copy','report_sources'])counts[table]=(await admin.query(`SELECT count(*)::int AS n FROM synthetic_review_ci.${table}`)).rows[0].n;return counts;};
+   const before=await totals();
    await admin.query('CREATE TRIGGER injected_failure BEFORE INSERT ON synthetic_review_ci.report_sources FOR EACH ROW EXECUTE FUNCTION synthetic_review_ci.provenance_failure()');
    try{assert.deepEqual(await submit(other,{m:'100000000000000012'}),denied);
-    for(const table of ['report_snapshots','report_audit','report_receipts','report_state'])assert.equal((await admin.query(`SELECT count(*)::int AS n FROM synthetic_review_ci.${table} WHERE record_id=$1`,[other])).rows[0].n,0);
+    for(const table of ['report_snapshots','report_receipts','report_state'])assert.equal((await admin.query(`SELECT count(*)::int AS n FROM synthetic_review_ci.${table} WHERE record_id=$1`,[other])).rows[0].n,0);
+    assert.deepEqual(await totals(),before);
    }finally{await admin.query('DROP TRIGGER injected_failure ON synthetic_review_ci.report_sources');}
   });
   await t.test('competing records submitting one source commit at most one report',async()=>{
