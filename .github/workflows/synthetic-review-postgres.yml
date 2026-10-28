@@ -1,7 +1,7 @@
 name: Synthetic review persistence (disposable only)
 on:
   push:
-    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, main]
+    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, feat/synthetic-intake-storage, main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
       - '.github/workflows/synthetic-review-postgres.yml'
@@ -55,4 +55,26 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Guard, transaction, authority and recovery fixture tests
-        run: node --test --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs
+        shell: bash
+        run: |
+          set +e
+          node --test --test-reporter=tap --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/source-provenance.test.mjs 2>&1 | tee "$RUNNER_TEMP/synthetic-postgres.log"
+          codes=("${PIPESTATUS[@]}")
+          set -e
+          status=${codes[0]}
+          if [ "$status" -eq 0 ] && [ "${codes[1]}" -ne 0 ]; then status=${codes[1]}; fi
+          if [ "$status" -ne 0 ]; then
+            node --input-type=module <<'NODE' || true
+          import { readFileSync } from 'node:fs';
+          const lines=readFileSync(process.env.RUNNER_TEMP+'/synthetic-postgres.log','utf8').split(/\r?\n/);
+          const failed=lines.map((line,index)=>/^\s*not ok\b/.test(line)?index:-1).filter(index=>index>=0);
+          for(const start of (failed.length?failed.slice(0,4):[0])) {
+            let text=lines.slice(start,start+48).join('\n')
+              .replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi,'[redacted-connection-url]')
+              .replace(/\bPASSWORD\s+'[^']*'/gi,"PASSWORD '[redacted]'").slice(0,4000);
+            text=text.replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A');
+            console.log('::error title=Disposable PostgreSQL test failure::'+text);
+          }
+          NODE
+          fi
+          exit "$status"
