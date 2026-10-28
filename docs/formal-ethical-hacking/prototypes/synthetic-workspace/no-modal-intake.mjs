@@ -8,7 +8,7 @@ const text=x=>typeof x==='string'&&x.trim().length>0&&Array.from(x).length<=2000
 const digest=x=>createHash('sha256').update(x).digest('hex');
 const deny=(reason='unavailable')=>Object.freeze({ok:false,reason});
 export function createNoModalIntakeCoordinator(config={},ports={}) {
-  if(config.enabled!==true)return Object.freeze(Object.fromEntries(['prepare','preview','submit','review','expireDraft'].map(k=>[k,async()=>deny('disabled')]).concat([['dispose',()=>{}]])));
+  if(config.enabled!==true)return Object.freeze(Object.fromEntries(['prepare','preview','submit','recoverSubmission','review','expireDraft'].map(k=>[k,async()=>deny('disabled')]).concat([['dispose',()=>{}]])));
   const {guildId,productionGuildId,ownerId,courseKey,mode,policy,timeoutMs=250}=config;
   if(mode!=='detached-rehearsal'||!id(guildId)||!id(productionGuildId)||guildId===productionGuildId||!id(ownerId)||
     !key(courseKey)||policy?.draftHours!==24||policy?.reportHours!==24||policy?.ownerOnly!==true||policy?.status!=='proposed-for-rehearsal'||
@@ -101,6 +101,18 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
         channelId:p.channelId,createdAtMs:p.createdAtMs,body:p.body,digest:p.digest}));
       if(response?.sourceMessageId!==p.messageId||response?.sourceChannelId!==p.channelId||response?.sourceCreatedAtMs!==p.createdAtMs)return deny();
       const result=ack(response,b,p.digest);await binding(ctx,'submit',b);return now()<result.expiresAtMs?result:deny();
+    }),
+    recoverSubmission:(ctx,requestId)=>run(async()=>{
+      if(!key(requestId))return deny();
+      const b=await binding(ctx,'submit'),ch=await channel(b);
+      const receipt=await call('receipt',b,requestId);
+      if(receipt?.ok!==true||receipt.sourceGuildId!==guildId||receipt.sourceChannelId!==ch||
+        !id(receipt.sourceMessageId)||!time(receipt.sourceCreatedAtMs)||receipt.sourceCreatedAtMs>receipt.submittedAtMs)return deny();
+      const result=ack(receipt,b,receipt.digest);
+      const current=await binding(ctx,'submit',b);
+      if(await channel(current)!==ch)return deny();
+      await binding(ctx,'submit',current);
+      return now()<result.expiresAtMs?result:deny();
     }),
     review:(ctx,reportId,expectedRevision,decision,feedback)=>run(async()=>{
       if(!key(reportId)||!Number.isSafeInteger(expectedRevision)||expectedRevision<0||!['changes-requested','review-recorded'].includes(decision)||!text(feedback))return deny();
