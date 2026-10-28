@@ -59,6 +59,30 @@ jobs:
         run: node --test navigation.test.mjs route-boundary.test.mjs trusted-route.test.mjs general-chat-ui-review.test.mjs adapters.test.mjs trusted-readers.test.mjs cards.test.mjs catalogue.test.mjs readings.test.mjs lab-linux.test.mjs lab-linux-interactions.test.mjs foundation-interactions.test.mjs
       - name: Existing synthetic review and workspace regression
         working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
-        run: node --test workspace.test.mjs review.test.mjs review-recovery.test.mjs controls.test.mjs journey.test.mjs first-journey-rehearsal.test.mjs action-presenter.test.mjs session-journey.test.mjs authorization.test.mjs build-browser-demo.test.mjs report-retention.test.mjs no-modal-intake.test.mjs
+        shell: bash
+        run: |
+          node --version
+          set +e
+          node --test --test-reporter=tap workspace.test.mjs review.test.mjs review-recovery.test.mjs controls.test.mjs journey.test.mjs first-journey-rehearsal.test.mjs action-presenter.test.mjs session-journey.test.mjs authorization.test.mjs build-browser-demo.test.mjs report-retention.test.mjs no-modal-intake.test.mjs 2>&1 | tee "$RUNNER_TEMP/formal-synthetic.log"
+          codes=("${PIPESTATUS[@]}")
+          set -e
+          status=${codes[0]}
+          if [ "$status" -eq 0 ] && [ "${codes[1]}" -ne 0 ]; then status=${codes[1]}; fi
+          if [ "$status" -ne 0 ]; then
+            node --input-type=module <<'NODE' || true
+          import { readFileSync } from 'node:fs';
+          const lines = readFileSync(process.env.RUNNER_TEMP + '/formal-synthetic.log', 'utf8').split(/\r?\n/);
+          const failed = lines.map((line, index) => /^\s*not ok\b/.test(line) ? index : -1).filter(index => index >= 0);
+          const starts = failed.length ? failed.slice(0, 3) : [0];
+          for (const start of starts) {
+            let text = lines.slice(start, start + 32).join('\n')
+              .replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi, '[redacted-connection-url]')
+              .replace(/\bPASSWORD\s+'[^']*'/gi, "PASSWORD '[redacted]'").slice(0, 6000);
+            text = text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+            console.log('::error title=Synthetic regression failure::' + text);
+          }
+          NODE
+          fi
+          exit "$status"
       - name: Installed SDK compatibility with existing navigation controller
         run: node --test scripts/formal-workspace-sdk-compatibility.test.mjs
