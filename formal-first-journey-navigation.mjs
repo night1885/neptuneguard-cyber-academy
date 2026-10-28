@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {FIRST_JOURNEY_PAGES} from './formal-first-journey-content.mjs';
+import {FIRST_JOURNEY_PAGES,relatedReadingFor} from './formal-first-journey-content.mjs';
 const id=x=>typeof x==='string'&&/^[0-9]{17,20}$/.test(x);
 const neutral=()=>({content:'Formal workspace is unavailable. Use the course entry button to re-enter or contact the approved support route.',embeds:[],components:[],allowedMentions:{parse:[]}});
 const validCursor=c=>['overview','help','status'].includes(c)||FIRST_JOURNEY_PAGES.some(p=>new RegExp(`^${p.key}:[0-9]{1,4}$`).test(c));
@@ -27,14 +27,16 @@ export function createFormalFirstJourneyNavigation(config={},ports={}){
  }
  // Membership reads use the SDK-shaped interaction; no client private/member Boolean is authoritative.
  function controls(token,cursor,page){
-  const b=(label,next)=>({type:2,style:2,label,custom_id:`fnv:page:${token}:${next}`});
+  const b=(label,next)=>{const custom_id=`fnv:page:${token}:${next}`;if(!validCursor(next)||custom_id.length>100||label.length>80)throw new Error('Bounded control required');return{type:2,style:2,label,custom_id};};
   const navigation=[b('Overview','overview'),b('Help','help'),b('Status','status')];
   if(cursor==='overview')return[{type:1,components:navigation},{type:1,components:[b('Start first practical','start:0')]}];
   if(page.pageKey){const pos=FIRST_JOURNEY_PAGES.findIndex(p=>p.key===page.pageKey);
    if(page.pageIndex>0)navigation.push(b('Previous page',`${page.pageKey}:${page.pageIndex-1}`));
    if(page.pageIndex+1<page.pageCount)navigation.push(b('Next page',`${page.pageKey}:${page.pageIndex+1}`));
    const next=[];if(pos>0)next.push(b('Previous lesson',`${FIRST_JOURNEY_PAGES[pos-1].key}:0`));if(pos+1<FIRST_JOURNEY_PAGES.length)next.push(b('Next lesson',`${FIRST_JOURNEY_PAGES[pos+1].key}:0`));
-   return[{type:1,components:navigation},...(next.length?[{type:1,components:next}]:[])];
+   const rows=[{type:1,components:navigation},...(next.length?[{type:1,components:next}]:[])],reading=relatedReadingFor(page.pageKey).available;
+   for(let n=0;n<reading.length;n+=5)rows.push({type:1,components:reading.slice(n,n+5).map(r=>b(r.label,r.cursor))});
+   if(rows.length>5)throw new Error('Too many control rows');return rows;
   }return[{type:1,components:navigation}];
  }
  async function handleOne(i){let token,session,ctx,opening=false;
@@ -53,8 +55,11 @@ export function createFormalFirstJourneyNavigation(config={},ports={}){
    const page=await call('loadPage',Object.freeze({courseKey,cursor}));
    if(typeof page?.content!=='string'||!page.content||page.content.length>1900)throw new Error('Invalid bounded page');
    if(page.pageKey!==undefined){if(!FIRST_JOURNEY_PAGES.some(p=>p.key===page.pageKey)||cursor!==`${page.pageKey}:${page.pageIndex}`||!Number.isSafeInteger(page.pageIndex)||!Number.isSafeInteger(page.pageCount)||page.pageIndex<0||page.pageIndex>=page.pageCount||page.pageCount>9999)throw new Error('Invalid page metadata');}
+   const reading=relatedReadingFor(page.pageKey);
+   const notice=reading.available.length?`\n\nRelated reading: use the bound buttons below; source-document links are not viewer routes. ${reading.unavailableCount} reference(s) remain outside this viewer.`:reading.unavailableCount?`\n\nRelated reading: ${reading.unavailableCount} reference(s) remain outside this viewer. No related-reading shortcut is available here; source-document links are not viewer routes.`:'';
+   const viewContent=page.content+notice;if(viewContent.length>1900)throw new Error('Reference notice exceeds page bounds');
    await authorize(i,ctx,authorized);if(!live())throw new Error('Unavailable');
-   const message=await i.editReply({content:page.content,embeds:[],components:controls(token,cursor,page),allowedMentions:{parse:[]}});
+   const message=await i.editReply({content:viewContent,embeds:[],components:controls(token,cursor,page),allowedMentions:{parse:[]}});
    if(opening){if(!id(message?.id)||message.flags?.has?.(64)!==true||!live())throw new Error('Private message unavailable');session.messageId=message.id;sessions.set(token,session);}
    return true;
   }catch{if(token&&session&&sessions.get(token)===session)sessions.delete(token);return deny();}

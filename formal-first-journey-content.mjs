@@ -5,6 +5,23 @@ export const FIRST_JOURNEY_PAGES=Object.freeze([
  Object.freeze({key:'start',title:'Start here',path:'docs/formal-ethical-hacking/START-HERE.md'}),
  ...['EH-LAB-00','EH-LAB-01','EH-LAB-02','EH-LINUX-01','EH-LINUX-02','EH-LINUX-03','EH-LAB-03','EH-LAB-04','EH-LAB-05'].map(key=>Object.freeze({key,title:key,path:`docs/formal-ethical-hacking/lessons/${key}.md`}))
 ]);
+const referencePairs=Object.freeze([
+ ...['EH-LAB-00','EH-LAB-01','EH-LAB-02','EH-LINUX-01','EH-LINUX-02','EH-LINUX-03','EH-LAB-03','EH-LAB-04','EH-LAB-05'].map(pageKey=>Object.freeze({sourceKey:'start',target:`lessons/${pageKey}.md`,pageKey})),
+ ...['FIRST-PRACTICAL-WORKSHEET.md','README.md','authoring/FIRST-JOURNEY-PILOT.md','PROGRAMME-BLUEPRINT.md'].map(target=>Object.freeze({sourceKey:'start',target,pageKey:null})),
+ Object.freeze({sourceKey:'EH-LINUX-02',target:'LINUX-PRIVILEGE-BOUNDARIES.md',pageKey:null})
+]);
+export const reviewedDraftReferences=()=>referencePairs;
+export function resolveDraftReference(sourceKey,target){
+ const denied=()=>Object.freeze({available:false});
+ if(typeof sourceKey!=='string'||typeof target!=='string'||target.length>200)return denied();
+ const ref=referencePairs.find(r=>r.sourceKey===sourceKey&&r.target===target),page=ref?.pageKey&&FIRST_JOURNEY_PAGES.find(p=>p.key===ref.pageKey);
+ if(!page)return denied();
+ return Object.freeze({available:true,cursor:`${page.key}:0`,label:`Read ${page.key}`});
+}
+export function relatedReadingFor(sourceKey){
+ const refs=referencePairs.filter(r=>r.sourceKey===sourceKey),resolved=refs.map(r=>resolveDraftReference(sourceKey,r.target));
+ return Object.freeze({available:Object.freeze(resolved.filter(r=>r.available)),unavailableCount:resolved.filter(r=>!r.available).length});
+}
 const footer='Draft review only. Reading does not grant enrollment, exercise authorization, completion or an award. Report intake and reviewer actions are unavailable.';
 export function createFormalDraftLessonLoader({allowDraftContent=false,repositoryRoot=new URL('./',import.meta.url)}={}){
  if(allowDraftContent!==true)return async()=>{throw new Error('Draft content not approved');};
