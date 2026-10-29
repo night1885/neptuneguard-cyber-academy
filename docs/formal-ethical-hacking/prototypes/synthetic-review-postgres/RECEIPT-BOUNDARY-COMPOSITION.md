@@ -1,0 +1,16 @@
+# Actual recovery composition test candidate
+
+Prepared after source-only PR #44. No production operation or runtime change.
+
+## Scope
+New disposable-CI-only PostgreSQL parent test imports the actual receipt recovery boundary, coordinator and disposable intake storage adapter. The five existing fixtures install only after the strict local CI profile and actual database/role/version/UTF8/clean-schema checks. A restricted worker pool is supplied to the real adapter. Discord source/provisioning/privacy/interaction methods remain scripted with fictional identities. The existing serial Node 20/22 by PostgreSQL 16/18 workflow retains all previous suites, settings, guard environment, install flags, services, permissions, timeout, concurrency, cleanup pattern and failure diagnostics; append only this test and the recovery-boundary source path filters.
+
+Eight nested scenarios cover actual discovery-to-recovery metadata output/no duplicate write, reconstructed adapter/coordinator with fresh controls, foreign actor/control denial, assignment revocation, missing request mapping with no fallback, cross-record control isolation, before/at/after original expiry with assignment preservation, and empty discovery without extra provisioning. Source transport is disabled after submission in selected scenarios; refetch counters and snapshot/submission/provisioning counts assert the recovery-only contract. Logical clock changes affect only the disposable report_clock fixture. Missing mapping and cleanup SQL operate only in this isolated test fixture if executed in CI. No connected production database is used.
+
+## Preparation evidence and mandatory execution gate
+The new JavaScript file passed Node 20 syntax checking. The reused profile matched Git blob 58dbe62885823c03fcb4874ba5052762211a5f0d; its default-denial test passed without database import or connection. Workflow baseline matched blob 32f4ef5524f5afc60ffb666ef54aa80856e174ac. Candidate YAML parsed; bash -n passed for the generated test step; Node/PostgreSQL matrices, permissions and concurrency were checked unchanged.
+
+The eight composition scenarios have NOT executed locally. No local PostgreSQL server/client execution, SQL installation/semantics, database-backed integration success, Node 22, full checkout or committed-head CI result is claimed. Current evidence is syntax/guard/configuration preparation only; actual four-way CI execution and inspection are mandatory before merge. No independent review is claimed. Earlier boundary-only CI success is not composition evidence.
+
+## Limits
+Real database fixtures plus actual modules still would not prove live Discord transport/private permissions, real enrollment identity, OS restart, backup/restore, external-copy deletion or exact-time secure erasure. Reconstructed objects are not a process restart. Privacy verification remains a scripted equality check, not a permission audit. No reviewer delivery, publication or live service readiness is established. No policy, grace period, report deadline, SQL fixture, dependency, startup, account cleanup or production setting changes. Repository writes require exact approval; live collection/deletion, database operations, Discord changes, deployment and activation require separate approval. Issue #30 remains incomplete.
