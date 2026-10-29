@@ -4,11 +4,13 @@ on:
     branches: [feat/formal-intake-adapters, main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-boundary*'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-deadline.test.mjs'
       - '.github/workflows/formal-receipt-recovery-boundary.yml'
   pull_request:
     branches: [main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-boundary*'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-deadline.test.mjs'
       - '.github/workflows/formal-receipt-recovery-boundary.yml'
 permissions:
   contents: read
@@ -29,4 +31,4 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Detached scripted recovery boundary tests
         working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
-        run: node --test receipt-recovery-boundary.test.mjs
+        run: node --test receipt-recovery-boundary.test.mjs receipt-recovery-deadline.test.mjs

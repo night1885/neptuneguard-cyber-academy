@@ -52,6 +52,10 @@ export function createReceiptRecoveryBoundary(config={},ports={}) {
         });
         await binding(ctx,b);const slot=sessions.get(reserved);if(!slot||now()>=slot.until||items.some(r=>now()>=r.expiresAtMs))throw Error();
         slot.binding=b;slot.items=items;
+        if(items.length){
+          slot.until=Math.min(slot.until,...items.map(r=>r.expiresAtMs));clearTimeout(slot.timer);
+          const sessionToken=reserved;slot.timer=setTimeout(()=>drop(sessionToken),Math.max(0,slot.until-now()));slot.timer.unref?.();
+        }
         payload={content:items.length?'Select a submission receipt to recheck its current authorization and original deadline.':'No current submission receipts are available.',components:items.length?[{type:1,components:items.map((r,n)=>({type:2,style:2,label:`Recover receipt ${n+1}`,custom_id:`nmr:recover:${reserved}:${n}`}))}]:[]};
       }else{
         const item=s.items?.[Number(match[2])];if(!item||now()>=item.expiresAtMs||now()>=s.until)throw Error();
