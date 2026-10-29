@@ -1,7 +1,7 @@
 name: Synthetic review persistence (disposable only)
 on:
   push:
-    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, feat/synthetic-intake-storage, feat/intake-end-to-end-rehearsal, feat/intake-receipt-recovery, main]
+    branches: [feat/synthetic-review-postgres, feat/report-retention-integration, feat/synthetic-intake-storage, feat/intake-end-to-end-rehearsal, feat/intake-receipt-recovery, feat/formal-intake-adapters, main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/**'
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake*.mjs'
@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          node --test --test-reporter=tap --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/source-provenance.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/intake-rehearsal.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-recovery.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/receipt-recovery-profile.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/receipt-recovery-postgres.test.mjs 2>&1 | tee "$RUNNER_TEMP/synthetic-postgres.log"
+          node --test --test-reporter=tap --test-concurrency=1 docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/retention.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/source-provenance.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/intake-rehearsal.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-recovery.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/receipt-recovery-profile.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/receipt-recovery-postgres.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/intake-storage-adapter.test.mjs docs/formal-ethical-hacking/prototypes/synthetic-review-postgres/intake-storage-adapter-postgres.test.mjs 2>&1 | tee "$RUNNER_TEMP/synthetic-postgres.log"
           codes=("${PIPESTATUS[@]}")
           set -e
           status=${codes[0]}
