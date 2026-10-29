@@ -1,0 +1,23 @@
+# First-practical runtime integration candidate
+
+Preparation base: 3a3da6c85f3e5c82136555cf1c5b68c684c3d68e. Source-only branch: feat/formal-first-practical-integration. This is one review batch, not production activation or a completed learner pilot.
+
+## What changes
+- The root certification runtime keeps its existing fws: default, but admits exactly fnv: only when explicitly selected by an enabled review profile. Other prefixes are rejected. Normal startup still ignores fnv:. The fnv: profile additionally requires disabled enrollment submission, no registration pilot, the existing isolated formal review prerequisites and a bounded drain deadline.
+- createFirstPracticalRuntimeOptions is default-off before accessing supplied service providers. An enabled profile requires explicit draft/review settings, entry channel, a trusted selected-course authorization service and parent readiness. It creates an enabled disposable navigation route for the existing root injection point. It creates no client, pool, listener publication or production connection itself.
+- Navigation retains session/context/recheck defenses and adds idempotent bounded drain reporting for its admitted queue and unsettled provider work. Unsettled work yields drained:false; it is not cancelled or claimed complete. The fnv: root shutdown bounds both waiting and pool close. Unconfirmed formal drain does not blindly close the pool. Timeout is a failure requiring operator reconciliation; late work may still finish, and a pool-close request already issued may still complete.
+- The default catalogue remains ten documents, nine related shortcuts and five unavailable targets. Only explicit allowReadOnlyWorksheet:true makes an eleven-document review profile and the tenth shortcut available. Other four targets remain excluded. This is a deliberate proposed optional read scope, not implicit access expansion or a response form.
+
+## Validation and limits
+32 new local core tests passed with zero failures/skips on the recorded Node version. They ran the actual modified navigation/loader and composition factory using scripted membership/authorization and temporary text. Default-off checks, parent gates, worksheet opt-in, context isolation, revocation, expiry, namespaces, source bounds and successful/failed drain paths are covered.
+
+The fourteen new installed-SDK/root/service cases and the eleven-document real-source contract were syntax-checked only, NOT executed locally. They must run successfully in CI before merge readiness is claimed. The new source contract compares all opt-in raw bytes and reports bounded pagination/link metadata without source bodies. The unchanged audit CLI still audits its default ten-document profile; do not mislabel it as eleven-document audit evidence. Delivery findings remain visible, not release acceptance.
+
+Existing regressions were not rerun in this local sandbox. Proposed CI preserves all original steps/settings and appends the three test files, branch trigger and worksheet/note paths. The SDK test uses actual installed SDK, root runtime and course-service code with scripted database/transport objects: it is not real PostgreSQL or Discord delivery evidence. Existing action-runtime/runner notices remain unresolved.
+
+## No activation or new policy
+No restoration/startup injection, environment change, entry-message publication, course registration/assignment, database migration, submission/review operation, report retention change, grade or award is added. The supplied authorization service is trusted infrastructure, not authenticated by object shape; it needs separately reviewed selected-course registration, schema, read-role and pool-ownership decisions. Reading grants no exercise authority.
+
+The worksheet remains a blank source template. Its fields are not collected, saved or submitted by this viewer. No generic file/URL router, modal navigation or learner slash-command navigation is introduced. Actual Discord presentation, timing/privacy, keyboard accessibility, hardware practical reproduction, independent review and real learner pilot acceptance remain outstanding.
+
+Do not connect the detached intake coordinator or treat proposed draft expiry/owner-only review as production policy. Issue #30 policy, writer/permission, copy tracking, backups/log/cache and deletion-recovery gates remain open. No real learner collection/deletion, Discord permission change, Render action, deployment or live activation is authorized. Repository writes, PR and merge each require their exact approval; production actions remain separate. The branch has no uploaded implementation at preparation time.

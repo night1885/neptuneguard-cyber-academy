@@ -39,6 +39,10 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       (pilot.enabled && !isGeneralChatUiReviewOptions(formalReview, guildId)) || closureEnabled || courses.enabled)) {
     throw new Error('Formal review requires isolated explicit review mode and current certification readiness');
   }
+  const formalPrefix=formal?.interactionPrefix??'fws:';
+  if(formal&&!['fws:','fnv:'].includes(formalPrefix))throw new Error('Reviewed formal prefix required');
+  const formalDrainMs=formalPrefix==='fnv:'?(formal?.drainMs??2000):null;
+  if(formal&&formalPrefix==='fnv:'&&(config.enrollmentSubmissionEnabled!==false||pilot.enabled||!Number.isSafeInteger(formalDrainMs)||formalDrainMs<5||formalDrainMs>5000))throw new Error('Isolated bounded first-practical profile required');
   if (!config.enabled) return { enabled: false, detach() {} };
   const connection = loadCertificationDatabaseConnection(env);
   const backing = readOnlyPreview ? createPool(connection, { readOnly: true }) : createPool(connection);
@@ -136,7 +140,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
     };
     try {
-      if (formal && interaction.customId?.startsWith('fws:')) {
+      if (formal && interaction.customId?.startsWith(formalPrefix)) {
         if (!ready || detached || !formalRoute || interaction.isButton?.() !== true) {
           if (!interaction.deferred && !interaction.replied) await respond('Formal review workspace is unavailable.');
           return;
@@ -149,7 +153,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     } catch {
       console.error('Certification interaction failed.');
       try {
-        if (formal && interaction.customId?.startsWith('fws:')) {
+        if (formal && interaction.customId?.startsWith(formalPrefix)) {
           if (!interaction.deferred && !interaction.replied) await respond('Formal review workspace is unavailable.');
         } else await respond('This action could not be completed. Reopen the dashboard or student panel and check the current status before retrying.');
       } catch { console.error('Certification error reply failed.'); }
@@ -158,7 +162,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
 
   function onInteraction(interaction) {
     if (detached || !(interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu?.()) ||
-        !(interaction.customId?.startsWith('cert:') || (formal && interaction.customId?.startsWith('fws:')))) return;
+        !(interaction.customId?.startsWith('cert:') || (formal && interaction.customId?.startsWith(formalPrefix)))) return;
     const task = handleInteraction(interaction); active.add(task);
     void task.finally(() => active.delete(task)).catch(() => {
       console.error('Certification reply failed.');
@@ -186,9 +190,14 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
           }); } catch { formalDisposal = Promise.reject(new Error('Formal review disposal failed')); }
         }
         closing = (async () => {
-          const results = await Promise.allSettled([...active, ...(initializing ? [initializing] : []), disposal, formalDisposal]);
-          await database.end();
-          if (results.at(-1).status === 'rejected') throw new Error('Formal review shutdown requires attention');
+          const waiting=Promise.allSettled([...active, ...(initializing ? [initializing] : []), disposal, formalDisposal]);
+          const complete=(async()=>{const results=await waiting;
+            if(formal&&formalPrefix==='fnv:'&&results.at(-1).status==='rejected')throw new Error('First-practical drain incomplete; pool not closed');
+            await database.end();
+            if(results.at(-1).status==='rejected')throw new Error('Formal review shutdown requires attention');
+          })();
+          if(!formal||formalPrefix!=='fnv:')return complete;
+          let timer;try{return await Promise.race([complete,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('First-practical shutdown incomplete; reconcile outstanding work')),formalDrainMs);})]);}finally{clearTimeout(timer);}
         })();
       }
       return closing;
