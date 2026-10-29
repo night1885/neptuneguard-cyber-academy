@@ -1,0 +1,32 @@
+name: Detached receipt recovery boundary
+on:
+  push:
+    branches: [feat/formal-intake-adapters, main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-boundary*'
+      - '.github/workflows/formal-receipt-recovery-boundary.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-boundary*'
+      - '.github/workflows/formal-receipt-recovery-boundary.yml'
+permissions:
+  contents: read
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Detached scripted recovery boundary tests
+        working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
+        run: node --test receipt-recovery-boundary.test.mjs
