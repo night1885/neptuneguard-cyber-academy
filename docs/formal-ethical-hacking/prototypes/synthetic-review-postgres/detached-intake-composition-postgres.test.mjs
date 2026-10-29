@@ -5,6 +5,7 @@ import {requireDisposableRecoveryProfile} from './receipt-recovery-profile.mjs';
 import {createDisposableIntakeAdapter} from './intake-storage-adapter.mjs';
 import {createNoModalIntakeCoordinator} from '../synthetic-workspace/no-modal-intake.mjs';
 import {createDetachedIntakeJourney} from '../synthetic-workspace/detached-intake-journey.mjs';
+import {exerciseLifecycleComposition} from './detached-intake-lifecycle-composition.mjs';
 const G='100000000000000001',PROD='100000000000000002',L='100000000000000003',O='100000000000000004',ENTRY='100000000000000005',DAY=86400000;
 const scope=['demo-workspace','demo-ethical-hacking','demo-first-practical'];
 test('actual detached journey, coordinator and disposable adapter composition',{timeout:120000},async t=>{
@@ -96,6 +97,7 @@ test('actual detached journey, coordinator and disposable adapter composition',{
    const f=await fresh();assert.equal(await f.open(),undefined);assert.match(f.edits.at(-1).content,/No current submission/);
    assert.equal(f.creates,0);assert.equal(f.reads,0);assert.equal(f.submits,0);assert.equal(await f.count(),0);
   });
+  await exerciseLifecycleComposition({t,fresh,journeys,config:{enabled:true,mode:'detached-rehearsal',guildId:G,productionGuildId:PROD,entryChannelId:ENTRY,courseKey:scope[1],exerciseKey:scope[2],timeoutMs:1000}});
   await t.test('original expiry is enforced before, at and after deadline without account cleanup',async()=>{
    const f=await fresh();await f.submit();const reads=f.reads;f.source=false;
    await advance(f.ack.expiresAtMs-60000);f.now=f.ack.expiresAtMs-60000;const token=await f.open();assert.ok(token);
