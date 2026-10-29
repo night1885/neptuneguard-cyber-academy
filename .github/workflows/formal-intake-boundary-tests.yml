@@ -1,0 +1,34 @@
+name: Detached intake boundary tests
+on:
+  push:
+    branches: [feat/formal-intake-adapters, main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-workflow.test.mjs'
+      - '.github/workflows/formal-intake-boundary-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-workflow.test.mjs'
+      - '.github/workflows/formal-intake-boundary-tests.yml'
+permissions:
+  contents: read
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Test detached boundary with scripted providers only
+        working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
+        run: node --test no-modal-intake-workflow.test.mjs
