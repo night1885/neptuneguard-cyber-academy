@@ -5,12 +5,14 @@ on:
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary.mjs'
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-workflow.test.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary-hardening.test.mjs'
       - '.github/workflows/formal-intake-boundary-tests.yml'
   pull_request:
     branches: [main]
     paths:
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary.mjs'
       - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-workflow.test.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary-hardening.test.mjs'
       - '.github/workflows/formal-intake-boundary-tests.yml'
 permissions:
   contents: read
@@ -31,4 +33,4 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Test detached boundary with scripted providers only
         working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
-        run: node --test no-modal-intake-workflow.test.mjs
+        run: node --test no-modal-intake-workflow.test.mjs no-modal-intake-boundary-hardening.test.mjs
