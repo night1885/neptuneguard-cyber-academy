@@ -6,7 +6,7 @@ export function createNoModalIntakeBoundary({enabled=false,guildId,entryChannelI
   if(!enabled)return Object.freeze({handle:async()=>false,dispose:()=>{}});
   if(!id(guildId)||!id(entryChannelId)||typeof isReady!=='function'||typeof readNow!=='function'||!['prepare','preview','submit','dispose'].every(k=>typeof coordinator?.[k]==='function'))throw new Error('Explicit detached boundary required');
   const owners=new Map();let stopped=false,lastNow=-1;
-  const clock=()=>{const n=readNow();if(!Number.isSafeInteger(n)||n<lastNow)throw new Error('Clock unavailable');lastNow=n;return n;};
+  const clock=()=>{const n=readNow();if(!Number.isSafeInteger(n)||n<0||n<lastNow)throw new Error('Clock unavailable');lastNow=n;return n;};
   const ready=()=>{try{const value=isReady();if(value?.catch)value.catch(()=>{});return !stopped&&value===true;}catch{return false;}};
   return Object.freeze({async handle(i){
     if(typeof i?.customId!=='string'||!i.customId.startsWith('nmi:'))return false;
