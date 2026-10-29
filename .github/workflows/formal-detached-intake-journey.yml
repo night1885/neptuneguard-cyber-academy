@@ -1,0 +1,57 @@
+name: Detached intake journey assembly
+on:
+  push:
+    branches: [feat/formal-intake-adapters, main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/detached-intake-journey*'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-boundary.mjs'
+      - '.github/workflows/formal-detached-intake-journey.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/detached-intake-journey*'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake-boundary.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/receipt-recovery-boundary.mjs'
+      - '.github/workflows/formal-detached-intake-journey.yml'
+permissions:
+  contents: read
+jobs:
+  journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Actual boundary assembly with scripted borrowed providers
+        working-directory: docs/formal-ethical-hacking/prototypes/synthetic-workspace
+        shell: bash
+        run: |
+          node --version
+          set +e
+          node --test --test-reporter=tap detached-intake-journey.test.mjs 2>&1 | tee "$RUNNER_TEMP/journey-tests.log"
+          codes=("${PIPESTATUS[@]}")
+          set -e
+          status=${codes[0]}
+          if [ "$status" -eq 0 ] && [ "${codes[1]}" -ne 0 ]; then status=${codes[1]}; fi
+          if [ "$status" -ne 0 ]; then
+            node --input-type=module <<'NODE' || true
+          import {readFileSync} from 'node:fs';
+          const lines=readFileSync(process.env.RUNNER_TEMP+'/journey-tests.log','utf8').split(/\r?\n/);
+          const failed=lines.flatMap((s,n)=>/^\s*not ok\b/.test(s)?[n]:[]);
+          for(const n of (failed.length?failed.slice(0,3):[0])){
+            let text=lines.slice(n,n+32).join('\n').replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi,'[redacted-url]').slice(0,6000);
+            text=text.replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A');
+            console.log('::error title=Journey regression failure::'+text);
+          }
+          NODE
+          fi
+          exit "$status"
