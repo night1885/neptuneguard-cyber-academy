@@ -54,3 +54,126 @@ jobs:
         run: >-
           node --unhandled-rejections=strict --test
           docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*.test.mjs
+  publish-validation-metadata:
+    needs: disposable-validation
+    if: always() && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[fi-stage-validate]') || contains(github.event.head_commit.message, '[fi-stage-report]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Publish job conclusions only to the approved evidence path
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_ONLY: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[fi-stage-report]') }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          OWNER = 'night1885'
+          REPO = 'neptuneguard-cyber-academy'
+          BRANCH = 'feat/fictional-intake-staging'
+          WORKFLOW = '.github/workflows/fictional-staging-batch.yml'
+          EVIDENCE = '.ci-evidence/fictional-staging-latest.json'
+          ORIGINAL = '2f10cbb01d2f982f51e4a685ab5f45232f81c547'
+          BASE = 'https://api.github.com/repos/' + OWNER + '/' + REPO
+
+          def api(method, path, body=None):
+              data = None if body is None else json.dumps(body).encode()
+              request = urllib.request.Request(BASE + path, data=data, method=method, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'Content-Type': 'application/json',
+              })
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  return json.load(response)
+
+          def build_report(run, jobs, target, publisher):
+              if run is not None and (run.get('head_sha') != target or run.get('path', '').split('@')[0] != WORKFLOW):
+                  raise RuntimeError('Validation run identity mismatch')
+              rows = []
+              dimensions = set()
+              for job in jobs:
+                  match = re.fullmatch(r'disposable-validation [(](20|22), *(16|18)[)]', job.get('name', ''))
+                  if not match:
+                      continue
+                  dimensions.add((int(match[1]), int(match[2])))
+                  rows.append({
+                      'name': job['name'], 'status': job.get('status'),
+                      'conclusion': job.get('conclusion'), 'url': job.get('html_url'),
+                      'failed_steps': [s.get('name') for s in job.get('steps', []) if s.get('conclusion') in ('failure', 'timed_out')],
+                  })
+              complete = run is not None and len(rows) == 4 and dimensions == {(20, 16), (20, 18), (22, 16), (22, 18)} and all(j['status'] == 'completed' for j in rows)
+              result = 'unconfirmed'
+              if complete:
+                  result = 'success' if all(j['conclusion'] == 'success' for j in rows) else 'not_passed'
+              return {
+                  'version': 1, 'scope': 'disposable-validation matrix only',
+                  'validation_commit': target, 'source_run_id': None if run is None else run['id'],
+                  'source_run_number': 0 if run is None else run.get('run_number', 0),
+                  'source_run_attempt': 0 if run is None else run.get('run_attempt', 1),
+                  'observed_run_status': None if run is None else run.get('status'),
+                  'observed_run_conclusion': None if run is None else run.get('conclusion'),
+                  'matrix_complete': complete, 'matrix_result': result,
+                  'jobs': sorted(rows, key=lambda x: x['name']),
+                  'publisher_run_id': publisher, 'raw_logs_exported': False,
+              }
+
+          def main():
+              if os.environ.get('GITHUB_REPOSITORY') != OWNER + '/' + REPO or os.environ.get('GITHUB_REF') != 'refs/heads/' + BRANCH:
+                  raise RuntimeError('Approved staging repository/ref required')
+              publisher = int(os.environ['GITHUB_RUN_ID'])
+              report_only = os.environ.get('REPORT_ONLY') == 'true'
+              target = ORIGINAL if report_only else os.environ['GITHUB_SHA']
+              query = urllib.parse.urlencode({'branch': BRANCH, 'head_sha': target, 'event': 'push', 'per_page': 100})
+              if report_only:
+                  candidates = api('GET', '/actions/runs?' + query).get('workflow_runs', [])
+                  candidates = [r for r in candidates if r.get('head_sha') == target and r.get('path', '').split('@')[0] == WORKFLOW]
+                  run = max(candidates, key=lambda r: r['id']) if candidates else None
+              else:
+                  run = api('GET', '/actions/runs/' + str(publisher))
+              jobs = [] if run is None else api('GET', '/actions/runs/' + str(int(run['id'])) + '/jobs?filter=latest&per_page=100').get('jobs', [])
+              report = build_report(run, jobs, target, publisher)
+              path = '/contents/' + urllib.parse.quote(EVIDENCE, safe='/')
+              for attempt in range(3):
+                  sha = None
+                  try:
+                      existing = api('GET', path + '?' + urllib.parse.urlencode({'ref': BRANCH}))
+                      if existing.get('type') != 'file' or existing.get('encoding') != 'base64':
+                          raise RuntimeError('Unexpected evidence file')
+                      prior = json.loads(base64.b64decode(existing['content']))
+                      old_order = (prior.get('source_run_number', 0), prior.get('source_run_attempt', 0))
+                      new_order = (report['source_run_number'], report['source_run_attempt'])
+                      if old_order > new_order:
+                          return
+                      sha = existing['sha']
+                  except urllib.error.HTTPError as error:
+                      if error.code != 404:
+                          raise RuntimeError('Evidence lookup failed') from None
+                  body = {
+                      'message': 'ci: record fictional staging validation metadata',
+                      'branch': BRANCH,
+                      'content': base64.b64encode((json.dumps(report, indent=2) + chr(10)).encode()).decode(),
+                  }
+                  if sha is not None:
+                      body['sha'] = sha
+                  try:
+                      api('PUT', path, body)
+                      return
+                  except urllib.error.HTTPError as error:
+                      if error.code not in (409, 422) or attempt == 2:
+                          raise RuntimeError('Evidence publication failed') from None
+              raise RuntimeError('Evidence publication did not complete')
+
+          if __name__ == '__main__':
+              main()
+          PY
