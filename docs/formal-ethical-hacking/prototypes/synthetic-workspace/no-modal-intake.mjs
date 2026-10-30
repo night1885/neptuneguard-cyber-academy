@@ -81,8 +81,8 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
       await binding(ctx,'preview',b);
       for(const [token,p]of previews)if(p.actorId===ctx.actorId||now()>=p.until)forget(token);
       if(previews.size>=20)return deny();const token=randomUUID(),hash=digest(m.content);
-      const p={actorId:ctx.actorId,b,channelId:ch,messageId:m.id,createdAtMs:m.createdAtMs,body:m.content,digest:hash,until:now()+PREVIEW};
-      p.timer=setTimeout(()=>forget(token),PREVIEW);p.timer.unref?.();previews.set(token,p);
+      const p={actorId:ctx.actorId,b,channelId:ch,messageId:m.id,createdAtMs:m.createdAtMs,body:m.content,digest:hash,until:Math.min(now()+PREVIEW,m.createdAtMs+DAY)};
+      p.timer=setTimeout(()=>forget(token),Math.max(0,p.until-now()));p.timer.unref?.();previews.set(token,p);
       return Object.freeze({ok:true,token,sourceMessageId:m.id,channelId:ch,digest:hash,characters:Array.from(m.content).length});
     }),
     submit:(ctx,token,requestId)=>run(async()=>{

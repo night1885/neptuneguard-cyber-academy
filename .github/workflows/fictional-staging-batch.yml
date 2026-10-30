@@ -1,0 +1,56 @@
+name: Fictional staging batch - explicit disposable validation
+on:
+  push:
+    branches: ['feat/fictional-intake-staging']
+    paths:
+      - '.github/workflows/fictional-staging-batch.yml'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/**'
+      - 'docs/formal-ethical-hacking/prototypes/synthetic-workspace/no-modal-intake.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-validation:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[fi-stage-validate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_DB: fi_stage_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fixture-only-admin-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fi_stage_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: fi_stage_test
+      PGPASSWORD: fixture-only-admin-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install only the explicit disposable schema
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE fi_stage_worker NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+          psql -v ON_ERROR_STOP=1 -v staging_database=fi_stage_test -v production_database=excluded_production_database -v staging_admin=postgres -v staging_worker=fi_stage_worker -f docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-schema.sql
+      - name: Model integration and actual PostgreSQL contract
+        env:
+          FICTIONAL_STAGE_SQL_TESTS: 'true'
+          FICTIONAL_STAGE_TEST_DB: fi_stage_test
+        run: >-
+          node --unhandled-rejections=strict --test
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*.test.mjs
