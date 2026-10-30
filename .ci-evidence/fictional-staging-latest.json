@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "scope": "disposable-validation matrix only",
+  "validation_commit": "2f10cbb01d2f982f51e4a685ab5f45232f81c547",
+  "source_run_id": 41072928567,
+  "source_run_number": 1,
+  "source_run_attempt": 1,
+  "observed_run_status": "completed",
+  "observed_run_conclusion": "success",
+  "matrix_complete": true,
+  "matrix_result": "success",
+  "jobs": [
+    {
+      "name": "disposable-validation (20, 16)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/night1885/neptuneguard-cyber-academy/actions/runs/41072928567/job/124121428241",
+      "failed_steps": []
+    },
+    {
+      "name": "disposable-validation (20, 18)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/night1885/neptuneguard-cyber-academy/actions/runs/41072928567/job/124121427245",
+      "failed_steps": []
+    },
+    {
+      "name": "disposable-validation (22, 16)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/night1885/neptuneguard-cyber-academy/actions/runs/41072928567/job/124121427610",
+      "failed_steps": []
+    },
+    {
+      "name": "disposable-validation (22, 18)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/night1885/neptuneguard-cyber-academy/actions/runs/41072928567/job/124121427668",
+      "failed_steps": []
+    }
+  ],
+  "publisher_run_id": 41077972919,
+  "raw_logs_exported": false
+}
