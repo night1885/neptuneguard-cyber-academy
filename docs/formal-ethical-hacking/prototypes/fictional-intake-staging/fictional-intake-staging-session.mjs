@@ -5,7 +5,7 @@ import {createDetachedIntakeJourney} from '../synthetic-workspace/detached-intak
 export function createFictionalIntakeStagingSession(config={},scope={},ports={}){
  const inspected=inspectFictionalIntakeStagingProfile(config);
  if(!inspected.ok)throw Error('Invalid fictional intake staging profile');
- if(!inspected.enabled)return Object.freeze({start:async()=>{},verifyIsolation:async()=>false,isReady:()=>false,handle:async()=>false,close:async()=>{}});
+ if(!inspected.enabled)return Object.freeze({start:async()=>{},verifyIsolation:async()=>false,isReady:()=>false,handle:async()=>false,requestStop(){},close:async()=>{}});
  const profile=inspected.profile;
  if(!['courseKey','exerciseKey'].every(k=>typeof scope[k]==='string'&&/^demo-[a-zA-Z0-9-]{1,70}$/.test(scope[k])))throw Error('Explicit fictional exercise scope required');
  const courseKey=scope.courseKey,exerciseKey=scope.exerciseKey;
@@ -33,7 +33,12 @@ export function createFictionalIntakeStagingSession(config={},scope={},ports={})
   })();
   return startPromise;
  }
- return Object.freeze({start,
+ function requestStop(){
+  if(closed)return;
+  closed=true;verified=false;verificationEpoch++;verifier?.close();
+  try{const value=ports.cancelStartup?.call(ports);value?.catch?.(()=>{});}catch{}
+ }
+ return Object.freeze({start,requestStop,
   async verifyIsolation(actualProfile){
    const epoch=++verificationEpoch;verified=false;
    try{
@@ -46,7 +51,7 @@ export function createFictionalIntakeStagingSession(config={},scope={},ports={})
   isReady:()=>providersReady()&&journey?.ready===true,
   async handle(i){if(!providersReady()||journey?.ready!==true)return false;return journey.handle(i);},
   close(){
-   closed=true;verified=false;verificationEpoch++;verifier?.close();
+   requestStop();
    if(!closePromise)closePromise=(async()=>{
     try{if(startPromise)await startPromise;}catch{}
     try{journey?.dispose();}finally{await closeResources.call(ports);}

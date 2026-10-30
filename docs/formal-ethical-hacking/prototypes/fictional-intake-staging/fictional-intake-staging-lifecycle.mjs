@@ -39,6 +39,7 @@ export function createFictionalIntakeStagingLifecycle(config={},factories={}){
  }
  function stop(){
   stopped=true;if(state!=='stopped'&&state!=='cleanup-failed')state='stopping';
+  try{const value=session?.requestStop?.();value?.catch?.(()=>{});}catch{}
   if(!stopPromise)stopPromise=(async()=>{try{if(startPromise)await startPromise;}catch{}await close();})();
   return stopPromise;
  }
