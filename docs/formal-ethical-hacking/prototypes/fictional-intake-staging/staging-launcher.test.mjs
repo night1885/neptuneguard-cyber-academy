@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {createStagingPilot} from './staging-pilot.mjs';
+const profile={enabled:true,mode:'fictional-intake-staging',fictionalReportsOnly:true,staging:{guildId:'100000000000000001',botId:'100000000000000002',entryChannelId:'100000000000000003',operatorId:'100000000000000004',database:{host:'stage.invalid',port:'5432',name:'fictional_intake'}},production:{guildId:'200000000000000001',botId:'200000000000000002',database:{host:'prod.invalid',port:'5432',name:'production'}}};
+const manifest={profile,scope:{courseKey:'demo-course',exerciseKey:'demo-exercise'},recordId:'11111111-1111-1111-1111-111111111111',reviewerId:'100000000000000099',expectedRole:'fictional_stage_worker',entryMessageId:'100000000000000088'};
+test('default-off pilot never touches credentials',async()=>{const p=createStagingPilot({},new Proxy({},{get(){throw Error('unexpected credential/provider read');}}));assert.equal(p.enabled,false);assert.equal(await p.start(),false);await p.stop();});
+test('enabled construction remains pure and credential failure cleans actual core stack',async()=>{let reads=0;const p=createStagingPilot(manifest,{async readCredentials(){reads++;throw Error('fixture-only-marker');}});assert.equal(reads,0);assert.equal(p.ready,false);await assert.rejects(p.start(),e=>e.message==='Fictional staging pilot unavailable');assert.equal(reads,1);assert.equal(p.ready,false);await p.stop();});
+test('entry message ID required before any startup',()=>{assert.throws(()=>createStagingPilot({...manifest,entryMessageId:null}),/unavailable/);});
+test('self-review configuration rejected before startup',()=>{assert.throws(()=>createStagingPilot({...manifest,reviewerId:profile.staging.operatorId}),/unavailable/);});
+test('CLI without a manifest is disabled',()=>{const r=spawnSync(process.execPath,[new URL('./staging-pilot.mjs',import.meta.url).pathname],{encoding:'utf8'});assert.equal(r.status,0);assert.match(r.stdout,/disabled/);assert.equal(r.stderr,'');});
