@@ -1,0 +1,11 @@
+# Fictional staging resource verifier candidate
+
+Prepared against afe39207998037045c61d76cc7f4997210b84db6. Explicit one-shot observation only, not attached to the lifecycle or a deployable launcher. Caller supplies the actual inspector's validated frozen profile, a trusted already-connected Discord.js client, an already-created restricted pool and explicit expected staging role. Construction performs no API/query calls; inspect fetches one guild, roles, two members and one entry channel, then a fixed metadata-only SELECT. It creates no client/pool, logs in nowhere, publishes nothing and mutates no resources.
+
+Twenty local unit tests passed on Node 20.20.1 with zero failures/skips/cancellations using scripted SDK/pool responses. SDK method shapes were checked against Discord.js 14.27.0 documentation; no actual SDK package/transport, PostgreSQL, full checkout, committed-head CI or independent review is claimed.
+
+Success is a limited observation, not live readiness or privacy proof. operationalReady stays false. It does not establish DNS/host alias or database cluster separation, schema/table least privilege, source-channel initial overwrites, outsider/reviewer visibility, administrator roster, MessageContent capability, real record/course authority, deletion or fictional content. Entry visibility is not a source privacy audit. A non-elevated role is not necessarily least privilege. Trusted providers can lie, and state/permission races remain possible. Owner must implement readiness/identity drift and per-operation authorization.
+
+The query does not interpolate the expected role or return raw provider errors. No timeout, cancellation, drain or polling is implemented. close retires only the observer; it does not close borrowed resources or cancel queries. No real environment IDs or credentials are supplied. Resource session integration, actual storage/SDK providers, manifest, launcher, live walkthrough and stop/rollback remain unfinished.
+
+No runtime, package, workflow, SQL fixture, policy, deadline, account cleanup, Discord resource or service setting change. Keep on feat/fictional-intake-staging; this commit authorizes no PR, merge, resource creation, live inspection, database operation, publication, deployment or intake activation. Issue #30 remains incomplete.
