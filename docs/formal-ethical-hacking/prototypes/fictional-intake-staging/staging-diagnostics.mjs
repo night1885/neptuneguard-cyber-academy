@@ -18,18 +18,22 @@ async function loadDiscord(){
 }
 function databaseCategory(error){
  const categories=new Map([['28P01','authentication'],['28000','authorization'],['42501','permission'],['3D000','database-not-found'],['42P01','table-not-found'],['42883','function-not-found'],['ENOTFOUND','dns'],['EAI_AGAIN','dns'],['ECONNREFUSED','connection-refused'],['ETIMEDOUT','connection-timeout'],['ECONNRESET','connection-reset'],['CERT_HAS_EXPIRED','tls-certificate-expired'],['DEPTH_ZERO_SELF_SIGNED_CERT','tls-self-signed'],['SELF_SIGNED_CERT_IN_CHAIN','tls-chain'],['UNABLE_TO_VERIFY_LEAF_SIGNATURE','tls-chain'],['UNABLE_TO_GET_ISSUER_CERT_LOCALLY','tls-chain'],['ERR_TLS_CERT_ALTNAME_INVALID','tls-hostname'],['57014','query-cancelled'],['EHOSTUNREACH','network-unreachable'],['ENETUNREACH','network-unreachable'],['EPIPE','connection-broken'],['53300','connection-limit'],['57P03','database-not-ready'],['08P01','protocol']]);
- const pending=[error],seen=new Set();let aggregate=false;
+ const pending=[error],seen=new Set();let aggregate=false,hasCode=false,unreadable=false;
  for(let count=0;pending.length&&count<16;count++){
   const current=pending.shift();
   if(!current||typeof current!=='object'||seen.has(current))continue;
   seen.add(current);
   try{
-   const category=categories.get(current.code);if(category)return category;
+   const code=current.code,category=categories.get(code);if(category)return category;
+   if(code!==undefined&&code!==null&&code!=='')hasCode=true;
    if(current.cause&&pending.length<16)pending.push(current.cause);
    if(Array.isArray(current.errors)){aggregate=true;for(const child of current.errors.slice(0,8)){if(pending.length>=16)break;pending.push(child);}}
-  }catch{}
+  }catch{unreadable=true;}
  }
- return aggregate?'aggregate-unclassified':'unknown';
+ if(hasCode)return 'code-unrecognized';
+ if(unreadable)return 'error-properties-unreadable';
+ if(aggregate)return 'aggregate-no-recognized-code';
+ return seen.size?'code-missing':'non-object-error';
 }
 async function loadPostgres(){
  const pg=await import('pg'),Base=pg.Pool??pg.default?.Pool;
