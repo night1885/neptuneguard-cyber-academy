@@ -16,13 +16,17 @@ async function loadDiscord(){
   async login(token){report('discord-login-attempt');try{return await super.login(token);}catch{report('discord-login-failed');throw Error('Staging connection unavailable');}}
  }};
 }
+function databaseCategory(error){
+ const categories=new Map([['28P01','authentication'],['28000','authorization'],['42501','permission'],['3D000','database-not-found'],['42P01','table-not-found'],['42883','function-not-found'],['ENOTFOUND','dns'],['EAI_AGAIN','dns'],['ECONNREFUSED','connection-refused'],['ETIMEDOUT','connection-timeout'],['ECONNRESET','connection-reset'],['CERT_HAS_EXPIRED','tls-certificate-expired'],['DEPTH_ZERO_SELF_SIGNED_CERT','tls-self-signed'],['SELF_SIGNED_CERT_IN_CHAIN','tls-chain'],['UNABLE_TO_VERIFY_LEAF_SIGNATURE','tls-chain'],['UNABLE_TO_GET_ISSUER_CERT_LOCALLY','tls-chain'],['ERR_TLS_CERT_ALTNAME_INVALID','tls-hostname'],['57014','query-cancelled']]);
+ return categories.get(error?.code)??'unknown';
+}
 async function loadPostgres(){
  const pg=await import('pg'),Base=pg.Pool??pg.default?.Pool;
  return {Pool:class extends Base{
   query(...args){
    report('database-query-attempt');
-   const fail=()=>{report('database-query-failed');throw Error('Staging database unavailable');};
-   let result;try{result=super.query(...args);}catch{return fail();}
+   const fail=error=>{report('database-query-failed-'+databaseCategory(error));throw Error('Staging database unavailable');};
+   let result;try{result=super.query(...args);}catch(error){return fail(error);}
    if(result&&typeof result.then==='function')return result.then(value=>{report('database-query-succeeded');return value;},fail);
    return result;
   }
