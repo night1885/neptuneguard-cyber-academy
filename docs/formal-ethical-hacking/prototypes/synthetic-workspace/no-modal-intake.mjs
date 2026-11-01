@@ -9,10 +9,11 @@ const digest=x=>createHash('sha256').update(x).digest('hex');
 const deny=(reason='unavailable')=>Object.freeze({ok:false,reason});
 export function createNoModalIntakeCoordinator(config={},ports={}) {
   if(config.enabled!==true)return Object.freeze(Object.fromEntries(['prepare','preview','submit','recoverSubmission','review','expireDraft'].map(k=>[k,async()=>deny('disabled')]).concat([['dispose',()=>{}]])));
-  const {guildId,productionGuildId,ownerId,courseKey,mode,policy,timeoutMs=250}=config;
+  const {guildId,productionGuildId,ownerId,courseKey,mode,policy,timeoutMs=250,providerTimeoutMs=timeoutMs}=config;
   if(mode!=='detached-rehearsal'||!id(guildId)||!id(productionGuildId)||guildId===productionGuildId||!id(ownerId)||
     !key(courseKey)||policy?.draftHours!==24||policy?.reportHours!==24||policy?.ownerOnly!==true||policy?.status!=='proposed-for-rehearsal'||
-    !Number.isSafeInteger(timeoutMs)||timeoutMs<5||timeoutMs>1000)throw new Error('Explicit isolated rehearsal profile required');
+    !Number.isSafeInteger(timeoutMs)||timeoutMs<5||timeoutMs>1000||
+    !Number.isSafeInteger(providerTimeoutMs)||providerTimeoutMs<5||providerTimeoutMs>10000)throw new Error('Explicit isolated rehearsal profile required');
   for(const name of ['resolve','authorize','journalRead','journalWrite','createRestricted','verifyPrivate','admitLearner',
     'latest','exact','receipt','submit','readReport','publishTrackedReview','review','claimDraft','deleteDraft','finishDraft','now'])
     if(typeof ports[name]!=='function')throw new Error('Explicit rehearsal provider required');
@@ -24,7 +25,7 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
     const work=Promise.resolve().then(()=>ports[name](...args));inflight.add(work);
     void work.then(()=>inflight.delete(work),()=>inflight.delete(work));
     try{const value=await Promise.race([work,
-      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Provider outcome unknown')),timeoutMs);})]);
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Provider outcome unknown')),providerTimeoutMs);})]);
       if(stopped)throw new Error('Retired');return value;
     }finally{clearTimeout(timer);}
   }
