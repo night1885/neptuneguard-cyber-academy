@@ -11,6 +11,7 @@ import {createStagingChannels} from './staging-channels.mjs';
 import {createStagingRetention} from './staging-retention.mjs';
 import {createStagingOperationGate} from './staging-operation-gate.mjs';
 import {createStagingCoordinatedPrepare} from './staging-coordinated-prepare.mjs';
+import {stagingPrepareTimeouts} from './staging-prepare-timeouts.mjs';
 const unavailable=()=>Error('Fictional staging pilot unavailable');
 export function createStagingPilot(manifest={},options={}){
  const inspected=inspectFictionalIntakeStagingProfile(manifest.profile??{});
@@ -21,6 +22,7 @@ export function createStagingPilot(manifest={},options={}){
  let resources,timer,closed=false,fatal=false,started=false,coordinator,reader,listener;const now=options.now??Date.now;
  const operationTimeoutMs=options.operationTimeoutMs??5000,pollIntervalMs=options.pollIntervalMs??1000,cleanupTimeoutMs=options.cleanupTimeoutMs??5000;
  if(typeof now!=='function'||![operationTimeoutMs,cleanupTimeoutMs,pollIntervalMs].every(n=>Number.isInteger(n)&&n>=10&&n<=60000))throw unavailable();
+ const timeoutPolicy=stagingPrepareTimeouts(options);
  async function bounded(work,ms,message){let t;try{return await Promise.race([work,new Promise((_,reject)=>{t=setTimeout(()=>reject(Error(message)),ms);})]);}finally{clearTimeout(t);}}
  const gate=createStagingOperationGate({timeoutMs:operationTimeoutMs,onUnhealthy:()=>{fatal=true;}});
  const owner=createFictionalStagingResourceOwner(manifest.profile,{expectedRole,readCredentials:options.readCredentials??(async()=>{const env=process.env;if(env.FICTIONAL_STAGE_RUN!=='true')throw unavailable();return {discordToken:env.FICTIONAL_STAGE_TOKEN,databasePassword:env.FICTIONAL_STAGE_DB_PASSWORD,databaseCa:env.FICTIONAL_STAGE_DB_CA};}),
@@ -31,10 +33,10 @@ export function createStagingPilot(manifest={},options={}){
  const retention=createStagingRetention({store,channels,now,operationTimeoutMs,onUnhealthy:()=>{fatal=true;}});
  const unsupported=async()=>{throw unavailable();};
  reader=createFictionalStagingSourceReader(manifest.profile,{getClient:()=>resources?.client,isReady:()=>transportReady()&&!fatal&&retention.admissionReady,resolve:store.resolve,authorize:store.authorize,journalRead:store.journalRead,verifyPrivate:channels.verifyPrivate,now});
- coordinator=createNoModalIntakeCoordinator({enabled:true,mode:'detached-rehearsal',guildId:profile.staging.guildId,productionGuildId:profile.production.guildId,ownerId:reviewerId,courseKey:scope.courseKey,policy:{draftHours:24,reportHours:24,ownerOnly:true,status:'proposed-for-rehearsal'},timeoutMs:1000},
+ coordinator=createNoModalIntakeCoordinator({enabled:true,mode:'detached-rehearsal',guildId:profile.staging.guildId,productionGuildId:profile.production.guildId,ownerId:reviewerId,courseKey:scope.courseKey,policy:{draftHours:24,reportHours:24,ownerOnly:true,status:'proposed-for-rehearsal'},timeoutMs:1000,providerTimeoutMs:timeoutPolicy.providerTimeoutMs},
   {...store,...channels,latest:reader.latest,exact:reader.exact,now,readReport:unsupported,publishTrackedReview:unsupported,review:unsupported,claimDraft:unsupported,deleteDraft:unsupported,finishDraft:unsupported});
  const ungatedCoordinator=coordinator;
- coordinator=Object.freeze({...ungatedCoordinator,prepare:createStagingCoordinatedPrepare({gate,prepare:(...args)=>ungatedCoordinator.prepare(...args),isReady:()=>transportReady()&&!fatal&&retention.admissionReady})});
+ coordinator=Object.freeze({...ungatedCoordinator,prepare:createStagingCoordinatedPrepare({gate,timeoutMs:timeoutPolicy.prepareTimeoutMs,prepare:(...args)=>ungatedCoordinator.prepare(...args),isReady:()=>transportReady()&&!fatal&&retention.admissionReady})});
  const runRetention=()=>gate.run(()=>{if(closed||fatal)throw unavailable();return retention.pass();});
  const lifecycle=createFictionalIntakeStagingLifecycle(manifest.profile,{createSession:()=>createFictionalIntakeStagingSession(manifest.profile,scope,{coordinator,storage:store,now,expectedRole,isReady:()=>transportReady()&&!fatal&&retention.admissionReady,cancelStartup:owner.cancelStartup,
   async startResources(p){resources=await owner.startResources(p);await store.initialize();await channels.auditGuild();const r=await runRetention();if(!r.complete)throw unavailable();return resources;},
