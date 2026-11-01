@@ -37,14 +37,21 @@ function databaseCategory(error){
  if(aggregate)return 'aggregate-no-recognized-code';
  return seen.size?'code-missing':'non-object-error';
 }
-async function loadPostgres(){
+function reportStorageContract(value,expected){
+ const row=value?.rows?.[0];
+ if(!row){report('storage-contract-row-missing');return;}
+ const checks=[['database-identity',row.db===expected.databaseName],['worker-role-identity',row.actor===expected.expectedRole],['schema-version',row.contract===1],['non-elevated-role',row.elevated===false],['no-schema-create',row.can_create===false],['no-direct-table-access',row.table_access===false]];
+ for(const [name,ok] of checks)report('storage-contract-'+name+(ok?'-passed':'-failed'));
+ report(checks.every(([,ok])=>ok)?'storage-contract-checks-passed':'storage-contract-checks-failed');
+}
+async function loadPostgres(expected){
  const pg=await import('pg'),Base=pg.Pool??pg.default?.Pool;
  return {Pool:class extends Base{
   query(...args){
    report('database-query-attempt');
    const fail=error=>{report('database-query-failed-'+databaseCategory(error));throw Error('Staging database unavailable');};
    let result;try{result=super.query(...args);}catch(error){return fail(error);}
-   if(result&&typeof result.then==='function')return result.then(value=>{report('database-query-succeeded');return value;},fail);
+   if(result&&typeof result.then==='function')return result.then(value=>{report('database-query-succeeded');if(typeof args[0]==='string'&&args[0].startsWith('SELECT current_database() AS db,current_user AS actor,fi_stage.contract() AS contract,'))reportStorageContract(value,expected);return value;},fail);
    return result;
   }
  }};
@@ -63,7 +70,7 @@ try {
   if(!process.env.FICTIONAL_STAGE_TOKEN||!process.env.FICTIONAL_STAGE_DB_PASSWORD)throw Error();
   report('credentials-present-not-validated');
   stage='pilot-construction';
-  pilot=createStagingPilot(manifest,{loadDiscord,loadPostgres});
+  pilot=createStagingPilot(manifest,{loadDiscord,loadPostgres:()=>loadPostgres({databaseName:inspected.profile.staging.database.name,expectedRole:manifest.expectedRole})});
   stage='live-startup';
   if(await pilot.start()!==true)throw Error();
   report('started-operational-readiness-not-certified');
