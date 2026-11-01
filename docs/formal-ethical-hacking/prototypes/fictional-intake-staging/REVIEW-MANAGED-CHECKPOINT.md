@@ -1,0 +1,13 @@
+# Managed responses and recovery checkpoint — NOT activation
+
+Base: bd6cffe967098f22ab9ca83d9d9b1ce313c07ecb. Six additive files recover managed modal-status responses and quiescent startup inventory. Existing backend/owner/journal/runtime/SQL files are unchanged. The saved owner blob 28c2163b3fef1b46df0272faa33228e0953a94dc was verified before local contract testing.
+
+29 port-contract tests passed locally on Node 20.20.1 using that actual owner with simulated vault/journal ports. Three separate actual-filesystem stack scenarios were syntax-checked only and are NOT claimed as locally executed. New Node 20/22 CI runs the saved backend suite, lifecycle suite, these 29 contracts and all three filesystem scenarios (not skipped). No combined success is asserted before CI results.
+
+All factories default off; no listener, client, live key, storage selection, SQL or deployment. The service captures scoped credentials (not modal fields), holds one owner workflow open from defer through edit/cancellation, accepts only two fixed status texts, and releases credentials only after owner cleanup completes. Timeouts and rejected/malformed receipts remain unknown. Incomplete stop preserves obligations; it does not close shared resources. Actual transport and key/store retention still require approved deployment configuration.
+
+Recovery inspection authenticates keys/envelopes through trusted ports and blocks unresolved, orphan, missing, retained-completed, expired, ambiguous or capacity-exhausted inventories. It returns counts only, never auto-deletes or replays, and is a quiescent-startup snapshot—not an atomic live admission fence. Parent startup must serialize access and own resources. No active startup or revocation gate is wired into a launcher here.
+
+This status-only service does not render confirmation controls or coordinate multiple interactions updating one logical Discord message. Modal/input/bound preparation, multi-interaction lifetime, installed SDK/permissions, SQL composition, full regressions and credential-expiry recovery remain gates. Abort is not remote quiescence; file/key I/O is not forcibly cancelled. No power-loss or deployed-persistence proof is claimed.
+
+Filesystem fixtures use real crypto/private temporary files but HTTP is always mocked. Their teardown removes synthetic test resources even for unknown outcomes; real launchers must not discard unresolved owners just because these fixtures do so. Older local test counts/ZIP snapshots do not certify this reconstructed version. No merge, deployment, SQL installation or Discord publication is authorized.
