@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fixture} from './staging-test-fixtures.mjs';
 
+// Scripted-provider characterization; not evidence of live provisioning success.
 test('late channel creation remains quarantined and retry creates no duplicate', {timeout:10000}, async t => {
  const f=await fixture(t);
  let enter,release,settled;
