@@ -1,0 +1,59 @@
+name: Fictional reviewer modal - disposable validation
+on:
+  push:
+    branches: ['feat/fictional-reviewer-validation']
+    paths:
+      - '.github/workflows/fictional-review-modal-validation.yml'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-modal-boundary.candidate*'
+permissions:
+  contents: read
+jobs:
+  modal-boundary:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && github.ref == 'refs/heads/feat/fictional-reviewer-validation' && contains(github.event.head_commit.message, '[review-modal-validate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Guard additive modal scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=349ced2410bf9ae0321cebcada72e42e66ce7df3
+          git merge-base --is-ancestor "$base" HEAD
+          git diff --name-only "$base" HEAD | while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/fictional-review-modal-validation.yml) ;;
+              docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*)
+                name=${path#docs/formal-ethical-hacking/prototypes/fictional-intake-staging/}
+                case "$name" in
+                  REVIEW-MODAL-CHECKPOINT.md|staging-review-modal-boundary.candidate.mjs|staging-review-modal-boundary.candidate.test.mjs|staging-review-modal-boundary.candidate.sdk.test.mjs) ;;
+                  *) echo 'Unexpected staging source'; exit 1 ;;
+                esac ;;
+              *) echo 'Unexpected source change'; exit 1 ;;
+            esac
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install existing locked SDK dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Saved contracts, modal boundary and installed SDK schemas
+        run: >-
+          node --unhandled-rejections=strict --test --test-concurrency=1
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-credential-backend.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-delivery-lifecycle.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate.filesystem.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-controls.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-input-custody.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-bound-preparation.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-modal-boundary.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-modal-boundary.candidate.sdk.test.mjs
