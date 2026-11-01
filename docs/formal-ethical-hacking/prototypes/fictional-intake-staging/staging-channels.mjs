@@ -17,7 +17,7 @@ export function createStagingChannels({profile,reviewerId,store,getResources,isR
    if(member.id===s.operatorId&&['Administrator','ManageRoles','ManageChannels','ManageWebhooks'].some(p=>member.permissions.has(p)))throw denied();
   }
   if(!reportedRolePermission){diagnostic(members.get(s.botId).permissions.has('ManageRoles')?'bot-guild-manage-roles-present':'bot-guild-manage-roles-missing');reportedRolePermission=true;}
-  if(!members.get(s.botId).permissions.has('ManageChannels'))throw denied();return {g,members};
+  if(!['ManageChannels','ManageRoles'].every(p=>members.get(s.botId).permissions.has(p)))throw denied();return {g,members};
  }
  async function physical(ch,step=()=>{}){
   step('channel-id');if(!snow(ch)||ch===s.entryChannelId)throw denied();step('guild-audit');const {g,members}=await guildAudit();step('channel-fetch');const channel=await g.channels.fetch(ch,{force:true,cache:false});live();
@@ -29,8 +29,8 @@ export function createStagingChannels({profile,reviewerId,store,getResources,isR
    const p=channel.permissionsFor(m);if(!p)throw denied();
    if(!allowed.has(m.id)&&p.has('ViewChannel'))throw denied();
    if(m.id===s.operatorId&&p.has('ViewChannel')!==admitted)throw denied();
-   if(m.id===s.botId&&!['ViewChannel','ReadMessageHistory','SendMessages','ManageMessages'].every(x=>p.has(x)))throw denied();
    if(m.id===s.botId)diagnostic(p.has('ManageRoles')?'bot-channel-manage-roles-present':'bot-channel-manage-roles-missing');
+   if(m.id===s.botId&&!['ViewChannel','ReadMessageHistory','SendMessages','ManageMessages','ManageRoles'].every(x=>p.has(x)))throw denied();
   }
   return {channel,admitted};
  }
