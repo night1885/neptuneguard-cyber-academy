@@ -9,6 +9,8 @@ import {createFictionalStagingSourceReader} from './fictional-intake-staging-sou
 import {createStagingStorage} from './staging-storage.mjs';
 import {createStagingChannels} from './staging-channels.mjs';
 import {createStagingRetention} from './staging-retention.mjs';
+import {createStagingOperationGate} from './staging-operation-gate.mjs';
+import {createStagingCoordinatedPrepare} from './staging-coordinated-prepare.mjs';
 const unavailable=()=>Error('Fictional staging pilot unavailable');
 export function createStagingPilot(manifest={},options={}){
  const inspected=inspectFictionalIntakeStagingProfile(manifest.profile??{});
@@ -20,9 +22,10 @@ export function createStagingPilot(manifest={},options={}){
  const operationTimeoutMs=options.operationTimeoutMs??5000,pollIntervalMs=options.pollIntervalMs??1000,cleanupTimeoutMs=options.cleanupTimeoutMs??5000;
  if(typeof now!=='function'||![operationTimeoutMs,cleanupTimeoutMs,pollIntervalMs].every(n=>Number.isInteger(n)&&n>=10&&n<=60000))throw unavailable();
  async function bounded(work,ms,message){let t;try{return await Promise.race([work,new Promise((_,reject)=>{t=setTimeout(()=>reject(Error(message)),ms);})]);}finally{clearTimeout(t);}}
+ const gate=createStagingOperationGate({timeoutMs:operationTimeoutMs,onUnhealthy:()=>{fatal=true;}});
  const owner=createFictionalStagingResourceOwner(manifest.profile,{expectedRole,readCredentials:options.readCredentials??(async()=>{const env=process.env;if(env.FICTIONAL_STAGE_RUN!=='true')throw unavailable();return {discordToken:env.FICTIONAL_STAGE_TOKEN,databasePassword:env.FICTIONAL_STAGE_DB_PASSWORD,databaseCa:env.FICTIONAL_STAGE_DB_CA};}),
   loadPostgres:options.loadPostgres,loadDiscord:options.loadDiscord??(async()=>{const sdk=await import('discord.js');return {...sdk,Client:class extends sdk.Client{constructor(o){super({...o,intents:[...o.intents,sdk.GatewayIntentBits.GuildMembers],makeCache:sdk.Options.cacheWithLimits({MessageManager:0})});}}};})});
- const transportReady=()=>!closed&&owner.isReady()&&store.ready;
+ const transportReady=()=>!closed&&!fatal&&owner.isReady()&&store.ready;
  const store=createStagingStorage({profile,scope,recordId,reviewerId,expectedRole,getResources:()=>resources});
  const channels=createStagingChannels({profile,reviewerId,store,getResources:()=>resources,isReady:transportReady,now});
  const retention=createStagingRetention({store,channels,now,operationTimeoutMs,onUnhealthy:()=>{fatal=true;}});
@@ -30,21 +33,24 @@ export function createStagingPilot(manifest={},options={}){
  reader=createFictionalStagingSourceReader(manifest.profile,{getClient:()=>resources?.client,isReady:()=>transportReady()&&!fatal&&retention.admissionReady,resolve:store.resolve,authorize:store.authorize,journalRead:store.journalRead,verifyPrivate:channels.verifyPrivate,now});
  coordinator=createNoModalIntakeCoordinator({enabled:true,mode:'detached-rehearsal',guildId:profile.staging.guildId,productionGuildId:profile.production.guildId,ownerId:reviewerId,courseKey:scope.courseKey,policy:{draftHours:24,reportHours:24,ownerOnly:true,status:'proposed-for-rehearsal'},timeoutMs:1000},
   {...store,...channels,latest:reader.latest,exact:reader.exact,now,readReport:unsupported,publishTrackedReview:unsupported,review:unsupported,claimDraft:unsupported,deleteDraft:unsupported,finishDraft:unsupported});
+ const ungatedCoordinator=coordinator;
+ coordinator=Object.freeze({...ungatedCoordinator,prepare:createStagingCoordinatedPrepare({gate,prepare:(...args)=>ungatedCoordinator.prepare(...args),isReady:()=>transportReady()&&!fatal&&retention.admissionReady})});
+ const runRetention=()=>gate.run(()=>{if(closed||fatal)throw unavailable();return retention.pass();});
  const lifecycle=createFictionalIntakeStagingLifecycle(manifest.profile,{createSession:()=>createFictionalIntakeStagingSession(manifest.profile,scope,{coordinator,storage:store,now,expectedRole,isReady:()=>transportReady()&&!fatal&&retention.admissionReady,cancelStartup:owner.cancelStartup,
-  async startResources(p){resources=await owner.startResources(p);await store.initialize();await channels.auditGuild();const r=await retention.pass();if(!r.complete)throw unavailable();return resources;},
+  async startResources(p){resources=await owner.startResources(p);await store.initialize();await channels.auditGuild();const r=await runRetention();if(!r.complete)throw unavailable();return resources;},
   async verifyIsolation(){if(!store.ready||await channels.auditGuild()!==true)return false;const ctx={actorId:profile.staging.operatorId,guildId:profile.staging.guildId,action:'prepare'},b={...await store.resolve(ctx),...ctx},j=await store.journalRead(b);return j===null||j?.state==='available'&&await channels.verifyPrivate(b,j.channelId)===true;},
   closeResources:cleanup})});
  let stopPromise,cleanupPromise;
  function cleanup(){
-  if(!cleanupPromise)cleanupPromise=(async()=>{const stopRetention=retention.stop();reader.dispose();coordinator.dispose();channels.dispose();store.dispose();
+  if(!cleanupPromise)cleanupPromise=(async()=>{gate.stop();const stopRetention=retention.stop();reader.dispose();coordinator.dispose();channels.dispose();store.dispose();
    const outcomes=await bounded(Promise.allSettled([stopRetention,owner.closeResources()]),cleanupTimeoutMs,'Staging cleanup requires attention');
    if(outcomes.some(r=>r.status==='rejected'))throw Error('Staging cleanup requires attention');})();
   return cleanupPromise;
  }
- function stop(){closed=true;fatal=true;started=false;clearTimeout(timer);if(listener)resources?.client.removeListener('interactionCreate',listener);owner.cancelStartup();
+ function stop(){closed=true;fatal=true;started=false;gate.stop();clearTimeout(timer);if(listener)resources?.client.removeListener('interactionCreate',listener);owner.cancelStartup();
   if(!stopPromise)stopPromise=(async()=>{const outcomes=await bounded(Promise.allSettled([lifecycle.stop(),cleanup()]),cleanupTimeoutMs,'Staging cleanup requires attention');if(outcomes.some(r=>r.status==='rejected'))throw Error('Staging cleanup requires attention');})();return stopPromise;
  }
- function scheduleRetention(){if(closed||retention.failed)return;timer=setTimeout(()=>{void retention.pass().then(r=>{if(!r.complete)fatal=true;},()=>{fatal=true;}).finally(()=>{if(!closed&&!retention.failed)scheduleRetention();});},pollIntervalMs);timer.unref?.();}
+ function scheduleRetention(){if(closed||fatal||retention.failed)return;timer=setTimeout(()=>{void runRetention().then(r=>{if(!r.complete)fatal=true;},()=>{fatal=true;}).finally(()=>{if(!closed&&!fatal&&!retention.failed)scheduleRetention();});},pollIntervalMs);timer.unref?.();}
  return Object.freeze({enabled:true,operationalReady:false,get ready(){return started&&!fatal&&!closed&&lifecycle.ready;},
   async start(){try{if(closed)return false;if(await lifecycle.start()!==true||closed)return false;await bounded((async()=>{
     const g=await resources.client.guilds.fetch({guild:profile.staging.guildId,force:true});if(closed||fatal)throw unavailable();
