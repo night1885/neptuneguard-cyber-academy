@@ -1,0 +1,56 @@
+name: Fictional bound reviewer input - disposable validation
+on:
+  push:
+    branches: ['feat/fictional-reviewer-validation']
+    paths:
+      - '.github/workflows/fictional-review-input-validation.yml'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-input-custody.candidate*'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-bound-preparation.candidate*'
+permissions:
+  contents: read
+jobs:
+  bound-input:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && github.ref == 'refs/heads/feat/fictional-reviewer-validation' && contains(github.event.head_commit.message, '[review-input-validate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Guard additive bound-input scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=2e15e9f0d54ab0f9c3925504c1b348e21cf5ff14
+          git merge-base --is-ancestor "$base" HEAD
+          git diff --name-only "$base" HEAD | while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/fictional-review-input-validation.yml) ;;
+              docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*)
+                name=${path#docs/formal-ethical-hacking/prototypes/fictional-intake-staging/}
+                case "$name" in
+                  REVIEW-INPUT-CHECKPOINT.md|staging-review-input-custody.candidate.mjs|staging-review-bound-preparation.candidate.mjs|staging-review-input-custody.candidate.test.mjs|staging-review-bound-preparation.candidate.test.mjs) ;;
+                  *) echo 'Unexpected staging source'; exit 1 ;;
+                esac ;;
+              *) echo 'Unexpected source change'; exit 1 ;;
+            esac
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Saved contracts and bound input composition
+        run: >-
+          node --unhandled-rejections=strict --test --test-concurrency=1
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-credential-backend.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-delivery-lifecycle.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate.filesystem.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-controls.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-input-custody.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-bound-preparation.candidate.test.mjs
