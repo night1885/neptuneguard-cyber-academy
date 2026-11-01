@@ -43,13 +43,19 @@ export function createFictionalIntakeStagingLifecycle(config={},factories={}){
   if(!stopPromise)stopPromise=(async()=>{try{if(startPromise)await startPromise;}catch{}await close();})();
   return stopPromise;
  }
+ const rejectInteraction=reason=>{try{console.log('Staging diagnostic: interaction-rejected:'+reason);}catch{}return false;};
  return Object.freeze({enabled:true,operationalReady:false,get state(){return state;},get ready(){return ready();},start,stop,
   async handle(i){
    try{
-    if(!ready()||typeof i?.customId!=='string'||!['nmi:','nmr:'].some(p=>i.customId.startsWith(p))||
-     i.guildId!==profile.staging.guildId||i.channelId!==profile.staging.entryChannelId||i.user?.id!==profile.staging.operatorId||i.user?.bot===true)return false;
-    return await session.handle(i)===true;
-   }catch{return false;}
+    if(!ready())return rejectInteraction('not-ready');
+    if(typeof i?.customId!=='string'||!['nmi:','nmr:'].some(p=>i.customId.startsWith(p)))return rejectInteraction('unsupported-button');
+    if(i.guildId!==profile.staging.guildId)return rejectInteraction('guild-mismatch');
+    if(i.channelId!==profile.staging.entryChannelId)return rejectInteraction('entry-channel-mismatch');
+    if(i.user?.id!==profile.staging.operatorId)return rejectInteraction('operator-mismatch');
+    if(i.user?.bot===true)return rejectInteraction('bot-account');
+    if(await session.handle(i)!==true)return rejectInteraction('session-unhandled');
+    return true;
+   }catch{return rejectInteraction('handler-error');}
   }
  });
 }
