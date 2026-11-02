@@ -47,8 +47,24 @@ false deliberately returns a failure status without representing a real system f
 
 Do not generalize Bash-specific behavior to every shell. Do not infer success solely from an empty terminal or a final program that completed.
 
-## Independent diagnostic report
-Using only disposable local files, demonstrate one command with useful output plus an error, capture its status promptly, and separate observed facts from interpretation. Explain one case where redirecting only standard output would lose useful diagnostic evidence. Include the final workspace state and any differences from the guide.
+## Independent diagnostic report — connect the three foundations
+Complete this as one small task in the same approved disposable guest workspace. Use fresh names for this attempt; do not overwrite earlier evidence. This combines only the file, permission and diagnostic actions already taught in EH-LINUX-01 through EH-LINUX-03. It adds no network, cross-account, directory-permission or privilege-escalation permission.
+
+Before each part, state what you expect and why. Do not treat a copied command transcript as an explanation.
+
+1. Create a short invented note whose filename contains spaces. Copy it to another fresh filename, compare the contents and preserve the comparison status promptly. Explain the arguments, quoting and destination-overwrite risk.
+2. On that owned regular file only, demonstrate owner read/write, then owner read-only, then restore owner read/write. Record actual modes and explain one reason the observations do not prove absolute confidentiality or a write-denial result.
+3. Choose a definitely absent local filename. Use one read-only listing that names both the existing copy and the absent name. Keep output and diagnostics separate and preserve the listing status before another command changes it. Explain useful output plus failure, and what would be lost by collecting standard output alone.
+4. In your report, interpret the earlier append/overwrite and Bash pipeline examples. Explain why a final successful command or an empty display cannot establish that an earlier operation succeeded. Do not repeat an operation against unrelated files merely to create evidence.
+
+Keep the report short and use these headings:
+- Context and scope: identify the guest role and disposable working-directory role without unnecessary personal names or account details.
+- Prediction: the expected behavior and the reason for it.
+- Observation: minimal actual results/statuses, including differences, failures and unattempted steps.
+- Interpretation: what each observation supports and what it cannot establish.
+- Recovery/final state: the files you created, restored owner read/write, and any remaining blocker. Leave identified course files for review; do not use recursive deletion.
+
+If the guest/account, file ownership, regular-file target or tool environment is uncertain, stop and report that blocker instead of using sudo, changing another file or inventing an observation. Do not submit until the actual approved private evidence route is available. A truthful partial report is reviewable; it is not an automatic pass, progression decision or award.
 
 ## Scope and cleanup
 No scanning, downloading, credential collection or elevated execution belongs to this exercise. Retain only minimal redacted evidence in the approved private workflow. Do not put personal submissions or instructor answers in the repository. Cleanup must target only identified disposable files after review; a failed exercise is a valid troubleshooting record, not a reason to fabricate success.
