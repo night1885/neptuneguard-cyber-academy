@@ -16,6 +16,9 @@ on:
       - 'custody-composition.candidate.mjs'
       - 'custody-composition.integration.test.mjs'
       - 'custody-composition.postgres.test.mjs'
+      - 'custody-recovery-inspector.candidate.mjs'
+      - 'custody-recovery-validation.test.mjs'
+      - 'docs/formal-ethical-hacking/authoring/CUSTODY-RECOVERY-VALIDATION.md'
       - '.github/workflows/standalone-web-receipts.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -108,6 +111,13 @@ jobs:
         run: node --unhandled-rejections=strict --test custody-composition.postgres.test.mjs
       - name: Composition real-module integration - local files and scripted SQL only
         run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-composition.integration.test.mjs
+      - name: Check read-only recovery inspector and consolidated test syntax
+        shell: bash
+        run: |
+          node --check custody-recovery-inspector.candidate.mjs
+          node --check custody-recovery-validation.test.mjs
+      - name: Recovery validation - read-only evidence and synthetic local child termination
+        run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-recovery-validation.test.mjs
       - name: Actual disposable receipt SQL acceptance
         env:
           WEB_REVIEW_RECEIPT_SQL_CI: 'true'
