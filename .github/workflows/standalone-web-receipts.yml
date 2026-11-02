@@ -8,6 +8,11 @@ on:
       - 'standalone-web-save-receipts-adapter.mjs'
       - 'standalone-web-save-receipts-adapter.test.mjs'
       - 'standalone-web-save-receipts-adapter.postgres.test.mjs'
+      - 'custody-state.mjs'
+      - 'custody-storage.mjs'
+      - 'custody-controller.mjs'
+      - 'custody-combined-regression.test.mjs'
+      - 'custody-controller.postgres.test.mjs'
       - '.github/workflows/standalone-web-receipts.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -74,6 +79,20 @@ jobs:
         env:
           WEB_REVIEW_RECEIPT_SQL_CI: 'false'
         run: node --unhandled-rejections=strict --test standalone-web-save-receipts-adapter.postgres.test.mjs
+      - name: Check custody source and test syntax without connecting
+        shell: bash
+        run: |
+          node --check custody-state.mjs
+          node --check custody-storage.mjs
+          node --check custody-controller.mjs
+          node --check custody-combined-regression.test.mjs
+          node --check custody-controller.postgres.test.mjs
+      - name: Disabled custody PostgreSQL runner - expected skip is not acceptance
+        env:
+          WEB_REVIEW_CUSTODY_SQL_CI: 'false'
+        run: node --unhandled-rejections=strict --test custody-controller.postgres.test.mjs
+      - name: Custody combined regression - local files and scripted SQL clients only
+        run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-combined-regression.test.mjs
       - name: Actual disposable receipt SQL acceptance
         env:
           WEB_REVIEW_RECEIPT_SQL_CI: 'true'
@@ -82,3 +101,7 @@ jobs:
         env:
           WEB_REVIEW_RECEIPT_SQL_CI: 'true'
         run: node --unhandled-rejections=strict --test --test-concurrency=1 standalone-web-save-receipts-adapter.postgres.test.mjs
+      - name: Actual disposable custody controller and receipt adapter PostgreSQL acceptance
+        env:
+          WEB_REVIEW_CUSTODY_SQL_CI: 'true'
+        run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-controller.postgres.test.mjs
