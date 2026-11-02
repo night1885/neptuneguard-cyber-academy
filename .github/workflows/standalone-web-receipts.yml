@@ -5,6 +5,8 @@ on:
     paths:
       - 'standalone-web-save-receipts.candidate.sql'
       - 'standalone-web-save-receipts.postgres.test.mjs'
+      - 'standalone-web-save-receipts-adapter.mjs'
+      - 'standalone-web-save-receipts-adapter.test.mjs'
       - '.github/workflows/standalone-web-receipts.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -63,6 +65,8 @@ jobs:
         run: node --test standalone-web-save-receipts.postgres.test.mjs
       - name: Existing detached core lifecycle adapter and snapshot contracts
         run: node --test standalone-web-rehearsal-core.test.mjs standalone-web-rehearsal-lifecycle.test.mjs standalone-web-rehearsal-postgres.test.mjs standalone-web-rehearsal-snapshot.test.mjs
+      - name: Detached receipt adapter contracts - scripted clients only
+        run: node --unhandled-rejections=strict --test standalone-web-save-receipts-adapter.test.mjs
       - name: Actual disposable receipt SQL acceptance
         env:
           WEB_REVIEW_RECEIPT_SQL_CI: 'true'
