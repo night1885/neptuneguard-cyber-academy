@@ -59,3 +59,54 @@ test('content snapshot and guild are bound namespace components',async()=>{
   const s=setup([], {guildId:'33333333333333333',contentRevision:'b'.repeat(64)});await s.store.read(subject);
   assert.equal(s.calls[1].values[0],'33333333333333333');assert.equal(s.calls[1].values[3],'b'.repeat(64));
 });
+
+// Scripted histories, not PostgreSQL execution or a reconciliation implementation.
+async function uncertainHistory(originalCommits,overwrite) {
+  let row=null,phase='original',originalRequests=0,writes=0,originalCommitted=false;
+  const database={async query(text,values) {
+    if(text.startsWith('SELECT current_database()'))return {rows:[{database_name:config.databaseName}]};
+    assert.deepEqual(values.slice(0,4),[config.guildId,subject.actorId,subject.courseKey,config.contentRevision]);
+    if(text.startsWith('SELECT page_key'))return {rows:row?[{page_key:row.pageKey,revision:String(row.revision)}]:[]};
+    if(text.startsWith('INSERT ')) {
+      if(phase==='original') {
+        originalRequests++;
+        if(originalCommits){row={pageKey:values[4],revision:1};writes++;originalCommitted=true;}
+        throw Error('Synthetic unknown original outcome');
+      }
+      if(row)return {rows:[]};
+      row={pageKey:values[4],revision:1};writes++;return {rows:[{revision:'1'}]};
+    }
+    if(text.startsWith('UPDATE ')) {
+      if(!row||row.revision!==values[5])return {rows:[]};
+      row={pageKey:values[4],revision:row.revision+1};writes++;return {rows:[{revision:String(row.revision)}]};
+    }
+    throw Error('Unexpected scripted query');
+  }};
+  const originalWriter=createWebReviewPostgresStore(config,database),otherWriter=createWebReviewPostgresStore(config,database);
+  let originalError;
+  try{await originalWriter.compareAndSet(subject,0,'http');}catch(error){originalError=error.message;}
+  assert.equal(originalError,'Review progress unavailable');assert.equal(originalRequests,1);
+  phase='other';
+  assert.deepEqual(await otherWriter.compareAndSet(subject,0,'http'),originalCommits?{outcome:'conflict'}:{outcome:'saved',revision:1});
+  if(overwrite)assert.deepEqual(await otherWriter.compareAndSet(subject,1,'entry'),{outcome:'saved',revision:2});
+  const current=await originalWriter.read(subject);
+  phase='explicit-stale-attempt';
+  const staleAttempt=await originalWriter.compareAndSet(subject,0,'http');
+  return {originalCommitted,observations:{originalError,current,staleAttempt},writes,originalRequests};
+}
+test('matching current page and revision cannot identify an uncertain original save',async()=>{
+  const committed=await uncertainHistory(true,false),notCommitted=await uncertainHistory(false,false);
+  assert.equal(committed.originalCommitted,true);assert.equal(notCommitted.originalCommitted,false);
+  assert.deepEqual(committed.observations,notCommitted.observations);
+  assert.deepEqual(committed.observations.current,{pageKey:'http',revision:1});
+  assert.deepEqual(committed.observations.staleAttempt,{outcome:'conflict'});
+  assert.equal(committed.writes,1);assert.equal(notCommitted.writes,1);
+});
+test('a later overwrite and stale conflict still do not reconcile the original save',async()=>{
+  const committed=await uncertainHistory(true,true),notCommitted=await uncertainHistory(false,true);
+  assert.notEqual(committed.originalCommitted,notCommitted.originalCommitted);
+  assert.deepEqual(committed.observations,notCommitted.observations);
+  assert.deepEqual(committed.observations.current,{pageKey:'entry',revision:2});
+  assert.deepEqual(committed.observations.staleAttempt,{outcome:'conflict'});
+  assert.equal(committed.writes,2);assert.equal(notCommitted.writes,2);
+});
