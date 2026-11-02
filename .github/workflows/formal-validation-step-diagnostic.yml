@@ -1,0 +1,27 @@
+name: Exact formal validation step diagnostic
+on:
+  push:
+    branches: [feat/fictional-reviewer-validation]
+    paths:
+      - '.github/workflows/formal-validation-step-diagnostic.yml'
+      - '.github/scripts/formal_validation_step_diagnostic.py'
+permissions:
+  contents: read
+jobs:
+  step-metadata:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && github.ref == 'refs/heads/feat/fictional-reviewer-validation' && contains(github.event.head_commit.message, '[formal-step-diagnostic]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Publish only exact-run job and step metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: python3 .github/scripts/formal_validation_step_diagnostic.py
