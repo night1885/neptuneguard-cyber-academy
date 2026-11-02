@@ -13,6 +13,9 @@ on:
       - 'custody-controller.mjs'
       - 'custody-combined-regression.test.mjs'
       - 'custody-controller.postgres.test.mjs'
+      - 'custody-composition.candidate.mjs'
+      - 'custody-composition.integration.test.mjs'
+      - 'custody-composition.postgres.test.mjs'
       - '.github/workflows/standalone-web-receipts.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -93,6 +96,18 @@ jobs:
         run: node --unhandled-rejections=strict --test custody-controller.postgres.test.mjs
       - name: Custody combined regression - local files and scripted SQL clients only
         run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-combined-regression.test.mjs
+      - name: Check composition source and test syntax without connecting
+        shell: bash
+        run: |
+          node --check custody-composition.candidate.mjs
+          node --check custody-composition.integration.test.mjs
+          node --check custody-composition.postgres.test.mjs
+      - name: Disabled composition PostgreSQL runner - skip is not acceptance
+        env:
+          WEB_REVIEW_COMPOSITION_SQL_CI: 'false'
+        run: node --unhandled-rejections=strict --test custody-composition.postgres.test.mjs
+      - name: Composition real-module integration - local files and scripted SQL only
+        run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-composition.integration.test.mjs
       - name: Actual disposable receipt SQL acceptance
         env:
           WEB_REVIEW_RECEIPT_SQL_CI: 'true'
@@ -105,3 +120,7 @@ jobs:
         env:
           WEB_REVIEW_CUSTODY_SQL_CI: 'true'
         run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-controller.postgres.test.mjs
+      - name: Actual disposable composition PostgreSQL acceptance
+        env:
+          WEB_REVIEW_COMPOSITION_SQL_CI: 'true'
+        run: node --unhandled-rejections=strict --test --test-concurrency=1 custody-composition.postgres.test.mjs
