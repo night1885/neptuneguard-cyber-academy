@@ -1,0 +1,63 @@
+name: Standalone web disposable persistence validation
+on:
+  push:
+    branches: [feat/fictional-reviewer-validation, main]
+    paths:
+      - 'standalone-web-rehearsal-*.mjs'
+      - 'docs/formal-ethical-hacking/authoring/standalone-web-rehearsal-schema.sql'
+      - '.github/workflows/standalone-web-persistence.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'standalone-web-rehearsal-*.mjs'
+      - 'docs/formal-ethical-hacking/authoring/standalone-web-rehearsal-schema.sql'
+      - '.github/workflows/standalone-web-persistence.yml'
+      - 'package.json'
+      - 'package-lock.json'
+permissions:
+  contents: read
+concurrency:
+  group: standalone-web-persistence-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  disposable-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: web_review_ci_owner
+          POSTGRES_PASSWORD: ci-disposable-only
+          POSTGRES_DB: ng_web_review_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U web_review_ci_owner -d ng_web_review_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CI: 'true'
+      WEB_REVIEW_DISPOSABLE_CI: 'true'
+      WEB_REVIEW_PG_MAJOR: '${{ matrix.postgres }}'
+      WEB_REVIEW_TEST_DATABASE_URL: postgresql://web_review_ci_owner:ci-disposable-only@127.0.0.1:5432/ng_web_review_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Exact core lifecycle and adapter contracts
+        run: node --test standalone-web-rehearsal-core.test.mjs standalone-web-rehearsal-lifecycle.test.mjs standalone-web-rehearsal-postgres.test.mjs
+      - name: Disposable real PostgreSQL acceptance
+        run: node --test --test-concurrency=1 standalone-web-rehearsal-postgres.integration.test.mjs
