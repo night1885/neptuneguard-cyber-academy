@@ -3,7 +3,7 @@
   "status": "draft-source-review",
   "runtimeIntegration": false,
   "publishable": false,
-  "sourceCommit": "ae9a5af7a75bb9daf98fc7cbd1f7549596081543",
+  "sourceCommit": "00a473c19bab1a919698f3d661007b223b0de00d",
   "entries": [
     {"id":"EH-LAB-00","path":"lessons/EH-LAB-00.md","gitBlob":"667a660b19f0fc3dab1000b22d85bb73a5cbb311","sha256":"b0a2eb9bf1f1759ac522968a6c3c368c749736e8775c674ad5a712730cd35852"},
     {"id":"EH-LAB-01","path":"lessons/EH-LAB-01.md","gitBlob":"57f099471b478e123e654756ca29616f430ecd53","sha256":"4c6a607df922e107622c115deeddb19d86c461985683c309920321e8ca0d3326"},
@@ -13,7 +13,7 @@
     {"id":"EH-LAB-05","path":"lessons/EH-LAB-05.md","gitBlob":"bf1310c25879be2da083d7c1845625213ab48436","sha256":"34d3ad1acadaba4ac7497e61013c8cc5675e69de2a7c4b6a906e098e63c7285b"},
     {"id":"EH-LINUX-01","path":"lessons/EH-LINUX-01.md","gitBlob":"5403440343bd94763f184c4eadf261aaff5223e8","sha256":"6535f839ae45c2754d83b26c7866ffb7cdfc5d819176fa7f578f92de2d9bb218"},
     {"id":"EH-LINUX-02","path":"lessons/EH-LINUX-02.md","gitBlob":"8a8b04d6e6b31298987c860d28db10c2b7ff1564","sha256":"4491ff880fa9a88e331f729b687c45f76096158ecbab6c10617828b62fd917b5"},
-    {"id":"EH-LINUX-03","path":"lessons/EH-LINUX-03.md","gitBlob":"3e12f1aaa29d8415adaec09603e6cce7c6bb8724","sha256":"ec502dacd09b8eb8cdbaf9fb4437ebc4d9f2441246771357d5e392f09164697d"},
+    {"id":"EH-LINUX-03","path":"lessons/EH-LINUX-03.md","gitBlob":"7e0c88005c754a017bea3970ccb9e0f5d067dbe0","sha256":"dfeabe6f8408081cd23e32cb6ff94054e38979d247d553e281ef126bf4687eb4"},
     {"id":"EH-LINUX-04","path":"lessons/EH-LINUX-04.md","gitBlob":"f0605728c8c35aa19f0b01b14234ef88885495b8","sha256":"9a4dd8fda6b86ab4a0ff5a7bac9e139e204009bc51d2195a5c4da396a7ad3e34"},
     {"id":"EH-LINUX-05","path":"lessons/EH-LINUX-05.md","gitBlob":"2f4a6408a8458648cf56269c053bd3e2ddd1b351","sha256":"0e6f7d7518f7f9edd276cd6b5a092be6fe6eea2b383d1c598353c014c1a0b568"},
     {"id":"EH-NET-01","path":"lessons/EH-NET-01.md","gitBlob":"e6683a93bd99a5e3ac2f4807274ca14c072b20da","sha256":"f1add08409b34089b099dc77dd9ab4f7c813ac949e77e7ba100844ed4d60ebf9"},

@@ -12,11 +12,11 @@ function data(){
  for(const e of manifest.entries)assert.equal(e.path,`lessons/${e.id}.md`);
  const selected=new Set(ids);for(const l of catalogue.lessons)if(selected.has(l.id))for(const req of l.requires)assert.ok(selected.has(req),`${l.id} missing ${req}`);
  const sources=Object.fromEntries(manifest.entries.map(e=>[e.id,{path:e.path,text:readFileSync(new URL('../../'+e.path,import.meta.url),'utf8')}]));
- assert.equal(Object.values(sources).reduce((n,s)=>n+Buffer.byteLength(s.text),0),55876);
+ assert.equal(Object.values(sources).reduce((n,s)=>n+Buffer.byteLength(s.text),0),58090);
  return {courseId:K,catalogue,labels:load('./catalogue-labels.json'),manifest,sources};
 }
 function harness(t){
- const d=data(),model=createReadingCatalogueRenderer(d),chunks=compileLessonReadings(d);assert.deepEqual([model.readingLessonCount,model.readingPageCount,model.pageCount],[13,51,88]);
+ const d=data(),model=createReadingCatalogueRenderer(d),chunks=compileLessonReadings(d);assert.deepEqual([model.readingLessonCount,model.readingPageCount,model.pageCount],[13,52,89]);
  const state={grant:true,role:true,n:0};
  const control=createReadingReviewWorkspace({enabled:true,...d,guildId:G,entryChannelId:C,verifiedRoleId:R,readMember:async()=>({id:A,guild:{id:G},roles:{cache:{has:r=>state.role&&r===R}}}),readCourseGrant:async()=>state.grant?{student_id:'SYNTHETIC',course_key:K}:null,clock:()=>0,makeToken:()=>(++state.n).toString(16).padStart(32,'0')});t.after(()=>control.dispose());
  const interaction=(customId='fws:open',extra={})=>({customId,user:{id:A},guildId:G,channelId:C,message:{id:M,flags:{has:b=>b===64}},calls:[],isButton:()=>true,async deferReply(p){this.deferred=true;this.ephemeral=p.flags===64;this.calls.push(['deferReply',p]);},async deferUpdate(){this.deferred=true;this.calls.push(['deferUpdate']);},async reply(p){this.last=p;this.calls.push(['reply',p]);},async editReply(p){this.last=p;this.calls.push(['editReply',p]);return this.message;},...extra});
