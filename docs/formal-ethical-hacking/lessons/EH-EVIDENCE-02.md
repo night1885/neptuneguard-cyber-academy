@@ -49,6 +49,11 @@ Record the source and initial-copy digests and the changed-copy digest. Explain 
 
 A mismatching digest supports a byte inconsistency relative to the compared reference. It does not uniquely prove malicious tampering: transfer corruption, normalization, selecting the wrong file or intentional editing can also explain it. State evidence and alternatives.
 
+## Connect the three observations to the handling record
+Keep source, initial copy and edited derivative distinct in the existing handoff worksheet. The source/initial-copy comparison concerns the bytes read at that stage; the changed-copy comparison concerns the deliberate appended line. The final source recheck answers a separate question. Record actual outputs, not an expected digest copied from an author record, and do not turn a byte match into a statement about the origin or truth of the text.
+
+The supplied program reads the source but does not append to it. Preserve its run-once and fresh-directory instructions; an existing working filename is a blocker, not permission to overwrite it. If an unexpected digest appears, describe the selected file and possible transfer/editor changes without repairing the preserved source to fit an expectation. A proposed recipient, channel or retention policy remains unapproved until the actual authorized process supplies it. No real evidence transfer or extra practical task is introduced.
+
 ## Preservation and handoff exercise
 Complete EVIDENCE-HANDOFF-WORKSHEET.md using synthetic labels. Record the method, algorithm, source reference, copies, deliberate transformation and observed results. A real transfer would need an authorized recipient, approved channel, access restrictions and actual retention/deletion policy; this course document does not invent them. No real transfer is required here.
 
@@ -62,3 +67,5 @@ https://docs.python.org/3/library/hashlib.html
 https://csrc.nist.gov/pubs/sp/800/86/final
 
 The historical NIST guide informs preservation and documentation concepts, not a recommendation to adopt its historical hash choices unchanged. This practical uses SHA-256. See EVIDENCE-INTEGRITY-VALIDATION.md for bounded author checks.
+
+Maintainer note: see the [evidence and modelling walkthrough review](../authoring/EVIDENCE-MODELLING-WALKTHROUGH-REVIEW.md) for selected author checks and this documentation-only batch.
