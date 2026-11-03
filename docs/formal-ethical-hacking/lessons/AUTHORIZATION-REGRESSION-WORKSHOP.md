@@ -34,6 +34,11 @@ Restore the repaired baseline in the scratch copy before the next experiment. Op
 
 A further reasoning question: what happens if an otherwise repaired implementation checks instructor course membership but forgets to restrict the action to read? The author experiment shows that the original visible suite misses this selected regression while the added instructor-edit case catches it. That does not establish that all possible instructor-action defects are covered.
 
+## Read a counterexample failure as evidence about the tests
+Compare the repaired baseline with each optional scratch variant using the same unchanged expectations and named modules. A deny-all version should expose lost legitimate behaviour; an allow-all version should expose lost restrictions. An observed failure matters only if the relevant code imported and the intended assertion ran. Keep setup errors separate, and restore the baseline between experiments rather than carry a mutation into the next comparison.
+
+Distinguish seven discovered methods, 20 decision examples and the actual assertion-failure events; these are not interchangeable coverage counts. Catching the selected instructor-action regression shows a specific gap in the base examples, not complete mutation coverage. This workshop still tests only a trusted-record Boolean function. It is not the in-process application read/update suite, authentication, database enforcement or an HTTP exchange. Keep the supplement optional and complete the original independent policy-derived cases first.
+
 ## 5. Record your own observations
 | Local version | Predicted affected policy rule | Actual command/status | Actual assertion failures or setup error | Explanation / limit |
 |---|---|---|---|---|
@@ -47,3 +52,5 @@ Explain why both successful operations and rejected operations belong in a secur
 See [the local author validation record](AUTHORIZATION-REGRESSION-VALIDATION.md). Its results are not a substitute for your own guest execution. Full supported-platform reproduction, independent assessment calibration and application-level enforcement remain outside these checks. Catalogue, request budgets, runtime registration, publication and Community Learning remain unchanged.
 
 Source: Python unittest documentation, https://docs.python.org/3/library/unittest.html . The fictional permission policy is defined in EH-WEB-04.
+
+Maintainer note: see the [application-boundary walkthrough review](../authoring/APPLICATION-BOUNDARY-WALKTHROUGH-REVIEW.md) for this documentation batch and its selected evidence limits.

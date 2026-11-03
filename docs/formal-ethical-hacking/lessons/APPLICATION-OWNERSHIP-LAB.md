@@ -51,6 +51,11 @@ Expected reference demo: owner and assigned-instructor reads succeed; classmate 
 ## Inspect the response, not just the verdict
 Selected tests check denied bodies, unknown/nonowner response consistency, ignored forged headers, course/state boundaries, HEAD with no body and corresponding representation length, numeric response byte length, unsupported methods/query, a SQL-like value treated as a value, and generic 503 handling after the synthetic table is removed. WSGI validation wraps one selected allowed exchange only, not every protocol/route condition. Status/body consistency here does not establish timing-based non-enumeration, complete HTTP conformance or real server behaviour.
 
+## Keep the enforcement claim at the observed layer
+Trace each existing case from request-shaped input through row lookup and policy to the returned status, headers and synthetic body. Keep the harness-supplied actor distinct from untrusted header text. Parameter binding, owner equality and response construction answer different questions; a passing Boolean check alone cannot show that this handler withheld the row's text. HEAD must still pass the access decision even though it returns no body.
+
+Compare legitimate owner/instructor responses with the selected denied/absent cases without changing the fictional policy. Keep missing actor, forbidden resource, unsupported method and dependency failure as separate conditions, not interchangeable error labels. The named CLI checks can pass while confirming that the defective starter reports its expected failure. Record genuine output or blockers and retain the existing positive/forbidden case task. Nothing here authenticates a user, proves timing-based non-enumeration or authorizes the optional loopback listener.
+
 ## Instructor prompts and independent work
 Ask which facts are supplied as trusted assumptions, which operation actually executes, and which bytes reach the caller. Why does binding a query not fix ownership? Why can an empty HEAD body still need an access decision? Why are a generic dependency error and a hidden traceback different concerns? Explain that a public response without SQL details is one checked property, not complete logging/privacy assurance.
 
@@ -63,3 +68,5 @@ The separate [application-update practical](APPLICATION-UPDATE-LAB.md) extends t
 The separate [loopback verification practical](LOOPBACK-HTTP-LAB.md) adds an opt-in, short-lived 127.0.0.1 listener/client over the repaired policy with a fixed synthetic actor. It requires its own execution permission and supported setup; it is not authentication or a public deployment, and does not extend the foundation peer's request budget. See its [selected actual transport checks](LOOPBACK-HTTP-VALIDATION.md). The original exercise above remains in-process only.
 
 Sources: https://docs.python.org/3/library/wsgiref.html and https://docs.python.org/3/library/sqlite3.html and https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html .
+
+Maintainer note: see the [application-boundary walkthrough review](../authoring/APPLICATION-BOUNDARY-WALKTHROUGH-REVIEW.md) for this documentation batch and its selected evidence limits.
