@@ -7,7 +7,7 @@ The root object must contain exactly synthetic and records, with synthetic exact
 
 http_status is None or a true integer from 100 to 599. This numeric teaching range does not verify that a code is assigned, final or correctly observed. client_exit is a true integer from 0 to 255 under this fixture contract; it is not an HTTP status or universal native-tool validation. Python booleans have an integer relationship, so type(value) is int deliberately rejects them here. The same value 200 as text is also rejected rather than silently converted.
 
-Parsing and validation are separate. Well-formed JSON may contain the wrong shape or types. The program rejects unknown effective object fields and duplicate record IDs. It does not detect duplicate textual JSON keys discarded by the default decoder; that is different from duplicate IDs in a parsed list. The synthetic flag is a label, not proof of truth or authority. This helper is for the tiny reviewed teaching file, not a hardened general importer for hostile logs or real evidence.
+Parsing and validation are separate. Well-formed JSON may contain the wrong shape or types. The program rejects unknown effective object fields and duplicate record IDs. The file loader rejects repeated decoded JSON member names within any object, even if the repeated values agree; that is different from duplicate IDs in a parsed list. The already-decoded validate_document API cannot recover textual member history. The synthetic flag is a label, not proof of truth or authority. This helper is for the tiny reviewed teaching file, not a hardened general importer for hostile logs or real evidence.
 
 ## Trace the failing branch
 Consider client_exit=True in a disposable in-memory test record. A permissive isinstance(value, int) would accept its integer relationship; the strict check raises ValueError. By contrast, a boolean HTTP status also fails the numeric range, so observing its rejection alone does not show which condition caused it. Use counterexamples to understand the reason for a test result.
@@ -24,13 +24,16 @@ main catches expected OSError/ValueError families for this route and emits a fix
 | Byte bound | More than MAX_BYTES | Rejects before parsing the oversized teaching file |
 | Text decoding | Invalid UTF-8 bytes | Decoding fails before JSON validation |
 | JSON syntax | Unclosed object | Parser raises JSONDecodeError, in the ValueError family |
+| JSON member uniqueness | A repeated decoded name in one object | File loader raises ValueError during object decoding |
 | Parsed shape | A record lacks http_status | Exact-field validation rejects it |
 | Field type/range | Negative client_exit | Selected contract rejects it |
 | Aggregation | Already validated records | Groups fields under the helper's call-order assumptions |
 
 An exact-boundary test matters as well as an oversize rejection. A reviewed JSON document padded with trailing whitespace to exactly MAX_BYTES remains within the initial byte bound; a thirteenth valid record exceeds the record bound. Do not assume every rejection test proves that an adjacent valid input is accepted. The byte check is a teaching limit, not complete resource protection for hostile nesting, filesystems or concurrent changes.
 
-Unknown effective fields, repeated record IDs and duplicate textual JSON keys are three different questions. The standard decoder can retain the last value for a repeated textual key before this validator sees the dictionary. This selected limitation remains intentionally documented; do not call the program a strict arbitrary-JSON importer. A test that records the limitation is not a fix or permission to ingest real logs.
+Unknown effective fields, repeated record IDs and repeated JSON member names are three different questions. load_records uses object_pairs_hook to reject repeated names while each JSON object is decoded, before shape validation. Equality is on decoded names: an escaped spelling of the same name collides, but distinct case-sensitive names are not normalized into one. Repeated field names in separate record objects remain legitimate; the rule is per object, not per document.
+
+Calling the standard json.loads without this hook still retains its default repeated-name behaviour. Passing that already-decoded dictionary to validate_document cannot restore discarded history. The existing supplemental test intentionally demonstrates that separate API boundary and remains unchanged. This is a narrow file-loader contract change, not a claim of complete JSON standards enforcement, hostile-nesting/resource protection, authenticated provenance or permission to ingest real logs.
 
 The CLI's fixed diagnostic avoids echoing the rejected invented ID in the selected invalid-ID run. That single check is not a comprehensive privacy review. Do not broaden the accepted path/arguments, add real records or connect this helper to network tools merely because its small fixture contract is explicit.
 
@@ -38,3 +41,8 @@ The CLI's fixed diagnostic avoids echoing the rejected invented ID in the select
 On paper, trace wrong root type, unknown field, duplicate ID, boolean exit, string status, missing status and oversized file. Identify the rejection stage and which facts remain unknown. Use only fabricated values; do not replace observations.json with real output or cause a network operation to generate records. The next lesson uses test-owned in-memory copies and temporary files, not ad hoc endpoint observations.
 
 Source: https://docs.python.org/3/library/json.html and https://docs.python.org/3/tutorial/errors.html .
+
+## Maintainer contract recheck
+The new named test_summary_decoding module adds 17 selected methods for file-level repeated members, legitimate controls, the predecoded-dictionary boundary and three exact-file CLI checks. The original test_summary and test_summary_additional modules and observations.json remain unchanged. The combined selected command now has 49 methods; this is not a learner completion threshold or exhaustive input-space proof. The public CLI and the existing paper task above are unchanged.
+
+See the [WP-A decoding record](../authoring/WP-A-JSON-DECODING-VALIDATION.md) for exact baseline, proposed, temporary-regression and restored runs. Earlier validation files remain historical; a new hosted CI result must be inspected separately. No learner tools, network scope, catalogue or runtime activation are added.
