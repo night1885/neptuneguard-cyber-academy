@@ -18,7 +18,7 @@ jobs:
         include:
           - group: python-foundations
             directory: docs/formal-ethical-hacking/fixtures/python-foundations
-            command: python -B -m unittest -v test_summary test_summary_additional test_summary_decoding
+            command: python -B -m unittest -v test_summary test_summary_additional test_summary_decoding test_summary_regression
           - group: ownership-read
             directory: docs/formal-ethical-hacking/fixtures/application-ownership
             command: python -B -m unittest -v test_reference test_cli test_application_additional
