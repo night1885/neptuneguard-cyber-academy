@@ -36,6 +36,11 @@ Do not coerce every value to a string or integer to make tests pass. Do not acce
 
 Add independent cases for a floating-point port, another wrong integer port, a malformed address and a target of the wrong input type. Predict each result before running. Do not add real targets or a network transport to demonstrate your answer.
 
+## Trace each result to the exact contract
+For each existing case, separate input representation, successful address parsing, exact pair membership and the Boolean result. Keep the single legitimate pair as a positive control. A rejected malformed address and a rejected well-formed neighbour exercise different decisions; neither result demonstrates whether any host exists. Preserve the difference between an actual int, a bool and a value merely convertible to an integer.
+
+When reading unittest output, distinguish the test method from its named subcases and from individual assertion failures. Save the actual runner status before another successful command replaces it. For the four existing independent-case categories, record your prediction and actual result without changing the supplied expectations. Keep the repair inside the pure predicate: no scanner, hostname lookup or downstream action is needed to demonstrate it. Passing this model does not make a later subprocess call authorized or safe.
+
 ## Limits of the model
 A real automation system needs trusted policy configuration, a clear execution boundary, safe argument handling, bounded operations and controls for all applicable context. A unit-tested predicate that is never called before an action provides no enforcement. A hard-coded teaching pair is not a general production scope engine.
 
@@ -49,3 +54,5 @@ https://docs.python.org/3/library/ipaddress.html
 https://devguide.owasp.org/en/04-design/02-web-app-checklist/05-validate-inputs/
 
 See SCOPE-VALIDATION-CHECKS.md for bounded local author results.
+
+Maintainer note: see the [automation-boundary walkthrough review](../authoring/AUTOMATION-BOUNDARY-WALKTHROUGH-REVIEW.md) for this selected documentation batch and its execution limits.

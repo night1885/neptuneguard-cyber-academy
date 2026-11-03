@@ -46,6 +46,11 @@ Expected reference demo: all three labels preserved, all child exits zero, no ma
 
 Running python3 -B argument_lab_repaired.py extra should be rejected with status 2, empty stdout and No arguments accepted on stderr. The CLI suite verifies this for both modules. Do not interpret a silent zero exit as proof that a demo actually ran.
 
+## Keep the argument oracle separate from process success
+For each fixed case, compare the intended single literal label with what the worker actually received, the observed marker field and the relevant child/demo/test status. These are different observations: zero child status can coexist with a split label or a marker effect, while the demo may return nonzero because it detected a boundary violation. Count violating cases separately from failing assertions and discovered test methods.
+
+Keep the deliberately failing starter suite separate from the named reference/CLI suite. A visible reference is useful only when the exact entry point actually ran and produced its required report; quiet import and extra-argument rejection answer different questions. Use the existing packaging correction rather than treating an older silent zero exit as a successful demonstration. Do not combine this fixture with the scope predicate or executable-search helper and claim a complete safe automation system. Their contracts and permissions remain separate.
+
 ## Explain and submit
 Provide predictions, actual starter/reference results or blockers, a narrow local repair diff, preserved positive/negative controls and limitations. Explain why three failing assertions and two violating cases are different counts. The fixed marker proves a local interpreter effect, not remote exploitation, privilege escalation or application compromise. The repaired example does not validate every argument/parser/platform combination.
 
@@ -55,3 +60,5 @@ The [validation record](COMMAND-ARGUMENT-VALIDATION.md) corrects an earlier pack
 The separate [executable-search practical](EXECUTABLE-SEARCH-LAB.md) demonstrates that list arguments and shell=False do not alone select a trustworthy executable. It uses two fixed inert same-identity helpers, child-only PATH and an explicit-path reference; no privilege escalation or global/system configuration change is introduced. Read its distinct files, setup and limits before any approved run. This link does not expand the command-argument exercise's scope or register another canonical lesson.
 
 Sources: https://docs.python.org/3/library/subprocess.html and https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html .
+
+Maintainer note: see the [automation-boundary walkthrough review](../authoring/AUTOMATION-BOUNDARY-WALKTHROUGH-REVIEW.md) for this selected documentation batch and its execution limits.
