@@ -31,6 +31,9 @@ jobs:
           - group: search-contracts
             directory: docs/formal-ethical-hacking/fixtures/executable-search
             command: python -B -m unittest -v test_search_contracts
+          - group: maintainer-contracts
+            directory: docs/formal-ethical-hacking/authoring
+            command: python -B -m unittest -v test_run_practical_checks test_practical_cli_boundaries test_practical_output_observer
     steps:
       - uses: actions/checkout@v4
         with:
