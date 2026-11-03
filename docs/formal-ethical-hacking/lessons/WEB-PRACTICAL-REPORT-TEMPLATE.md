@@ -2,6 +2,11 @@
 
 Draft blank template. It contains no student results and collects no information by itself. Use only the approved private submission workflow; do not commit completed personal submissions into the course repository.
 
+## Use the existing fields as one traceable report
+For the existing capstone, repeat the component-analysis section inside one report, not three new submissions. Link each baseline, repair and rerun claim to an E label that identifies the component and working-copy state. Keep a prior prediction, an author's illustration, a supplied fictional response and your own actual run distinguishable; none can silently stand in for another.
+
+Leave unknown or blocked items explicit in the existing fields. A source/version reference belongs with the bytes actually used, not a convenient older fingerprint. Do not add optional worksheets or later fixtures as required capstone evidence. This guidance leaves the nine sections, blank rows, independent-case requirement, private-handling rules and capstone scope unchanged; it supplies no completed answer or collection service.
+
 ## 1. Scope and declaration
 Exercise identifier:
 Fixture versions/source reference:
@@ -65,3 +70,5 @@ Why does passing this suite not establish whole-application security?
 
 ## 9. Submission integrity
 Describe assistance or references used according to the actual assessment policy. Do not invent an academic-integrity policy here. Label all fictional or illustrative material explicitly. If execution was blocked, report the blocker honestly and avoid presenting a paper answer as a completed practical.
+
+Maintainer note: see the [reporting and evidence batch review](../authoring/REPORTING-EVIDENCE-WALKTHROUGH-REVIEW.md) for selected source checks and unchanged assessment gates.

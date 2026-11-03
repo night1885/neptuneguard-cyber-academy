@@ -42,6 +42,11 @@ A passing visible suite is not by itself proof of originality, independent maste
 
 Suspected fabrication, exposed secrets or scope violations require the actual incident/assessment process. Do not quietly resolve them with a point deduction, publish learner allegations or invent disciplinary rules.
 
+## Keep proposed descriptors linked to evidence
+When rehearsing review on synthetic samples, identify the report evidence and reasoning behind each proposed dimension judgment. Separate what the submission explains, what was actually executed and what remains blocked or unverified. Reused expectations, an author's check or an optional paper case must not be presented as independently executed learner testing.
+
+Feedback should name the missing observation or unsupported inference and a correction within the existing scope. These notes do not amend the A-E descriptors, assign scores, convert blockers into points, set a pass mark or authorize grading. Keep calibration, accommodations and incident handling dependent on actual approved policy; a rubric total is not progression, access or an award.
+
 ## Calibration before use
 1. Approve the policy, learning outcomes, accommodations and private evidence handling.
 2. Prepare synthetic benchmark submissions representing strong, partial, blocked and misleading work. Keep protected solutions in the eventual restricted instructor system, not this repository.
@@ -52,3 +57,5 @@ Suspected fabrication, exposed secrets or scope violations require the actual in
 
 ## Current state
 No benchmark set, inter-reviewer calibration, learner pilot or formal scoring has been completed by authoring this file. The full capstone has not been executed end to end. Existing release gates remain unchanged; no runtime grading, learner access or award is created.
+
+Maintainer note: see the [reporting and evidence batch review](../authoring/REPORTING-EVIDENCE-WALKTHROUGH-REVIEW.md) for selected source checks and unchanged assessment gates.

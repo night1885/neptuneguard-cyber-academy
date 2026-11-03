@@ -61,3 +61,8 @@ The 3572-byte UTF-8 fixture had SHA-256 194a177f15dc5608d9597aa72ba77de1807f3393
 No HTTP request, `policy.py` import, authenticated identity, live authorization decision, browser, database, application access, full repository suite, CI or assessor calibration was run. This is supporting draft material only: canonical count, prerequisites, existing local practical, runtime registration, publication and Community Learning remain unchanged.
 
 Source: OWASP Authorization Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html .
+
+## Version-pinned reader recheck — 2026-11-03
+At source checkpoint cc83e3e926ef652d6b8612e1e42b1482b02bdde1, the current cases.json matched Git blob f7e2b9320ecd4362b2afa38c1d4b62a141406874 and measured 2652 UTF-8 bytes with SHA-256 3705e7b9254257db897854cc2c721523c9ad381e1d7b4ea54eeb56b4b1a303ed. The historical byte count/digest above do not match this current snapshot. Their historical bytes and the cause of the difference were not reconstructed; do not infer tampering or use that earlier fingerprint as a match for the current file.
+
+The unchanged optional reader ran once in a private temporary author directory, exited zero and printed six rows with field names rather than body values. Selected checks again confirmed the stated B/C, D, E and F data distinctions. This is JSON/reader evidence only, not authentication, policy execution, a request, a new capstone case or a learner result. The dataset, reader code and case tasks are unchanged. See the [batch review](../authoring/REPORTING-EVIDENCE-WALKTHROUGH-REVIEW.md) for scope and remaining gates.
