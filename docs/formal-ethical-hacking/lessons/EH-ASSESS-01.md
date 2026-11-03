@@ -25,6 +25,13 @@ Keep target, interface, command and ordinary account consistent. Change only the
 
 Stopping a service is a controlled teaching transition, not remediation of a demonstrated vulnerability. In a real assessment, whether a service should exist depends on policy and business need. Do not frame every reachable service as a defect.
 
+## Work through the plan before using a tool
+Use the existing network finding/retest worksheet as a planning aid, not an authorization form. Start with the question, then map each proposed action to the observation it could supply. Keep confirmation of the peer listener separate from the learner's connection observation. A planned state change belongs in the plan; a measured result belongs in the later evidence record.
+
+Read the plan back as a boundary check: exact learner/peer roles and network, one address/port, the two planned invocations, running/stopped comparison, exclusions and stop/recovery contacts. Mark unresolved facts as blockers rather than fill them with example names or assumed permission. The course's example address and command cannot authorize a real machine.
+
+Before handing off to EH-ASSESS-02, explain which part is only proposed, which authority must approve execution and what would make you stop without collecting a second observation. Planning is complete as a reasoning exercise even when practical execution remains blocked. This guidance adds no deliverable, target or invocation to the existing task.
+
 ## Independent work
 Write a one-page plan for the exact two-state exercise. Explain why an unqualified scan command, a default set of ports and a version-detection option do not match the proposed scope. State what evidence would answer the question and what would remain unknown even if the two observations matched expectations.
 
@@ -32,3 +39,5 @@ Write a one-page plan for the exact two-state exercise. Explain why an unqualifi
 Review objective/scope alignment, bounded methods, evidence needs and stop decisions. No scan execution is required by this planning lesson. Publication, supported-host testing, assessment calibration and actual support/incident policy remain pending.
 
 Source: NIST SP 800-115, https://csrc.nist.gov/pubs/sp/800/115/final . It supports planning, analysis and reporting concepts; it does not endorse this course or certify the lab.
+
+Maintainer note: see the [assessment walkthrough batch review](../authoring/ASSESSMENT-WALKTHROUGH-REVIEW.md) for this documentation-only change and its validation limits.

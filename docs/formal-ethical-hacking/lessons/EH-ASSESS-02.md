@@ -39,6 +39,13 @@ Stop the server with Ctrl-C on NG-Peer. Inspect its listener state again. Make o
 
 Do not restart or repeatedly rescan to force a preferred output. If observations differ from expectations, stop and report them. Additional retries or tests need an explicit bounded recovery plan within actual authorization. Leave the server stopped and record final guest state.
 
+## Keep the comparison and its evidence separate
+Use the existing network finding/retest worksheet to connect each genuine learner result to the peer listener observation and verified service state. Preserve the actual command, tool version, observation time and immediately captured exit status. A successful process exit is not the same claim as an open port, an identified product or a verified vulnerability. Do not replace missing output with an expected transcript.
+
+Keep four descriptions distinct: the service state you checked locally, the scan's reported state, the source of a displayed service name and your bounded interpretation. A timeout or unexpected result leaves uncertainty; it does not grant another invocation or prove a particular firewall cause. Preserve the two-invocation budget and stop rules above even when the comparison is incomplete.
+
+If using the optional offline case pack, label its records fictional and keep them separate from practical evidence. Its independent cases are not a measured running/stopped sequence. Completing that interpretation support does not certify guest setup or replace execution of a separately released practical. Finish the authorized practical with the server stopped and final guest state recorded, as already required.
+
 ## Submission
 Provide your approved plan reference, exact command, version, minimal before/after evidence, listener correlation, source of any service label and at least three limitations. No scan result establishes whole-host security or complete network isolation. Do not copy fictional or author output as your own.
 
@@ -53,3 +60,5 @@ https://nmap.org/book/man.html
 https://nmap.org/book/man-host-discovery.html
 https://nmap.org/book/man-performance.html
 https://nmap.org/book/port-scanning.html
+
+Maintainer note: see the [assessment walkthrough batch review](../authoring/ASSESSMENT-WALKTHROUGH-REVIEW.md) for this documentation-only change and its validation limits.

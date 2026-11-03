@@ -22,6 +22,13 @@ Using the same case pack, explain which decision should occur next for each case
 
 For the supplied records distinguish: advisory-level impact, supported asset-specific consequence, hypothetical wider impact and unknown business context. Do not turn the case pack into a real advisory or claim any product has a published vulnerability.
 
+## Build the owner-facing handoff from the evidence
+Begin each existing case note with the applicability conclusion and its supporting record labels from EH-ASSESS-03. Then separate the advisory's stated consequence, the asset-specific context actually supplied and any wider impact that remains hypothetical. Do not make uncertainty disappear by assigning an urgent label or an invented number.
+
+Keep three questions visible: what the weakness could do under its stated conditions, what decision the responsible owner should consider next in this context, and how strongly the available records support those statements. An absent score is not zero severity. Unknown criticality, exposure or change constraints should remain named gaps, not guessed business facts or deadlines.
+
+Finish with a proposed decision, authority needed before practical action, the comparable evidence a later verification would require and residual uncertainty. A recommendation to update or clarify is not an update, restart, new investigation or verified correction. If an ordering is requested, explain its objective and the facts that could reverse it rather than inventing a universal remediation SLA. The existing worksheet and deliverables remain unchanged.
+
 ## Deliverables
 Write a concise owner-facing note for each case: evidence summary, applicability state, severity source if any, relevant context, confidence limits, next authorized decision and verification needs. Use TRIAGE-EVIDENCE-WORKSHEET.md.
 
@@ -29,3 +36,5 @@ Write a concise owner-facing note for each case: evidence summary, applicability
 Review evidence discipline, explicit assumptions and proportional recommendations. There is no approved pass threshold, organizational remediation SLA or automated priority engine. No numeric severity scores are supplied for the fictional cases. The paper exercises and reviewer interpretations have not been calibrated with learners. Existing publication gates and course permissions remain unchanged.
 
 Source: FIRST CVSS User Guide, https://www.first.org/cvss/user-guide . Its severity-versus-risk distinction informs this lesson; no FIRST endorsement or certification is claimed.
+
+Maintainer note: see the [assessment walkthrough batch review](../authoring/ASSESSMENT-WALKTHROUGH-REVIEW.md) for this documentation-only change and its validation limits.
