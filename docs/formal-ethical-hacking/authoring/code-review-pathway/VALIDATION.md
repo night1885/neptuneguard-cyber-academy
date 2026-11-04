@@ -84,3 +84,42 @@ Unit-test success does not establish complete application security or supported 
 WP-C overall acceptance remains open under the gates above. This documentation checkpoint
 adds no prerequisite, marking threshold, lesson reward, runtime integration, publication,
 merge, deployment, external database change or programme-certification decision.
+
+## 2026-11-04 — supplemental update stored-state observations
+
+A subsequent assistant-led source review identified that the three starter property tests
+stop at their failing response assertion, before their stored-field assertion. Their failure
+counts alone therefore do not record the starter's resulting stored fields. This is an
+evidence limitation, not a new independent review or a change to the existing contract.
+
+A separate supplemental maintainer harness then captured status/body/headers and the complete
+selected note-a row before and after each attempt. It reused the application_lab.py,
+application_repaired.py and update_lab.py Git blobs listed above, reconstructed from the
+connector-supplied text and verified before execution. Source checkpoint for this evidence:
+1b621912c4d94e0af081a69801497c7adaa00cb4. Predictions were declared before this supplemental
+execution; they are not retroactive predictions for the earlier contract runs.
+
+| Case | Original starter | Disposable text-only repair |
+|---|---|---|
+| owner=student-b | 200 OK; owner/text changed; revision 0 to 1 | 400 Bad Request; entire selected row unchanged |
+| course=course-b | 200 OK; course/text changed; revision 0 to 1 | 400 Bad Request; entire selected row unchanged |
+| state=submitted | 200 OK; state/text changed; revision 0 to 1 | 400 Bad Request; entire selected row unchanged |
+| Legitimate text edit | 200 OK; only text/revision changed | 200 OK; only text/revision changed |
+
+Each case used a fresh fictional application and in-memory database. Three fresh local
+subprocesses exercised original starter, disposable text-only factory repair and restored
+starter: four scenarios per variant, twelve observations total. All twelve satisfied their
+explicit expected response/full-row comparisons. Restored-starter observations exactly
+matched the first starter observations. This was not twelve distinct contract requirements
+or a rerun of test_updates.py. The supplemental runner did not modify the existing tests.
+
+The downloadable JSON record includes the supplemental runner, declared predictions,
+source fingerprints and full before/after rows; a CSV comparison was also supplied in the
+conversation. Neither is committed by this documentation-only addendum. Temporary working
+copies were removed after execution. No repository fixture or external service changed.
+
+This closes the selected starter/repaired stored-state observation gap only. Complete
+selected-row equality is not whole-database, external-side-effect, concurrency, durability
+or retry assurance. Known reference exposure remains disclosed. No Copilot request or
+independent reviewer approval occurred. The existing WP-C acceptance, learner-workflow,
+supported-setup and programme-certification gates remain open.
