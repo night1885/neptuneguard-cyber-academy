@@ -1,10 +1,12 @@
 name: Isolated formal staging composition
 on:
   push:
-    branches: [feat/protected-workspace-integration, main]
+    branches: [feat/protected-workspace-integration, feat/fictional-reviewer-validation, main]
     paths:
       - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
       - 'test-certification-isolated-staging.mjs'
+      - 'formal-isolated-staging-entry.mjs'
+      - 'test-formal-isolated-staging-entry.mjs'
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'package.json'
@@ -15,6 +17,8 @@ on:
     paths:
       - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
       - 'test-certification-isolated-staging.mjs'
+      - 'formal-isolated-staging-entry.mjs'
+      - 'test-formal-isolated-staging-entry.mjs'
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'package.json'
@@ -41,6 +45,10 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check isolated staging launcher syntax
+        run: node --check formal-isolated-staging-entry.mjs
+      - name: Offline staging launcher contracts with injected dependencies
+        run: node --test test-formal-isolated-staging-entry.mjs
       - name: Offline local-profile and composition unit tests
         run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging.test.mjs docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging-cleanup.test.mjs
       - name: Draft first-journey reading constraints
