@@ -123,3 +123,41 @@ selected-row equality is not whole-database, external-side-effect, concurrency, 
 or retry assurance. Known reference exposure remains disclosed. No Copilot request or
 independent reviewer approval occurred. The existing WP-C acceptance, learner-workflow,
 supported-setup and programme-certification gates remain open.
+
+## 2026-11-04 — extracted repair-bundle execution
+
+Later maintainer execution used selected source bytes at checkpoint
+a01fdb212d0cad893b8a9b9ba83aeec2b77b8502, not a full Git checkout. The unchanged builder
+wp_c_bundle.py was Git-blob verified as 3df41d712a306cacfe3cb93e23aa20d67017f026;
+the blank template was verified as 1352812155feafa4116579e7fd37e9e4bacaa714.
+All five application/test inputs matched the Git blobs listed above. Default builder pins
+were used without overrides. The manifest's historical baseline was left unchanged; it is
+not authenticated provenance for the inspected checkpoint.
+
+Both repair-stage archives were built, integrity/membership/manifest hashes checked and
+extracted separately. The selected-source construction tree was removed before execution.
+Application/test import origins were verified inside each extraction directory. Python-
+prefixed environment variables were removed except explicit PYTHONNOUSERSITE=1; this is
+not a security sandbox. The README contract argv was executed directly in fresh processes:
+- read-repair: python3 -B -m unittest -v test_application
+- update-repair: python3 -B -m unittest -v test_updates
+
+| Stage | Starter | Disposable repair | Restored starter |
+|---|---|---|---|
+| read-repair | 20 methods; 4 intended failures; exit 1 | 20 methods; 0 failures; exit 0 | Same 4 failures; exit 1 |
+| update-repair | 27 methods; 3 intended failures; exit 1 | 27 methods; 0 failures; exit 0 | Same 3 failures; exit 1 |
+
+All six invocations had zero errors and zero skips. Expected failure names matched the
+previous contract runs; no import/syntax/dependency failure was counted as reproduction.
+Only the designated extracted starter received its previously described narrow repair.
+Every noneditable archive member remained byte-identical, including tests, dependencies,
+README and manifest. Original starter bytes were restored and rechecked before temporary
+archives/extractions were removed. The manifest describes the archived originals, not an
+edited working copy. Repeated invocations do not add independent requirements coverage.
+
+The execution JSON and CSV summary were supplied as downloadable conversation artifacts,
+not committed by this documentation update. This closes selected repair-stage packaged
+execution in the maintainer environment only. Starter-only read/update archives and the
+README shell printf wrapper were not exercised. Ubuntu learner compatibility, accessibility,
+private delivery, independent review and programme acceptance remain unestablished. No
+repository fixture/test, CI, runtime, external service or release flag changed in that run.
