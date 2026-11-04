@@ -36,12 +36,21 @@ def validate_document(document):
     return tuple(dict(record) for record in records)
 
 
+def _unique_object(pairs):
+    result = {}
+    for name, value in pairs:
+        if name in result:
+            raise ValueError("Repeated JSON member name")
+        result[name] = value
+    return result
+
+
 def load_records(path):
     with Path(path).open("rb") as handle:
         raw = handle.read(MAX_BYTES + 1)
     if len(raw) > MAX_BYTES:
         raise ValueError("Teaching file too large")
-    return validate_document(json.loads(raw.decode("utf-8")))
+    return validate_document(json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object))
 
 
 def status_group(status):

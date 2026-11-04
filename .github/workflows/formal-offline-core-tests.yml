@@ -1,7 +1,7 @@
 name: Formal offline core fixture tests
 on:
   push:
-    branches: [formal-ethical-hacking-programme]
+    branches: [formal-ethical-hacking-programme, feat/fictional-reviewer-validation]
     paths:
       - 'docs/formal-ethical-hacking/**'
       - '.github/workflows/formal-offline-core-tests.yml'
@@ -18,7 +18,7 @@ jobs:
         include:
           - group: python-foundations
             directory: docs/formal-ethical-hacking/fixtures/python-foundations
-            command: python -B -m unittest -v test_summary test_summary_additional
+            command: python -B -m unittest -v test_summary test_summary_additional test_summary_decoding test_summary_regression
           - group: ownership-read
             directory: docs/formal-ethical-hacking/fixtures/application-ownership
             command: python -B -m unittest -v test_reference test_cli test_application_additional
@@ -31,6 +31,12 @@ jobs:
           - group: search-contracts
             directory: docs/formal-ethical-hacking/fixtures/executable-search
             command: python -B -m unittest -v test_search_contracts
+          - group: maintainer-contracts
+            directory: docs/formal-ethical-hacking/authoring
+            command: python -B -m unittest -v test_run_practical_checks test_practical_cli_boundaries test_practical_output_observer
+          - group: wp-c-packaging
+            directory: docs/formal-ethical-hacking/authoring
+            command: python -B -m unittest -v test_wp_c_bundle test_wp_c_bundle_integration
     steps:
       - uses: actions/checkout@v4
         with:

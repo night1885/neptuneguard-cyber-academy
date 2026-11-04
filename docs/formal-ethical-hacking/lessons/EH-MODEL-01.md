@@ -25,9 +25,16 @@ Consider identity confusion, unauthorized modification, unjustified disclosure, 
 ## Review completeness
 Check whether each sensitive flow has an identified decision point, whether error and background paths are represented, and whether your model distinguishes browser state from server authority. Missing detail belongs in an assumption register with a clarification question. Do not silently fill it with your preferred architecture.
 
+## Trace the model back to the fictional brief
+Use S01-S10 as references for stated facts and C01 for the paper change card. For each numbered flow, explain who supplies the data, which component makes the sensitive decision and what remains an assumption. S03 describes an application responsibility, not verified enforcement; the background worker/job handoff and collector also need a place in the model. Keep unspecified identity, queue, permissions and retention details visibly unknown rather than choosing an architecture for them.
+
+Use the traceability worksheet or an accessible equivalent to connect assets, flows and conditional threat statements. A boundary explanation should name the change in trust or authority, not merely draw a network line. The change card is a reason to revisit assumptions and questions, not a claim that a stale job has run or a mitigation has been implemented. Preserve the existing minimum of four conditional threats and the independent change analysis; no completed model or actual academy architecture is supplied here.
+
 ## Deliverables and limits
 Submit a labelled model or equivalent table, asset list, trust-boundary explanations, assumptions and at least four conditional threat statements. Identify one change to the scenario that would require revisiting the model. No live inspection, browser request or internal platform access is required.
 
 Formal scoring, accessibility review and student calibration remain pending. No threat-model exercise establishes complete security, grants access or changes the actual academy architecture.
 
 Source: https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html
+
+Maintainer note: see the [evidence and modelling walkthrough review](../authoring/EVIDENCE-MODELLING-WALKTHROUGH-REVIEW.md) for selected author checks and this documentation-only batch.

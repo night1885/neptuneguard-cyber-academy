@@ -31,7 +31,16 @@ Read VULNERABILITY-TRIAGE-CASEPACK.md. The products, identifiers, builds and evi
 
 For any missing fact, propose a narrowly scoped next action such as requesting an authoritative inventory record from the responsible owner. Do not perform that action or infer permission to access internal inventory.
 
+## Work from conditions to a bounded conclusion
+Use the existing triage worksheet to translate the fictional advisory into individual conditions before selecting an applicability label. Put the advisory evidence and asset record label beside each comparison. Preserve the distinction between an installed package claim and a running-process claim; a later-looking build string cannot fill a missing runtime record.
+
+Read the resulting table in both directions: which supplied record supports each conclusion, and which required conditions remain unknown or conflicting? A supported advisory match is not an exploit result. A narrow not-affected conclusion concerns the particular advisory and identified service, not every weakness on the asset. Missing evidence does not make the asset safe or vulnerable by default.
+
+For the existing independent cases, separate supplied observation, inference, missing fact and proposed clarification. Requesting an owner record is a proposed next step, not a record you have obtained or permission to query inventory. Keep TRAIN-ADV-A and all case products fictional; do not search for them or manufacture a CVE, version output or terminal transcript. No completed marking key or new case is added here.
+
 ## Deliverables and limits
 Submit condition-by-condition reasoning, source labels, conclusion, confidence limits and a proposed next step. Review whether each claim follows from evidence rather than whether the student found the most alarming interpretation. Formal grading and case calibration remain pending. No author scan or live vulnerability validation was performed.
 
 Source: Red Hat Security Backporting Practice, https://access.redhat.com/security/updates/backporting . This explains the general practice; it does not endorse the fictional exercise or establish applicability for a real asset.
+
+Maintainer note: see the [assessment walkthrough batch review](../authoring/ASSESSMENT-WALKTHROUGH-REVIEW.md) for this documentation-only change and its validation limits.

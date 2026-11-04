@@ -47,6 +47,11 @@ Expected reference: both cases select the intended helper, all_trusted true, exi
 
 Normal temporary-directory exit removes the generated workspaces. Interrupted execution or cleanup errors need the approved recovery process; do not recursively delete guessed parent paths. Helper source/mode/symlink checks are teaching constraints, not race-resistant containment or general executable provenance. An absolute path is not a cure for a writable trusted file.
 
+## Read runtime gates and evidence levels before interpreting a result
+The later [runtime alignment record](EXECUTABLE-SEARCH-RUNTIME-UPDATE.md) describes the non-root gate and separate mock-only contract checks. Read it alongside the historical validation record. Root rejection is an exercise-condition result, not reproduction of either helper-selection case; do not change identity or patch the gate to turn a blocked environment into a reported practical pass. Mocked launch-call checks are not actual helper executions or the original starter/reference suites.
+
+In an approved supported guest, distinguish the intended helper, observed fixed marker, child status and demo/test status under each permitted search order. Both children may succeed while the selected marker differs from the intended one. Keep caller PATH preservation separate from the child-only search order and keep explicit-path selection separate from file/dependency trust. Preserve the existing positive/rejection task and same-identity scope; no real privileged consumer or general executable-trust guarantee is established here.
+
 ## Instructor reasoning and independent work
 Ask why the child status is zero in the wrong-helper case, why shell=False does not solve search-order trust, and what a real privilege-boundary finding would still require. Draw caller context → selected executable → interpreter/dependencies → performed operation. Mark actual observations versus hypothetical higher authority.
 
@@ -61,3 +66,5 @@ Ask why the child status is zero in the wrong-helper case, why shell=False does 
 Add a positive and rejection case using only the fixed fixture and test-owned files. Preserve expectations and record interventions. Do not add arbitrary executable inputs, enumerate system paths, alter global environment or test a privileged service. Submit minimal redacted evidence through the approved private route. See [validation](EXECUTABLE-SEARCH-VALIDATION.md); formal grading and K09/certification/job readiness remain incomplete.
 
 Sources: https://docs.python.org/3/library/subprocess.html and https://docs.python.org/3/library/os.html and https://man7.org/linux/man-pages/man3/exec.3.html .
+
+Maintainer note: see the [automation-boundary walkthrough review](../authoring/AUTOMATION-BOUNDARY-WALKTHROUGH-REVIEW.md) for this selected documentation batch and its execution limits.

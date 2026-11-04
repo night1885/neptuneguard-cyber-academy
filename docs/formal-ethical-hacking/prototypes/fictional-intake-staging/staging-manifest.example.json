@@ -1,0 +1,35 @@
+{
+  "profile": {
+    "enabled": false,
+    "mode": "fictional-intake-staging",
+    "fictionalReportsOnly": true,
+    "staging": {
+      "guildId": null,
+      "botId": null,
+      "entryChannelId": null,
+      "operatorId": null,
+      "database": {
+        "host": null,
+        "port": null,
+        "name": null
+      }
+    },
+    "production": {
+      "guildId": null,
+      "botId": null,
+      "database": {
+        "host": null,
+        "port": null,
+        "name": null
+      }
+    }
+  },
+  "scope": {
+    "courseKey": "demo-course",
+    "exerciseKey": "demo-exercise"
+  },
+  "recordId": null,
+  "reviewerId": null,
+  "expectedRole": null,
+  "entryMessageId": null
+}

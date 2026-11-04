@@ -36,3 +36,20 @@ These are proposed work packages, not scheduled or completed milestones. Owners,
 In-memory JSON parse and reference checks used 37 lesson identifiers transcribed from the inspected catalogue. The plan has 21 unique competency identifiers: nine candidate-draft areas and twelve not-evidenced-in-index areas. Forty candidate lesson-reference occurrences resolve to 31 distinct catalogue IDs. Sixteen GPEN public objective headings have local candidate links with no unknown competency references. runtimeIntegration and publishable are false.
 
 These counts are not percentages of exam coverage or course completion. No full repository checkout/checker run, lesson-by-lesson semantic audit, complete provider-objective reconciliation, hardware reproduction, curriculum assessment, runtime test, CI or deployment was performed for this planning batch. Existing validation records retain their original scope.
+
+## Dated supporting-material reconciliation — 2026-11-03
+Selected review checkpoint: 4904c163f75eb6a113b57d47f7ad33e7158bf06c. The sections above and competency-plan.json retain their older index/canonical-anchor meaning. A missing canonical anchor there must not be read as a claim that no later supporting document exists. Conversely, a later document or local test does not close the competency gap.
+
+| Areas | Later supporting evidence located | Remaining evidence boundary |
+|---|---|---|
+| K03 | [Windows foundation record](../lessons/WINDOWS-FOUNDATIONS-VALIDATION.md) | Structural fictional-case checks only; no native PowerShell/Windows guest, ACL/process/service practical, supported route or learner calibration |
+| K06 | [Scripting foundation record](../lessons/PYTHON-FOUNDATIONS-VALIDATION.md) | Selected correct-starter, temporary-regression and CLI checks; not general input hardening, independent scripting competence or student-platform reproduction |
+| K08, K06 | [Command/automation review](AUTOMATION-BOUNDARY-WALKTHROUGH-REVIEW.md) | Fixed interpreter-boundary support and separate scope-predicate checks, not a complete controlled-exploitation pathway |
+| K09, K02 | [Linux privilege-boundary record](../lessons/LINUX-PRIVILEGE-VALIDATION.md) | Paper control-to-consumer analysis, not executed escalation or a higher-authority consumer; executable-selection support remains distinct |
+| K11 | [Domain foundation record](../lessons/DOMAIN-FOUNDATIONS-VALIDATION.md) | Fictional records/reference checks, not a directory/KDC build, native queries, tickets, domain protocol execution or supported lab |
+| K13 | [Password-verifier record](../lessons/PASSWORD-VERIFIER-VALIDATION.md) | Selected synthetic verifier tests and counterexamples, not account testing, production authentication/cryptography or complete password-assessment competence |
+| K05, K06, K14, K17 | [Code-review integration record](code-review-pathway/VALIDATION.md), [independent-task draft](code-review-pathway/03-INDEPENDENT-INVESTIGATION.md) and [offline-core CI design record](code-review-pathway/OFFLINE-CORE-CI-REVIEW.md) | Visible familiar source and authored handover guidance do not establish an unfamiliar-task assessment, current selected-job execution or calibrated independent performance |
+
+These are selected evidence-level reconciliations, not a new exhaustive audit. Other areas above remain unresolved under the original review; no claim of repository-wide absence or new provider alignment is made. Historical local counts and CI design statements retain their own snapshots. The existing blueprint already links several follow-ups; this addendum does not create new canonical IDs, prerequisite edges or completion states.
+
+Use the [core work-package plan](CORE-WORK-PACKAGE-PLAN.md) to select implementation and reproduction work rather than another optional case pack. It specifies proposed outputs, controls and stop gates, not execution permission, an owner assignment, a schedule or closure of any K-area. See the [selected reconciliation checks](CORE-WORK-PACKAGE-REVIEW.md).

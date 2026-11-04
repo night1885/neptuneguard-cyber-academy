@@ -1,0 +1,78 @@
+name: Fictional reviewer read - disposable validation
+on:
+  push:
+    branches: ['feat/fictional-reviewer-validation']
+    paths:
+      - '.github/workflows/fictional-reviewer-validation.yml'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/reviewer-read.candidate.*'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-reviewer-reader.candidate*'
+permissions:
+  contents: read
+jobs:
+  reviewer-read-validation:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && github.ref == 'refs/heads/feat/fictional-reviewer-validation' && contains(github.event.head_commit.message, '[reviewer-read-validate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_DB: fi_stage_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fixture-only-admin-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fi_stage_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: fi_stage_test
+      PGPASSWORD: fixture-only-admin-password
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify baseline learner and SQL sources remain unchanged
+        run: |
+          git merge-base --is-ancestor 8f119047a1f429692f3e6dda7dadf7cbf3660e15 HEAD
+          git diff --exit-code 8f119047a1f429692f3e6dda7dadf7cbf3660e15 HEAD -- docs/formal-ethical-hacking/prototypes/synthetic-workspace docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-schema.sql docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-storage.mjs docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-pilot.mjs docs/formal-ethical-hacking/prototypes/fictional-intake-staging/reviewer-read.candidate.sql docs/formal-ethical-hacking/prototypes/fictional-intake-staging/reviewer-read.candidate.test.mjs package.json package-lock.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install disposable baseline schema
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE fi_stage_worker NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+          psql -v ON_ERROR_STOP=1 -v staging_database=fi_stage_test -v production_database=excluded_production_database -v staging_admin=postgres -v staging_worker=fi_stage_worker -f docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-schema.sql
+      - name: Baseline staging regression and adapter unit tests
+        env:
+          FICTIONAL_STAGE_SQL_TESTS: 'true'
+          FICTIONAL_STAGE_TEST_DB: fi_stage_test
+          FICTIONAL_STAGE_REVIEW_SQL_TESTS: 'false'
+          FICTIONAL_STAGE_REVIEW_ADAPTER_SQL_TESTS: 'false'
+        run: node --unhandled-rejections=strict --test docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*.test.mjs
+      - name: Install disposable reviewer read function
+        run: >-
+          psql -v ON_ERROR_STOP=1 -v staging_database=fi_stage_test
+          -v production_database=excluded_production_database -v staging_admin=postgres
+          -v staging_worker=fi_stage_worker
+          -f docs/formal-ethical-hacking/prototypes/fictional-intake-staging/reviewer-read.candidate.sql
+      - name: Reviewer SQL contract
+        env:
+          FICTIONAL_STAGE_REVIEW_SQL_TESTS: 'true'
+        run: node --unhandled-rejections=strict --test docs/formal-ethical-hacking/prototypes/fictional-intake-staging/reviewer-read.candidate.test.mjs
+      - name: Enable fixture-only worker login in disposable service
+        run: psql -v ON_ERROR_STOP=1 -c "ALTER ROLE fi_stage_worker LOGIN PASSWORD 'fixture-only-worker-password'"
+      - name: Actual worker adapter and concurrency contracts
+        env:
+          FICTIONAL_STAGE_REVIEW_ADAPTER_SQL_TESTS: 'true'
+        run: node --unhandled-rejections=strict --test docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-reviewer-reader.candidate.postgres.test.mjs

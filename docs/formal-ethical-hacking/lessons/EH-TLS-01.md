@@ -22,6 +22,11 @@ The clean peer fixture in EH-LAB-04 uses plain HTTP for bounded protocol observa
 
 Replacing http with https in a URL does not configure a TLS server. The existing fixture has not been provisioned or tested as one. A practical TLS lab would need its own reviewed certificate setup, trust procedure, exact endpoints and reset instructions; none is introduced here.
 
+## Connect each protection claim to its endpoints
+In the existing fictional path, label the client and server endpoint of each stated TLS connection before describing confidentiality, integrity or peer identity. Keep a proxy's public connection distinct from any downstream connection and from stored logs or database records. If the brief leaves a hop unspecified, mark it unknown rather than extend the public-facing certificate's claim to that hop.
+
+Compare this boundary with the earlier plain-HTTP fixtures only as a reasoning exercise: a successful HTTP response, an owned loopback connection and an authenticated TLS connection are different evidence claims. None establishes resource authorization by itself. Preserve the existing diagram task and explicit unknowns; do not configure TLS, add credentials to a fixture, inspect a real service or create a new practical while explaining the comparison.
+
 ## Independent reasoning
 Draw a fictional browser-to-proxy-to-application path. Mark what each stated TLS connection would protect and which links remain unspecified. Explain why a valid public-facing certificate would not prove downstream encryption or resource authorization. State which missing facts would require clarification before calling the complete path protected.
 
@@ -29,3 +34,5 @@ Draw a fictional browser-to-proxy-to-application path. Mark what each stated TLS
 Submit an annotated boundary explanation and bounded conclusions. Keep proposed architecture separate from actual observations. No network test, key generation, certificate installation or production inspection is required. Student calibration, accessibility review and formal grading remain pending.
 
 Source: https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html
+
+Maintainer note: see the [transport walkthrough batch review](../authoring/TRANSPORT-WALKTHROUGH-REVIEW.md) for the source review and unexecuted practical boundaries.

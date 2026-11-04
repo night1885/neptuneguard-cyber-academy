@@ -19,14 +19,16 @@ export function createNoModalIntakeBoundary({enabled=false,guildId,entryChannelI
     if(opening&&owners.size>=100)return deny();
     try{
       if(opening)await i.deferReply({flags:64});else await i.deferUpdate();
-      if(!ready())return true;
+      if(stopped)return true;
+      if(!ready()){await i.editReply(unavailable());return true;}
       const ctx={actorId:i.user.id,guildId};let r;
       if(opening)r=await coordinator.prepare(ctx);
       else if(i.customId==='nmi:preview')r=await coordinator.preview(ctx);
       else if(/^nmi:submit:[a-f0-9-]{36}$/.test(i.customId)){
         const token=i.customId.slice(11);r=await coordinator.submit(ctx,token,token);
       }else r={ok:false};
-      if(!ready())return true;
+      if(stopped)return true;
+      if(!ready()){await i.editReply(unavailable());return true;}
       let payload=unavailable();
       if(r?.ok===true&&(!i.customId.startsWith('nmi:submit:')||Number.isSafeInteger(r.expiresAtMs)&&clock()<r.expiresAtMs)){
         if(opening&&id(r.channelId))payload={content:`Intake channel: <#${r.channelId}>. Write the report there, then preview it.`,components:[{type:1,components:[button('Preview latest report','nmi:preview')]}]};

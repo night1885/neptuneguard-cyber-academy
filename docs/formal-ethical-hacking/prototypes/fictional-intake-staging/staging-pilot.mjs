@@ -1,0 +1,73 @@
+import {readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+import {inspectFictionalIntakeStagingProfile} from './fictional-intake-staging-profile.mjs';
+import {createFictionalStagingResourceOwner} from './fictional-intake-staging-resource-owner.mjs';
+import {createFictionalIntakeStagingSession} from './fictional-intake-staging-session.mjs';
+import {createFictionalIntakeStagingLifecycle} from './fictional-intake-staging-lifecycle.mjs';
+import {createNoModalIntakeCoordinator} from '../synthetic-workspace/no-modal-intake.mjs';
+import {createFictionalStagingSourceReader} from './fictional-intake-staging-source-reader.mjs';
+import {createStagingStorage} from './staging-storage.mjs';
+import {createStagingChannels} from './staging-channels.mjs';
+import {createStagingRetention} from './staging-retention.mjs';
+import {createStagingOperationGate} from './staging-operation-gate.mjs';
+import {createStagingCoordinatedPrepare} from './staging-coordinated-prepare.mjs';
+import {stagingPrepareTimeouts} from './staging-prepare-timeouts.mjs';
+const unavailable=()=>Error('Fictional staging pilot unavailable');
+export function createStagingPilot(manifest={},options={}){
+ const inspected=inspectFictionalIntakeStagingProfile(manifest.profile??{});
+ if(!inspected.ok)throw unavailable();
+ if(!inspected.enabled)return Object.freeze({enabled:false,operationalReady:false,start:async()=>false,stop:async()=>{}});
+ const {profile}=inspected,{scope,recordId,reviewerId,expectedRole,entryMessageId}=manifest;
+ if(!/^[0-9]{17,20}$/.test(entryMessageId??''))throw unavailable();
+ let resources,timer,closed=false,fatal=false,started=false,coordinator,reader,listener;const now=options.now??Date.now;
+ let startupStage='not-started';
+ function markStartup(stage){startupStage=stage;try{console.log('Staging diagnostic: startup-'+stage);}catch{}}
+ const operationTimeoutMs=options.operationTimeoutMs??5000,pollIntervalMs=options.pollIntervalMs??1000,cleanupTimeoutMs=options.cleanupTimeoutMs??5000;
+ if(typeof now!=='function'||![operationTimeoutMs,cleanupTimeoutMs,pollIntervalMs].every(n=>Number.isInteger(n)&&n>=10&&n<=60000))throw unavailable();
+ const timeoutPolicy=stagingPrepareTimeouts(options);
+ async function bounded(work,ms,message){let t;try{return await Promise.race([work,new Promise((_,reject)=>{t=setTimeout(()=>reject(Error(message)),ms);})]);}finally{clearTimeout(t);}}
+ const gate=createStagingOperationGate({timeoutMs:operationTimeoutMs,onUnhealthy:()=>{fatal=true;}});
+ const owner=createFictionalStagingResourceOwner(manifest.profile,{expectedRole,readCredentials:options.readCredentials??(async()=>{const env=process.env;if(env.FICTIONAL_STAGE_RUN!=='true')throw unavailable();return {discordToken:env.FICTIONAL_STAGE_TOKEN,databasePassword:env.FICTIONAL_STAGE_DB_PASSWORD,databaseCa:env.FICTIONAL_STAGE_DB_CA};}),
+  loadPostgres:options.loadPostgres,loadDiscord:options.loadDiscord??(async()=>{const sdk=await import('discord.js');return {...sdk,Client:class extends sdk.Client{constructor(o){super({...o,intents:[...o.intents,sdk.GatewayIntentBits.GuildMembers],makeCache:sdk.Options.cacheWithLimits({MessageManager:0})});}}};})});
+ const transportReady=()=>!closed&&!fatal&&owner.isReady()&&store.ready;
+ const store=createStagingStorage({profile,scope,recordId,reviewerId,expectedRole,getResources:()=>resources});
+ const channels=createStagingChannels({profile,reviewerId,store,getResources:()=>resources,isReady:transportReady,now});
+ const retention=createStagingRetention({store,channels,now,operationTimeoutMs,onUnhealthy:()=>{fatal=true;}});
+ const unsupported=async()=>{throw unavailable();};
+ reader=createFictionalStagingSourceReader(manifest.profile,{getClient:()=>resources?.client,isReady:()=>transportReady()&&!fatal&&retention.admissionReady,resolve:store.resolve,authorize:store.authorize,journalRead:store.journalRead,verifyPrivate:channels.verifyPrivate,now});
+ coordinator=createNoModalIntakeCoordinator({enabled:true,mode:'detached-rehearsal',guildId:profile.staging.guildId,productionGuildId:profile.production.guildId,ownerId:reviewerId,courseKey:scope.courseKey,policy:{draftHours:24,reportHours:24,ownerOnly:true,status:'proposed-for-rehearsal'},timeoutMs:1000,providerTimeoutMs:timeoutPolicy.providerTimeoutMs},
+  {...store,...channels,latest:reader.latest,exact:reader.exact,now,readReport:unsupported,publishTrackedReview:unsupported,review:unsupported,claimDraft:unsupported,deleteDraft:unsupported,finishDraft:unsupported});
+ const ungatedCoordinator=coordinator;
+ coordinator=Object.freeze({...ungatedCoordinator,prepare:createStagingCoordinatedPrepare({gate,timeoutMs:timeoutPolicy.prepareTimeoutMs,prepare:(...args)=>ungatedCoordinator.prepare(...args),isReady:()=>transportReady()&&!fatal&&retention.admissionReady})});
+ const runRetention=()=>gate.run(()=>{if(closed||fatal)throw unavailable();return retention.pass();});
+ const lifecycle=createFictionalIntakeStagingLifecycle(manifest.profile,{createSession:()=>createFictionalIntakeStagingSession(manifest.profile,scope,{coordinator,storage:store,now,expectedRole,isReady:()=>transportReady()&&!fatal&&retention.admissionReady,cancelStartup:owner.cancelStartup,
+  async startResources(p){markStartup('resource-owner');resources=await owner.startResources(p);markStartup('storage-initialize');await store.initialize();markStartup('initial-guild-audit');await channels.auditGuild();markStartup('initial-retention');const r=await runRetention();if(!r.complete)throw unavailable();markStartup('resources-ready');return resources;},
+  async verifyIsolation(){markStartup('isolation-store-ready');if(!store.ready)return false;markStartup('isolation-guild-audit');if(await channels.auditGuild()!==true)return false;const ctx={actorId:profile.staging.operatorId,guildId:profile.staging.guildId,action:'prepare'};markStartup('isolation-record-resolution');const b={...await store.resolve(ctx),...ctx};markStartup('isolation-journal-read');const j=await store.journalRead(b);markStartup('isolation-journal-and-privacy-check');const isolated=j===null||j?.state==='available'&&await channels.verifyPrivate(b,j.channelId)===true;markStartup(isolated?'isolation-passed':'isolation-rejected');return isolated;},
+  closeResources:cleanup})});
+ let stopPromise,cleanupPromise;
+ function cleanup(){
+  if(!cleanupPromise)cleanupPromise=(async()=>{gate.stop();const stopRetention=retention.stop();reader.dispose();coordinator.dispose();channels.dispose();store.dispose();
+   const outcomes=await bounded(Promise.allSettled([stopRetention,owner.closeResources()]),cleanupTimeoutMs,'Staging cleanup requires attention');
+   if(outcomes.some(r=>r.status==='rejected'))throw Error('Staging cleanup requires attention');})();
+  return cleanupPromise;
+ }
+ function stop(){closed=true;fatal=true;started=false;gate.stop();clearTimeout(timer);if(listener)resources?.client.removeListener('interactionCreate',listener);owner.cancelStartup();
+  if(!stopPromise)stopPromise=(async()=>{const outcomes=await bounded(Promise.allSettled([lifecycle.stop(),cleanup()]),cleanupTimeoutMs,'Staging cleanup requires attention');if(outcomes.some(r=>r.status==='rejected'))throw Error('Staging cleanup requires attention');})();return stopPromise;
+ }
+ function scheduleRetention(){if(closed||fatal||retention.failed)return;timer=setTimeout(()=>{void runRetention().then(r=>{if(!r.complete)fatal=true;},()=>{fatal=true;}).finally(()=>{if(!closed&&!fatal&&!retention.failed)scheduleRetention();});},pollIntervalMs);timer.unref?.();}
+ return Object.freeze({enabled:true,operationalReady:false,get ready(){return started&&!fatal&&!closed&&lifecycle.ready;},
+  async start(){try{if(closed)return false;markStartup('lifecycle-start');if(await lifecycle.start()!==true||closed){markStartup('lifecycle-rejected');return false;}markStartup('entry-validation');await bounded((async()=>{
+    markStartup('entry-guild-fetch');const g=await resources.client.guilds.fetch({guild:profile.staging.guildId,force:true});if(closed||fatal)throw unavailable();
+    markStartup('entry-channel-fetch');const channel=await g.channels.fetch(profile.staging.entryChannelId,{force:true,cache:false});if(closed||fatal||channel?.guildId!==profile.staging.guildId)throw unavailable();
+    markStartup('entry-message-fetch');const m=await channel.messages.fetch({message:entryMessageId,force:true,cache:false});if(closed||fatal)throw unavailable();
+    markStartup('entry-message-check');const ids=m.components?.flatMap(r=>r.components.map(b=>b.customId));if(m.author?.id!==profile.staging.botId||!ids?.includes('nmi:prepare')||!ids.includes('nmr:list'))throw unavailable();
+   })(),operationTimeoutMs,'Staging entry validation outcome unknown');
+   markStartup('listener-registration');listener=i=>{if(typeof i?.customId!=='string'||!['nmi:','nmr:'].some(p=>i.customId.startsWith(p)))return;void lifecycle.handle(i).then(async handled=>{if(!handled&&!i.deferred&&!i.replied)await i.reply({content:'Fictional intake is unavailable.',flags:64,allowedMentions:{parse:[]}});}).catch(()=>{fatal=true;});};
+   if(closed||fatal)throw unavailable();resources.client.on('interactionCreate',listener);started=true;scheduleRetention();markStartup('complete');return true;
+  }catch{markStartup('failed-at-'+startupStage);await stop();throw unavailable();}},stop});
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+ let pilot;try{const file=process.argv[2];if(!file){console.log('Fictional staging pilot disabled');}else{const manifest=JSON.parse(await readFile(file,'utf8'));pilot=createStagingPilot(manifest);if(pilot.enabled){if(process.env.FICTIONAL_STAGE_RUN!=='true')throw unavailable();await pilot.start();console.log('Fictional staging pilot started; operational readiness not certified');}else console.log('Fictional staging pilot disabled');}}
+ catch{console.error('Fictional staging pilot failed; inspect approved deployment diagnostics');process.exitCode=1;}
+ for(const sig of ['SIGINT','SIGTERM'])process.once(sig,()=>{void pilot?.stop().catch(()=>{console.error('Staging cleanup requires attention');process.exitCode=1;});});
+}

@@ -71,16 +71,42 @@ def select_checks(checks, only=None, shell=False, loopback=False):
 
 
 def observe(result):
-    text = result.stderr
-    match = re.search(r"(?m)^Ran (\d+) tests? in ", text)
-    def count(pattern):
-        found = re.search(pattern, text)
-        return int(found.group(1)) if found else 0
-    return {"exit": result.returncode, "methods": int(match.group(1)) if match else None,
-            "failures": len(re.findall(r"(?m)^FAIL:", text)),
-            "failure_tests": sorted(re.findall(r"(?m)^FAIL:\s+(test_[A-Za-z0-9_]+)", text)), "errors": len(re.findall(r"(?m)^ERROR:", text)),
-            "skipped": count(r"skipped=(\d+)"), "expected_failures": count(r"expected failures=(\d+)"),
-            "unexpected_successes": count(r"unexpected successes=(\d+)")}
+    fields = ("methods", "failures", "failure_tests", "errors", "skipped",
+              "expected_failures", "unexpected_successes")
+    observed = dict.fromkeys(fields, None)
+    observed["exit"] = result.returncode
+    text = result.stderr if isinstance(result.stderr, str) else ""
+    matches = list(re.finditer(r"(?m)^Ran (\d+) tests? in [^\n]+\n?", text))
+    if not matches:
+        return observed
+    summary = matches[-1]
+    observed["methods"] = int(summary.group(1))
+    outcome = re.fullmatch(r"(OK|FAILED)(?: \(([^()\r\n]+)\))?", text[summary.end():].strip())
+    if outcome is None:
+        return observed
+    labels = {"failures": "failures", "errors": "errors", "skipped": "skipped",
+              "expected failures": "expected_failures", "unexpected successes": "unexpected_successes"}
+    counts = dict.fromkeys(labels.values(), 0)
+    seen = set()
+    if outcome.group(2):
+        for part in outcome.group(2).split(","):
+            item = re.fullmatch(r"([^=]+)=(\d+)", part.strip())
+            if item is None or item.group(1) not in labels or item.group(1) in seen:
+                return observed
+            seen.add(item.group(1))
+            counts[labels[item.group(1)]] = int(item.group(2))
+    unsuccessful = counts["failures"] + counts["errors"] + counts["unexpected_successes"]
+    if (outcome.group(1) == "OK" and unsuccessful) or (outcome.group(1) == "FAILED" and not unsuccessful):
+        return observed
+    observed.update(counts)
+    prefix = text[:summary.start()]
+    headers = re.findall(r"(?m)^FAIL:[^\n]*", prefix)
+    names = re.findall(r"(?m)^FAIL:\s+(test_[A-Za-z0-9_]+)", prefix)
+    if len(headers) == len(names) == counts["failures"]:
+        observed["failure_tests"] = sorted(names)
+    if len(re.findall(r"(?m)^ERROR:", prefix)) != counts["errors"]:
+        observed["errors"] = None
+    return observed
 
 
 def execute(check, root=COURSE_ROOT, child_runner=subprocess.run):

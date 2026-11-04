@@ -1,0 +1,11 @@
+# Staging lifecycle and actual assembly checkpoint
+
+Prepared against 966fc0b5be1c3be50ad8f7cb381ad2bf27e9faad on feat/fictional-intake-staging. This batch adds detached lifecycle/session source and six composition tests, not a deployable SDK/database launcher. Existing profile, CI-only adapter, review-only staging application and normal startup remain unchanged.
+
+Six local tests passed on Node 20.20.1, zero failures/skips/cancellations, using actual lifecycle/session/assembly/both boundaries. Reused source blobs matched b3bb0f741cb7ba4c3bf35fa44c1463b9a315d217, dc3f32d627fe04b846336ca2dd4cec271ac94398 and 91930ba190fd10e451d84e1f7cc04adf02b1982d; profile matched 8e270d48c66879e74df71002cba3c111bf43129f. Coordinator, storage, resource callbacks and SDK interactions are scripted doubles. No actual coordinator/SQL/SDK composition, full-checkout or committed-head CI result is claimed. Earlier profile and lifecycle preparation tests are distinct evidence; the separate 19-case lifecycle draft suite is not added by this batch. No independent review.
+
+Session owns only assembly; startResources, verifyIsolation and closeResources are explicit trusted resource-owner callbacks. Verification true is not itself identity/permission evidence. Local readiness requires startup, verification and current provider/assembly readiness; operationalReady remains false. The operator gate is for a fictional maintainer demo, not learner enrollment.
+
+No timeout, cancellation or drain barrier: stop can remain pending on unsettled startup/cleanup. Factory owns cleanup if it throws before returning a session. Direct session close during pending startup needs owner synchronization. Already-issued work and reply delivery can race shutdown; no recall or erasure guarantee.
+
+Real staging targets, SDK/database providers, credential loading, listener/entry publication, deployable launcher and stop/rollback execution remain unfinished. No workflow, package, runtime, SQL fixture, policy, deadline, account cleanup or live setting changes. Issue #30 remains incomplete. Keep on this implementation branch; source commit does not authorize PR, merge, provisioning, deployment, database operations, Discord publication or intake activation.

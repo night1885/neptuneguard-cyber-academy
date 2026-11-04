@@ -1,0 +1,12 @@
+\set ON_ERROR_STOP on
+SET search_path TO public, pg_catalog;
+SET lock_timeout TO '5s';
+SET statement_timeout TO '30s';
+\ir staging-precheck.sql
+\ir ../../../../../migrations/001-certification.sql
+\ir ../../../../../migrations/002-typed-acknowledgment.sql
+\ir ../../../../../migrations/003-enrollment-submission-metadata.sql
+\ir ../../../../../migrations/004-immutable-agreement-versions.sql
+\ir ../../../../../migrations/005-account-acknowledgment-age.sql
+\ir ../../../../../migrations/006-application-closure-metadata.sql
+\ir ../../../../../migrations/007-course-enrollment-lifecycle.sql

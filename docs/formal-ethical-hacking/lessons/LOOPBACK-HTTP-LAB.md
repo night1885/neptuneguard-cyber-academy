@@ -39,9 +39,16 @@ The correct reviewed helper should pass 12 methods (ten transport/lifecycle/guar
 
 One method simulates startup failure by making the fixture factory fail; it does not demonstrate every network/resource failure. The budget test changes the test-owned counter and verifies rejection before connection, rather than sending unnecessary requests. Cleanup checks inspect the managed socket's closed descriptor, worker termination and database-closure record. They do not reconnect to a released port, which might be reused, or claim every host listener is absent.
 
+## Keep transport, identity and cleanup evidence separate
+Use the existing report fields to distinguish the fixed request results, client-attempt count, handled-call count and post-context cleanup checks. Four demo attempts, seven Boolean checks and 12 test methods are different units. A refusal before connection, a failed startup and a completed exchange do not establish the same thing. Preserve actual output or a blocker; do not send extra probes to turn an ambiguous count into a preferred result.
+
+The fixed actor remains a harness assumption even when bytes cross an actual owned TCP connection. Plain loopback HTTP does not acquire TLS properties by being local, and successful cleanup of this managed run does not prove cleanup after a crash or forced termination. Keep the original separately approved listener scope, request budget and no-fallback rules. The TLS lessons remain conceptual/paper work, not a certificate setup or permission to change this helper.
+
 ## Instructor questions and deliverable
 Explain what is newly verified compared with in-process WSGI calls and what remains an assumption. Why does fixed ALICE context not test a login? Why does a 404 need a body check? Why is HEAD length not transferred content? Why is a successful owned bind not evidence about a physical LAN? Why is a joined worker not proof of cleanup after a crash or forced termination?
 
 Submit scope/version, predictions, genuine demo/test results or blockers, client/server-count interpretation, cleanup evidence and limitations. Do not submit real account/host details or invent a curl transcript. No automatic progression, private-evidence workflow, grade, award or production grant follows. See [validation](LOOPBACK-HTTP-VALIDATION.md). TLS, browser/proxy behaviour, real authentication, supported student hardware, malicious local clients, crash durability and full deployment/security testing remain outside this selected check.
 
 Sources: https://docs.python.org/3/library/wsgiref.html and https://docs.python.org/3/library/http.client.html and https://docs.python.org/3/library/sqlite3.html .
+
+Maintainer note: see the [transport walkthrough batch review](../authoring/TRANSPORT-WALKTHROUGH-REVIEW.md) for the source review and unexecuted practical boundaries.

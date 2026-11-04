@@ -25,6 +25,11 @@ Select a small initial set based on the protected assets, plausible exposure, kn
 
 A future retest should preserve the original claim, permitted method and comparison basis while recording the approved change and remaining gaps. Link it to the finding/retest worksheet rather than claim that a model alone fixes anything.
 
+## Check the proposed case pair before calling it a test result
+Carry the threat ID, asset and numbered flow from your model into each existing worksheet entry. State the synthetic identity/resource relationship, proposed control, expected legitimate result and closely related denied or boundary result. Explain the oracle and the minimum evidence that could distinguish the two, rather than treating one status label as the whole observation. Keep control design, unit-level illustration and integration enforcement as separate claims.
+
+The assignment's three threats produce six proposed cases, not six executions. Leave all of them marked not executed and keep live routes and credentials out of the worksheet. If a missing fact prevents a defensible setup or oracle, name the clarification and authority required instead of inventing them. Describe supported, contradicted and inconclusive as possible future interpretations of specified evidence, not outcomes already obtained. The existing clarification case, rationale and fixture-comparison task remain unchanged; no test runner or executable application is added.
+
 ## Independent assignment
 Choose three threats from your model. For each create one positive and one negative or boundary test, and explain its oracle and limits. Include at least one case whose correct next result is clarification rather than immediate execution. Keep all steps paper-based and synthetic.
 
@@ -34,3 +39,5 @@ Explain which earlier fixture could teach a related concept and why passing that
 Submit the traceability worksheet and a short rationale. Review scope, identity/resource setup, preservation of legitimate behavior, minimal evidence, explicit unknowns and outcome interpretation. Numeric grading and assessor examples remain pending. No actual application, test automation, deployment or formal permission is created.
 
 Source: https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html
+
+Maintainer note: see the [evidence and modelling walkthrough review](../authoring/EVIDENCE-MODELLING-WALKTHROUGH-REVIEW.md) for selected author checks and this documentation-only batch.

@@ -1,0 +1,53 @@
+name: Fictional managed responses - disposable validation
+on:
+  push:
+    branches: ['feat/fictional-reviewer-validation']
+    paths:
+      - '.github/workflows/fictional-review-managed-validation.yml'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate*'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-recovery-inspection.candidate.mjs'
+permissions:
+  contents: read
+jobs:
+  managed-responses:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && github.ref == 'refs/heads/feat/fictional-reviewer-validation' && contains(github.event.head_commit.message, '[review-managed-validate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Guard additive managed-response scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=bd6cffe967098f22ab9ca83d9d9b1ce313c07ecb
+          git merge-base --is-ancestor "$base" HEAD
+          git diff --name-only "$base" HEAD | while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/fictional-review-managed-validation.yml) ;;
+              docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*)
+                name=${path#docs/formal-ethical-hacking/prototypes/fictional-intake-staging/}
+                case "$name" in
+                  REVIEW-MANAGED-CHECKPOINT.md|staging-review-managed-responses.candidate.mjs|staging-review-recovery-inspection.candidate.mjs|staging-review-managed-responses.candidate.test.mjs|staging-review-managed-responses.candidate.filesystem.test.mjs) ;;
+                  *) echo 'Unexpected staging source'; exit 1 ;;
+                esac ;;
+              *) echo 'Unexpected source change'; exit 1 ;;
+            esac
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Backend, lifecycle, managed and actual-filesystem contracts
+        run: >-
+          node --unhandled-rejections=strict --test --test-concurrency=1
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-credential-backend.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-delivery-lifecycle.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate.test.mjs
+          docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-managed-responses.candidate.filesystem.test.mjs

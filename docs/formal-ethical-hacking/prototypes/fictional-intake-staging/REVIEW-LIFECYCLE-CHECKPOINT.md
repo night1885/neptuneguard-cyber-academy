@@ -1,0 +1,13 @@
+# Recovered delivery lifecycle checkpoint — NOT activation
+
+Base: 8168ed459271c73f065581a62ea5a77b16912943. Five additive files recover the metadata cleanup journal and one-delivery owner from conversation source. This is not a byte-for-byte recovery of an earlier ZIP. The 37 included lifecycle tests passed locally on Node 20.20.1. The new two-job Node 20/22 workflow reruns the saved credential-backend suite plus this lifecycle suite; those combined CI results are not yet verified.
+
+All factories default off. No runtime, SQL, package, credential backend or older workflow is changed. Tests use real private temporary files and simulated publication/deletion, never Discord or real credentials. A child-process exit test is not a power-loss or deployed-volume proof. Its stale-lock removal is test-only after the child exits, not automatic production reconciliation.
+
+Cleanup intent and start permission precede one publication invocation. Timeouts do not retry sends or prove quiescence. Late positive acknowledgement finalizes the sender and invalidates old deletion tickets; a post-finalization deletion is required. Unknown/rejected acknowledgements stay unknown even after deletion. Completed metadata tombstones remain; full capacity rejects new work rather than evicting obligations. Parent services must bound owner instances.
+
+Only the trusted publisher adapter may assert positive final acknowledgement with no pending duplicate/retry. The journal trusts the owner's quiescence assertion; it cannot verify remote transport independently. This candidate does not cover multiple independent publishers editing the same Discord message across interactions. That logical-message lifecycle must be coordinated before enabling confirmation-button updates.
+
+stop closes owner admission and waits boundedly, but incomplete means preserve/reconcile pending resources. It never closes the caller-owned journal. Repeated stop shares cleanup/drain work. Filesystem I/O itself has no hard timeout. Private same-UID POSIX storage and trusted ancestors are required; attestation is not durable-volume certification. Hostile administrators, hardware failure and orphan-temp retention still need review. Reopen quarantines interrupted sends; stale locks are never silently stolen.
+
+This batch does not install a live backend, key provider, listener or SDK adapter. Managed responses, startup inventory, modal/input, bound preparation, actual vault composition and full regression remain separate assembly work. CI here does not validate those absent components, live permissions, SQL or credential-expiry recovery. No merge, deployment, SQL installation or Discord publication is authorized.

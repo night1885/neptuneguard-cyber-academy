@@ -9,10 +9,11 @@ const digest=x=>createHash('sha256').update(x).digest('hex');
 const deny=(reason='unavailable')=>Object.freeze({ok:false,reason});
 export function createNoModalIntakeCoordinator(config={},ports={}) {
   if(config.enabled!==true)return Object.freeze(Object.fromEntries(['prepare','preview','submit','recoverSubmission','review','expireDraft'].map(k=>[k,async()=>deny('disabled')]).concat([['dispose',()=>{}]])));
-  const {guildId,productionGuildId,ownerId,courseKey,mode,policy,timeoutMs=250}=config;
+  const {guildId,productionGuildId,ownerId,courseKey,mode,policy,timeoutMs=250,providerTimeoutMs=timeoutMs}=config;
   if(mode!=='detached-rehearsal'||!id(guildId)||!id(productionGuildId)||guildId===productionGuildId||!id(ownerId)||
     !key(courseKey)||policy?.draftHours!==24||policy?.reportHours!==24||policy?.ownerOnly!==true||policy?.status!=='proposed-for-rehearsal'||
-    !Number.isSafeInteger(timeoutMs)||timeoutMs<5||timeoutMs>1000)throw new Error('Explicit isolated rehearsal profile required');
+    !Number.isSafeInteger(timeoutMs)||timeoutMs<5||timeoutMs>1000||
+    !Number.isSafeInteger(providerTimeoutMs)||providerTimeoutMs<5||providerTimeoutMs>10000)throw new Error('Explicit isolated rehearsal profile required');
   for(const name of ['resolve','authorize','journalRead','journalWrite','createRestricted','verifyPrivate','admitLearner',
     'latest','exact','receipt','submit','readReport','publishTrackedReview','review','claimDraft','deleteDraft','finishDraft','now'])
     if(typeof ports[name]!=='function')throw new Error('Explicit rehearsal provider required');
@@ -24,7 +25,7 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
     const work=Promise.resolve().then(()=>ports[name](...args));inflight.add(work);
     void work.then(()=>inflight.delete(work),()=>inflight.delete(work));
     try{const value=await Promise.race([work,
-      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Provider outcome unknown')),timeoutMs);})]);
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Provider outcome unknown')),providerTimeoutMs);})]);
       if(stopped)throw new Error('Retired');return value;
     }finally{clearTimeout(timer);}
   }
@@ -81,8 +82,8 @@ export function createNoModalIntakeCoordinator(config={},ports={}) {
       await binding(ctx,'preview',b);
       for(const [token,p]of previews)if(p.actorId===ctx.actorId||now()>=p.until)forget(token);
       if(previews.size>=20)return deny();const token=randomUUID(),hash=digest(m.content);
-      const p={actorId:ctx.actorId,b,channelId:ch,messageId:m.id,createdAtMs:m.createdAtMs,body:m.content,digest:hash,until:now()+PREVIEW};
-      p.timer=setTimeout(()=>forget(token),PREVIEW);p.timer.unref?.();previews.set(token,p);
+      const p={actorId:ctx.actorId,b,channelId:ch,messageId:m.id,createdAtMs:m.createdAtMs,body:m.content,digest:hash,until:Math.min(now()+PREVIEW,m.createdAtMs+DAY)};
+      p.timer=setTimeout(()=>forget(token),Math.max(0,p.until-now()));p.timer.unref?.();previews.set(token,p);
       return Object.freeze({ok:true,token,sourceMessageId:m.id,channelId:ch,digest:hash,characters:Array.from(m.content).length});
     }),
     submit:(ctx,token,requestId)=>run(async()=>{

@@ -50,6 +50,11 @@ printf 'reference and CLI=%s\n' "$result"
 
 Expected reference: text-only edit succeeds; stale write returns 409; server-field body returns 400; owner and accepted text are preserved; final revision stays 1; exit 0. Named positive suite has 29 methods (27 reused update expectations plus two CLI methods). CLI checks also verify the defective demo's expected report and both extra-argument rejections/status 2. A passing CLI suite does not declare the starter secure. Do not use broad test discovery as an all-green release gate.
 
+## Connect each write decision to stored state and response timing
+Trace the existing cases through object/operation permission, editable-field checks, expected revision and the conditional write. Ownership does not make every column writable, and a correct value-bound query does not select the correct field policy. Keep the literal text value separate from a JSON property name; do not widen the allowlist or schema set to make a case pass.
+
+For a legitimate update, stale replay, forbidden-field body or simulated commit failure, distinguish the response from the stored content, ownership and revision observations. An unchanged row after the selected rollback simulation is not durable-storage or concurrent-writer evidence. A conflict is not an instruction to retry automatically; loss of a response leaves the separate reconciliation question unresolved. Preserve the existing legitimate and denied/conflict case assignment, narrow repair and limits. No real PATCH endpoint, transaction migration or new request permission is added.
+
 ## Instructor guidance and independent work
 Ask learners to point to the row permission, writable-field policy and version predicate separately. Explain why text containing owner=student-b is literal text, whereas an owner property requests a different operation. Inspect stored row state in tests, not merely a response message. Predict whether invalid JSON/encoding/fields can reach the UPDATE. Explain why a 503 after simulated rollback must not expose a raw dependency error or claim completion.
 
@@ -58,3 +63,5 @@ Add one legitimate case and one denied/conflict case with invented values only. 
 Unresolved work includes duplicate textual JSON-key policy, real content framing/body streams, every malformed-input branch, general authentication/CSRF/session controls, revocation during operations, actual multithread/multiprocess transactions, durable storage failures and a deployed server. See [selected validation](APPLICATION-UPDATE-VALIDATION.md). This is one integrated application exercise, not complete advanced-web, professional or certification readiness.
 
 Sources: https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html and https://docs.python.org/3.12/library/sqlite3.html .
+
+Maintainer note: see the [application-boundary walkthrough review](../authoring/APPLICATION-BOUNDARY-WALKTHROUGH-REVIEW.md) for this documentation batch and its selected evidence limits.

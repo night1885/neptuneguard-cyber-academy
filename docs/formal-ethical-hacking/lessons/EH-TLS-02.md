@@ -25,9 +25,16 @@ If verification fails, distinguish an observed error from a unique diagnosis. Mi
 ## Offline assignment
 Analyse the four fictional cases. For each separate identity, trust, validity and unknowns. State what the supplied records justify, what remains unverified and a proposed authorized next step. Do not resolve the scenario names, connect to an address or generate missing output.
 
+## Fill the evidence columns before selecting a conclusion
+Use P01 for the intended reference identity and P02 for the fictional verification time, not today's date or your device clock. Put each case's supplied name, path-trust statement, validity information and connection record in the corresponding worksheet row. Keep missing evidence visibly missing; an issuer note, matching SAN or HTTP 200 cannot fill every other row. These are supplied paper statements, not certificates you have parsed or connections you measured.
+
+Write a narrow conclusion with the relevant P/case labels, remaining unknowns and smallest proposed clarification. Keep other clients, downstream transport, endpoint integrity and application authority outside a claim unless the supplied evidence covers them. Preserve all four independent case tasks and the no-bypass/no-trust-store-change rules. Do not resolve .invalid labels, generate a fingerprint or run a client to manufacture the missing record; no completed marking key or new verification command is supplied.
+
 ## Assessment and limits
 Use TLS-VERIFICATION-WORKSHEET.md. Review independent treatment of the checks, explicit assumptions, privacy and restraint in conclusions. No real TLS handshake, browser behavior or certificate processing was executed in this authoring batch. Formal scoring and learner calibration remain pending.
 
 Sources:
 https://curl.se/docs/sslcerts.html
 https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html
+
+Maintainer note: see the [transport walkthrough batch review](../authoring/TRANSPORT-WALKTHROUGH-REVIEW.md) for the source review and unexecuted practical boundaries.

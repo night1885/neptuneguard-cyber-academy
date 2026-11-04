@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "purpose": "Validate integrated staging pilot timeout wiring",
+  "source_commit": "e9ca8dfa9f77ce6172e1c2540cfbd9333eff027b",
+  "scope": "Disposable staging tests only; no deployment or Discord interaction"
+}

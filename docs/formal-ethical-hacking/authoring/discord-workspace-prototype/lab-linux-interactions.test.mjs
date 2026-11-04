@@ -5,7 +5,7 @@ import { compileLessonReadings } from './source-readings.mjs';
 import { createReadingCatalogueRenderer } from './reading-catalogue.mjs';
 import { createReadingReviewWorkspace } from './reading-workspace.mjs';
 const K='formal-ethical-hacking', A='100000000000000001', B='100000000000000002', G='100000000000000003', C='100000000000000004', M='100000000000000005', R='100000000000000006';
-const ids=['EH-LAB-00','EH-LAB-01','EH-LAB-02','EH-LAB-03','EH-LAB-04','EH-LAB-05','EH-LINUX-01','EH-LINUX-02','EH-LINUX-03','EH-LINUX-04','EH-LINUX-05'];
+const ids=['EH-LINUX-01','EH-LINUX-02','EH-LINUX-03','EH-LINUX-04','EH-LINUX-05'];
 const load=p=>JSON.parse(readFileSync(new URL(p,import.meta.url),'utf8'));
 function data(){
   const manifest=load('./lab-linux-sources.json');
@@ -15,7 +15,7 @@ function data(){
 }
 function harness(t){
   const d=data(),model=createReadingCatalogueRenderer(d),chunks=compileLessonReadings(d);
-  assert.deepEqual([model.readingLessonCount,model.readingPageCount,model.pageCount],[11,44,83]);
+  assert.deepEqual([model.readingLessonCount,model.readingPageCount,model.pageCount],[5,38,83]);
   const state={grant:true,role:true,n:0};
   const control=createReadingReviewWorkspace({enabled:true,...d,guildId:G,entryChannelId:C,verifiedRoleId:R,readMember:async()=>({id:A,guild:{id:G},roles:{cache:{has:r=>state.role&&r===R}}}),readCourseGrant:async()=>state.grant?{student_id:'SYNTHETIC',course_key:K}:null,clock:()=>0,makeToken:()=>(++state.n).toString(16).padStart(32,'0')});
   t.after(()=>control.dispose());

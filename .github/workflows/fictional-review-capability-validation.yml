@@ -1,0 +1,50 @@
+name: Fictional review capability - disposable validation
+on:
+  push:
+    branches: ['feat/fictional-reviewer-validation']
+    paths:
+      - '.github/workflows/fictional-review-capability-validation.yml'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-capability-store.candidate.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-credential-vault.candidate.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-original-transport.candidate.mjs'
+      - 'docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-credential-backend.candidate.test.mjs'
+permissions:
+  contents: read
+jobs:
+  credential-backend:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && github.ref == 'refs/heads/feat/fictional-reviewer-validation' && contains(github.event.head_commit.message, '[review-capability-validate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Guard the recovered checkpoint scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=f543f164515edc12a77a7edd90b965956840f188
+          git merge-base --is-ancestor "$base" HEAD
+          git diff --name-only "$base" HEAD | while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/fictional-review-capability-validation.yml) ;;
+              docs/formal-ethical-hacking/prototypes/fictional-intake-staging/*)
+                name=${path#docs/formal-ethical-hacking/prototypes/fictional-intake-staging/}
+                case "$name" in
+                  REVIEW-CAPABILITY-CHECKPOINT.md|staging-review-capability-store.candidate.mjs|staging-review-credential-vault.candidate.mjs|staging-review-original-transport.candidate.mjs|staging-review-credential-backend.candidate.test.mjs) ;;
+                  *) echo 'Unexpected staging source'; exit 1 ;;
+                esac ;;
+              *) echo 'Unexpected source change'; exit 1 ;;
+            esac
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run synthetic crypto, filesystem and mocked HTTP contracts
+        run: node --unhandled-rejections=strict --test docs/formal-ethical-hacking/prototypes/fictional-intake-staging/staging-review-credential-backend.candidate.test.mjs

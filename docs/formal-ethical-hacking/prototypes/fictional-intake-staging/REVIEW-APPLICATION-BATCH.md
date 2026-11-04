@@ -1,0 +1,13 @@
+# Decision/status application batch — detached candidate, not activation
+
+Base: 39c803f375a5440ddc48dc21010576ad150869f4. Adds a default-off store, scripted unit tests, disposable real-worker integration tests and a separate four-job workflow. Existing SQL, learner runtime and previously validated adapters/workflows remain unchanged. No listener, status button, feedback presentation or deployment is included.
+
+API: recordReview({actorId,guildId},{reportId,requestId,expectedReviewRevision,decision,feedback}); getStatus({actorId,guildId},reportId). Actor must come from authenticated Discord context, not untrusted request fields. Configuration must be derived from the validated isolated staging profile. The SQL service-identity trust boundary is unchanged. Pool acquisition/transport/COMMIT deadlines and hard cancellation remain embedding responsibilities.
+
+Returns immutable metadata only. Rejects unexpected response fields rather than forwarding protected text. Checks bindings, privileges across all five tables, function access, revisions/status/expiry, and captures mutable caller inputs before awaiting providers. No automatic retries. Conflict is a typed rejected command, not an instruction to repeat blindly.
+
+Mutation failures: confirmed pre-COMMIT rollback is unavailable/conflict; unconfirmed mutation rollback or any uncertain COMMIT is outcome-unknown and preserves the original request ID. A successful COMMIT followed by disposal/readiness loss/expiry returns acknowledgement-unavailable. These states must not generate a new request ID or repeat the action automatically. Recovery must use the original actor, record/report, request ID, expected revision, decision and exact feedback while authority/retention still permit it. The adapter does not persist a recovery command; safe command custody and explicit recovery control are later boundary requirements.
+
+Real integration uses only an empty disposable fi_stage_test and fixture worker login; fixtures are committed for cross-connection visibility and deleted in finally. Fault injection AFTER an actual server COMMIT checks acknowledgement classification and exact replay; it is not proof of all network/driver failure modes. Local unit doubles likewise do not validate PostgreSQL. Prior green matrix results do not cover this new code.
+
+A local report-expiry check is not proof of continued grant authority until later publication. Authorization rechecks, private tracked presentation, retention-aware delivery, migrations, SDK validation, independent review and renewed live-test approval remain required. Test counts are recorded in the attached validation, not combined with historical runs.

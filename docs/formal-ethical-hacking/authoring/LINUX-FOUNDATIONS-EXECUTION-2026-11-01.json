@@ -1,0 +1,106 @@
+{
+  "date": "2026-11-01",
+  "source_commit": "c0b4f2ff686bebb02e2aabdf67e93cec84edbbf1",
+  "lesson_source_blobs": {
+    "EH-LINUX-01": "5403440343bd94763f184c4eadf261aaff5223e8",
+    "EH-LINUX-02": "8a8b04d6e6b31298987c860d28db10c2b7ff1564",
+    "EH-LINUX-03": "3e12f1aaa29d8415adaec09603e6cce7c6bb8724"
+  },
+  "environment": "Disposable local authoring sandbox; Bash --noprofile --norc; minimal PATH and C locale; not a student VM",
+  "versions": {
+    "bash": "GNU bash, version 5.3.9(1)-release (x86_64-pc-linux-gnu)",
+    "cp": "cp (GNU coreutils) 9.7",
+    "cmp": "cmp (GNU diffutils) 3.12",
+    "chmod": "chmod (uutils coreutils) 0.8.0",
+    "stat": "stat (uutils coreutils) 0.8.0",
+    "ls": "ls (uutils coreutils) 0.8.0",
+    "cat": "cat (uutils coreutils) 0.8.0"
+  },
+  "matched_cases": 6,
+  "student_nonroot_context_validated": false,
+  "sandbox_effective_uid_is_zero": true,
+  "limits": [
+    "No hostname/account inventory was collected.",
+    "Only owned temporary files and mode bits were exercised; no access-denial, cross-account or ACL test.",
+    "No supported guest/hypervisor/hardware, learner usability/accessibility, independent student performance, grader calibration, full-checkout checks or CI validation.",
+    "No privilege-escalation attempt, sudo, network, package installation or system-file modification. The effective-UID flag above describes this author sandbox, not a validated normal-account student session.",
+    "One extra instructor case demonstrates status preservation; this is not a claim the full interactive lessons ran."
+  ],
+  "cases": [
+    {
+      "case": "quoted-copy",
+      "source_lesson": "EH-LINUX-01",
+      "script": "printf '%s\\n' 'authorized lab note' > 'scope note.txt'\ncp -- 'scope note.txt' copy.txt\ncmp -- 'scope note.txt' copy.txt\nresult=$?\nprintf 'comparison status=%s\\n' \"$result\"\ncat -- copy.txt\n",
+      "expected_stdout": "comparison status=0\nauthorized lab note\n",
+      "observed_stdout": "comparison status=0\nauthorized lab note\n",
+      "observed_stderr": "",
+      "script_exit": 0,
+      "extra_observations": {},
+      "matched": true
+    },
+    {
+      "case": "owned-file-modes",
+      "source_lesson": "EH-LINUX-02",
+      "script": "printf '%s\\n' 'authorized lab note' > 'scope note.txt'\nchmod u=rw,go= 'scope note.txt'\nstat -c '%a %A' -- 'scope note.txt'\nchmod u=r,go= 'scope note.txt'\nstat -c '%a %A' -- 'scope note.txt'\ncat -- 'scope note.txt'\nchmod u=rw,go= 'scope note.txt'\nstat -c '%a %A' -- 'scope note.txt'\n",
+      "expected_stdout": "600 -rw-------\n400 -r--------\nauthorized lab note\n600 -rw-------\n",
+      "observed_stdout": "600 -rw-------\n400 -r--------\nauthorized lab note\n600 -rw-------\n",
+      "observed_stderr": "",
+      "script_exit": 0,
+      "extra_observations": {},
+      "matched": true
+    },
+    {
+      "case": "split-output-error",
+      "source_lesson": "EH-LINUX-03",
+      "script": "printf '%s\\n' 'authorized lab note' > copy.txt\nls -- copy.txt absent.txt > listing.txt 2> errors.txt\nresult=$?\nprintf 'status=%s\\n' \"$result\"\n",
+      "expected_stdout": "status=2\n",
+      "observed_stdout": "status=2\n",
+      "observed_stderr": "",
+      "script_exit": 0,
+      "extra_observations": {
+        "listing_lines": [
+          "copy.txt"
+        ],
+        "diagnostic_nonempty": true,
+        "diagnostic_mentions_absent_txt": true
+      },
+      "matched": true
+    },
+    {
+      "case": "append-overwrite",
+      "source_lesson": "EH-LINUX-03",
+      "script": "printf '%s\\n' first > stream.txt\nprintf '%s\\n' second >> stream.txt\nprintf 'before:\\n'\ncat -- stream.txt\nprintf '%s\\n' replacement > stream.txt\nprintf 'after:\\n'\ncat -- stream.txt\n",
+      "expected_stdout": "before:\nfirst\nsecond\nafter:\nreplacement\n",
+      "observed_stdout": "before:\nfirst\nsecond\nafter:\nreplacement\n",
+      "observed_stderr": "",
+      "script_exit": 0,
+      "extra_observations": {},
+      "matched": true
+    },
+    {
+      "case": "pipeline-status",
+      "source_lesson": "EH-LINUX-03",
+      "script": "(\nset +o pipefail\nfalse | cat\nprintf 'default=%s\\n' \"$?\"\nset -o pipefail\nfalse | cat\nprintf 'pipefail=%s\\n' \"$?\"\n)\n",
+      "expected_stdout": "default=0\npipefail=1\n",
+      "observed_stdout": "default=0\npipefail=1\n",
+      "observed_stderr": "",
+      "script_exit": 0,
+      "extra_observations": {},
+      "matched": true
+    },
+    {
+      "case": "saved-versus-late-status",
+      "source_lesson": "Instructor worked example supporting EH-LINUX-03",
+      "script": "ls -- absent.txt > ignored.txt 2> errors.txt\nsaved=$?\ntrue\nlate=$?\nprintf 'saved=%s late=%s\\n' \"$saved\" \"$late\"\n",
+      "expected_stdout": "saved=2 late=0\n",
+      "observed_stdout": "saved=2 late=0\n",
+      "observed_stderr": "",
+      "script_exit": 0,
+      "extra_observations": {},
+      "matched": true
+    }
+  ],
+  "toolchain_classification": "Mixed GNU and uutils implementations; do not claim the prescribed GNU student environment was validated.",
+  "validation_kind": "Six selected local command contracts, not student competency, full interactive lessons, guest/platform or release validation.",
+  "evidence_minimization": "Captured listing and diagnostic content were checked; the stored extra observation retains only listing lines and diagnostic predicates, not a purported full guest transcript."
+}

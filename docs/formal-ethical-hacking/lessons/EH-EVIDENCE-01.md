@@ -32,6 +32,11 @@ A login denial is an observed authentication outcome, not proof of password gues
 
 An interaction with a request but no later outcome is incomplete evidence. It is not automatically a successful action, a failed action or proof that records were tampered with. State what is unknown and request the smallest useful additional authorized evidence. Do not access the resource to fill the gap.
 
+## Connect the method to the worksheet
+Use the existing timeline worksheet to keep the preserved source, analysis view and interpretation separate. Count before deduplicating, compare complete repeated records before collapsing them, and retain original timestamp strings beside normalized UTC instants. A smaller analysis view does not mean that source rows should be erased. Keep interaction, component and actor context when sorting.
+
+Read each conclusion back to its supporting event IDs. Distinguish the source's event order, the collector's receipt order and your explanation of the difference. A request, policy decision and response answer different questions; an absent later record is a gap, not an outcome you may invent. Record competing explanations and the authority needed for any further collection rather than accessing the named resource. This guidance supports the existing independent task without adding real logs, a completed answer sheet or new collection permission.
+
 ## Independent analysis
 Prepare a UTC timeline, a raw-versus-distinct count and an interaction summary. Identify an observed denial, an allowed decision and an incomplete interaction, with evidence labels. Explain what the collection delay changes about naive line-by-line interpretation. Propose two competing explanations for incomplete evidence without declaring either proven.
 
@@ -42,3 +47,5 @@ Real logs may contain sensitive identifiers or secrets. OWASP recommends recordi
 Use LOG-TIMELINE-WORKSHEET.md. Submit your method, normalized view, duplicate handling, evidence-linked interpretations, gaps and limits. Do not claim a real intrusion or actual exfiltration. Formal scoring, learner calibration, accessibility review and supported guest reproduction remain pending.
 
 Source: OWASP Logging Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html . See LOG-DATASET-VALIDATION.md for bounded author checks.
+
+Maintainer note: see the [evidence and modelling walkthrough review](../authoring/EVIDENCE-MODELLING-WALKTHROUGH-REVIEW.md) for selected author checks and this documentation-only batch.

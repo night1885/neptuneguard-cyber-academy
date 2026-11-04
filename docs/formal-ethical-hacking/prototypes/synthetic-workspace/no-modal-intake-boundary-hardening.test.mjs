@@ -41,7 +41,9 @@ for(const mode of ['dispose','not-ready']) test(`late preparation suppressed aft
   const f=fixture();let release;f.coordinator.prepare=()=>new Promise(r=>{release=r;});const pending=f.boundary.handle(f.interaction());
   while(!release) await new Promise(r=>setImmediate(r));
   if(mode==='dispose') f.boundary.dispose();else f.ready=false;
-  release({ok:true,channelId:C});await pending;assert.equal(f.edits.length,0);
+  release({ok:true,channelId:C,body:'PRIVATE_LATE_RESULT'});await pending;
+  if(mode==='dispose') assert.equal(f.edits.length,0);
+  else assert.deepEqual(f.edits,[{content:'Evidence intake is unavailable.',embeds:[],components:[],allowedMentions:{parse:[]}}]);
 });
 test('invalid preview metadata yields no confirm button or provider body',async()=>{
   const f=fixture();await f.boundary.handle(f.interaction());f.coordinator.preview=async()=>({ok:true,channelId:C,sourceMessageId:f.message.id,token:'bad',digest:'bad',body:'PRIVATE_BODY'});
@@ -51,4 +53,11 @@ test('100 settled control bindings cap admission and expiry frees capacity',asyn
   const f=fixture();for(let n=0;n<100;n++){f.message={id:String(100000000000000100n+BigInt(n)),flags:{has:k=>k===64}};await f.boundary.handle(f.interaction());}
   await f.boundary.handle(f.interaction());assert.equal(f.calls,100);assert.equal(f.denials.length,1);
   f.now+=300000;await f.boundary.handle(f.interaction());assert.equal(f.calls,101);
+});
+
+test('readiness loss after defer returns neutral metadata without invoking coordinator',async()=>{
+  const f=fixture();
+  await f.boundary.handle(f.interaction('nmi:prepare',{deferReply:async()=>{f.ready=false;}}));
+  assert.equal(f.calls,0);
+  assert.deepEqual(f.edits,[{content:'Evidence intake is unavailable.',embeds:[],components:[],allowedMentions:{parse:[]}}]);
 });
