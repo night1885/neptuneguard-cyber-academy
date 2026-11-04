@@ -36,7 +36,7 @@ jobs:
             command: python -B -m unittest -v test_run_practical_checks test_practical_cli_boundaries test_practical_output_observer
           - group: wp-c-packaging
             directory: docs/formal-ethical-hacking/authoring
-            command: python -B -m unittest -v test_wp_c_bundle
+            command: python -B -m unittest -v test_wp_c_bundle test_wp_c_bundle_integration
     steps:
       - uses: actions/checkout@v4
         with:
