@@ -1,9 +1,10 @@
 name: Formal PostgreSQL restricted-reader validation
 on:
   push:
-    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, main]
+    branches: [formal-ethical-hacking-programme, feat/protected-workspace-integration, feat/fictional-reviewer-validation, main]
     paths:
       - 'test-formal-review-postgres.mjs'
+      - 'test-formal-staging-db-package.mjs'
       - '.github/workflows/formal-postgres-validation.yml'
       - 'migrations/**'
       - 'certification-*.js'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'test-formal-review-postgres.mjs'
+      - 'test-formal-staging-db-package.mjs'
       - '.github/workflows/formal-postgres-validation.yml'
       - 'migrations/**'
       - 'certification-*.js'
@@ -84,3 +86,43 @@ jobs:
           NODE
           fi
           exit "$status"
+  staging_database:
+    name: staging-database-package (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: formal_ci_admin
+          POSTGRES_PASSWORD: ci-disposable-only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U formal_ci_admin -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FORMAL_STAGING_DB_CI: 'true'
+      FORMAL_STAGING_TEST_POSTGRES: ${{ matrix.postgres }}
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://formal_ci_admin:ci-disposable-only@127.0.0.1:5432/certification_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require psql client and validate test syntax
+        run: |
+          command -v psql
+          node --check test-formal-staging-db-package.mjs
+      - name: Execute exact staging driver and grants in the disposable database
+        run: node --test test-formal-staging-db-package.mjs
