@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node restoration.js",
     "start:instructor": "node instructor.js",
-    "deploy-commands": "node deploy-commands.js"
+    "deploy-commands": "node deploy-commands.js",
+    "formal:staging": "node formal-isolated-staging-entry.mjs",
+    "test:formal-staging-launcher": "node --test test-formal-isolated-staging-entry.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
