@@ -13,9 +13,16 @@ PINS = {
     FIX + "application_repaired.py": "a0bb23e66156599fe2c4f27480577b884827e8d0",
     FIX + "update_lab.py": "a53a0196b0269abcd05b6e609125cfa04d1c4d77",
     REPORT: "1352812155feafa4116579e7fd37e9e4bacaa714",
+    FIX + "test_application.py": "06532c5c90e06061722a02380ec39b3fb08fe1c8",
+    FIX + "test_updates.py": "3d635596bbb05292a39dacb354abe4256eb3b15c",
 }
 STAGES = {"read": (FIX + "application_lab.py", REPORT),
           "update": (FIX + "application_lab.py", FIX + "application_repaired.py", FIX + "update_lab.py", REPORT)}
+STAGES.update({
+    "read-repair": (FIX + "application_lab.py", FIX + "test_application.py", REPORT),
+    "update-repair": (FIX + "application_lab.py", FIX + "application_repaired.py",
+                      FIX + "update_lab.py", FIX + "test_updates.py", REPORT),
+})
 
 
 def blob(data):
@@ -39,6 +46,8 @@ def read_checked(root, relative, expected):
 def brief(stage):
     if stage not in STAGES:
         raise ValueError("Unknown stage")
+    if stage in ("read-repair", "update-repair"):
+        return repair_brief(stage)
     script = "application_lab.py" if stage == "read" else "update_lab.py"
     members = "\n".join("- " + Path(p).name for p in STAGES[stage])
     text = """# WP-C guided-practice candidate - not released
@@ -110,6 +119,80 @@ work must not be described as unseen or unaided. The update repair remains absen
     return text
 
 
+def repair_brief(stage):
+    is_read = stage == "read-repair"
+    module = "test_application" if is_read else "test_updates"
+    editable = "application_lab.py" if is_read else "update_lab.py"
+    count, failures = (20, 4) if is_read else (27, 3)
+    members = "\n".join("- " + Path(p).name for p in STAGES[stage])
+    text = f"""# WP-C repair/retest candidate - not released
+
+## Prerequisites and readiness
+Retain EH-WEB-01 through EH-WEB-06 and offline Python/SQL reading requirements; updates
+add the read-ownership bridge and EH-WEB-08. Earlier Linux checks do not replace them.
+Actual editing/execution permission, supported Python/SQLite, transfer, support/recovery
+contact and approved private evidence route are required; otherwise mark BLOCKED.
+Do not install, elevate or reconnect. No listener, real identity or external service is added.
+This is familiar guided practice; visible tests count as assistance, not unseen assessment.
+
+## Included files
+{members}
+- README.md
+- bundle-manifest.json
+
+## Preserve baseline and control expectations
+Receive this later-stage bundle only after preserving original predictions/observations;
+that release order requires a reviewer process and is not enforced by this offline builder.
+Extract separately; do not overwrite earlier edited work. The manifest verifies selected
+bytes, not checkout provenance. Keep original sources and the supplied test module unchanged
+as baseline evidence. Record test/reference exposure and support interventions.
+
+## Baseline then repair then retest - only after approval
+In the disposable repair directory, on the approved POSIX-style launcher route, run:
+
+```sh
+python3 -B -m unittest -v {module}
+result=$?
+printf 'contract test status=%s\\n' "$result"
+```
+
+Before editing, source-derived expectation is {count} methods and {failures} deliberate
+assertion failures; this is not an observed result. Capture actual failure names and causes.
+Import/syntax/dependency errors are not intended reproduction. Preserve the actual status
+immediately; final printf has its own status and -B is not a sandbox.
+Edit only {editable} in this approved disposable copy. Preserve tests, expected values,
+legitimate behavior and repository originals. No hard-coded actor fixes or reject-all policy.
+Retain the minimal diff. Rerun the SAME command against the edited starter and unchanged
+contract: expected selected result is {count} methods, zero failures/errors/skips. This is
+not a calibrated programme pass mark or proof of complete security. Explain actual positive
+and forbidden controls, response/data or state evidence, and the source cause separately.
+Never claim PROPOSED / UNATTEMPTED repairs or retests were executed.
+
+## Review handoff and exposure
+The stage's solution, fixed-reference suites, CLI suites and instructor walkthroughs are
+excluded. CLI tests assert original defective-demo behavior, so are NOT a repair-success
+gate. Do not use broad discovery or fetch excluded files as a workaround. A reference-suite
+pass is not a retest of your edited starter. Independent additions remain separate from the
+unchanged baseline and within the original approved task. Delay reference comparison until
+the diff, results and explanation are preserved, recording subsequent exposure separately.
+Use INVESTIGATION-REPORT-TEMPLATE.md for predictions, actual results/blockers, intervention,
+legitimate/forbidden controls, repair/retest and final state. Reviewer/private submission and
+support details must come from the actual brief before collection; no public fallback.
+Preserve artifacts until approved review/retention/cleanup. No cleanup success is implied.
+No class certificates, badges, XP or points. Programme certification is a separate complete-
+programme decision, not a result of this practice suite.
+"""
+    if not is_read:
+        text += """
+## Read-policy dependency exposure
+application_repaired.py is the required READ-policy dependency, not the update solution.
+Keep it unchanged and record earlier-read repair exposure. update_repaired.py is absent.
+Separate object authority, editable fields, expected revision and actual stored state.
+The core rollback case is simulated; sequential checks do not prove concurrency or durability.
+"""
+    return text
+
+
 def build(repo, output, stage, *, pins=None):
     if stage not in STAGES:
         raise ValueError("Unknown stage")
@@ -120,7 +203,7 @@ def build(repo, output, stage, *, pins=None):
     expected = PINS if pins is None else pins
     selected = [(p, read_checked(root, p, expected[p])) for p in STAGES[stage]]
     manifest = {"status": "maintainer-candidate-not-published", "baseline": BASELINE,
-                "stage": stage, "read_repair_exposed": stage == "update",
+                "stage": stage, "read_repair_exposed": stage in ("update", "update-repair"),
                 "verification": "Selected bytes only; HEAD/provenance not authenticated; not adversarial-checkout race protection",
                 "files": [{"source": p, "member": Path(p).name, "git_blob": blob(data),
                            "sha256": hashlib.sha256(data).hexdigest()} for p, data in selected]}

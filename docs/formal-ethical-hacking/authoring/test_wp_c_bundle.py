@@ -110,7 +110,7 @@ class BundleTests(unittest.TestCase):
                     self.assertEqual({line[2:] for line in section.splitlines()}, set(z.namelist()))
 
     def test_handoff_retains_gates_and_policy(self):
-        for stage in b.STAGES:
+        for stage in ("read", "update"):
             text = b.brief(stage)
             for required in ("EH-WEB-01 through EH-WEB-06", "EH-WEB-08", "BLOCKED",
                              "expected to exit 1", "later reviewer-led tests are not included",
@@ -123,6 +123,64 @@ class BundleTests(unittest.TestCase):
         self.assertIn("## Read-policy dependency exposure", b.brief("update"))
         with self.assertRaisesRegex(ValueError, "Unknown stage"):
             b.brief("all")
+
+    def test_repair_members_and_exposure(self):
+        cases = {
+            "read-repair": {"application_lab.py", "test_application.py"},
+            "update-repair": {"application_lab.py", "application_repaired.py", "update_lab.py", "test_updates.py"},
+        }
+        for stage, files in cases.items():
+            with self.subTest(stage=stage):
+                self.output = self.output.with_name(stage + ".zip")
+                manifest = self.build(stage)
+                with zipfile.ZipFile(self.output) as z:
+                    self.assertEqual(set(z.namelist()), files | {"README.md", "bundle-manifest.json", "INVESTIGATION-REPORT-TEMPLATE.md"})
+                self.assertEqual(manifest["read_repair_exposed"], stage == "update-repair")
+
+    def test_repair_commands_use_included_contract(self):
+        import shlex
+        for stage, module in (("read-repair", "test_application"), ("update-repair", "test_updates")):
+            with self.subTest(stage=stage):
+                self.output = self.output.with_name(stage + ".zip")
+                self.build(stage)
+                with zipfile.ZipFile(self.output) as z:
+                    text = z.read("README.md").decode()
+                    commands = [shlex.split(line) for line in text.splitlines() if line.startswith("python3 ")]
+                    self.assertEqual(commands, [["python3", "-B", "-m", "unittest", "-v", module]])
+                    self.assertIn(module + ".py", z.namelist())
+
+    def test_repair_stage_excludes_cli_and_solutions(self):
+        for stage in ("read-repair", "update-repair"):
+            self.output = self.output.with_name(stage + ".zip")
+            self.build(stage)
+            with zipfile.ZipFile(self.output) as z:
+                for excluded in ("test_cli.py", "test_update_cli.py", "test_reference.py", "test_update_reference.py", "update_repaired.py", "loopback_lab.py"):
+                    self.assertNotIn(excluded, z.namelist())
+                if stage == "read-repair":
+                    self.assertNotIn("application_repaired.py", z.namelist())
+
+    def test_repair_contract_drift_rejected(self):
+        for stage, module in (("read-repair", "test_application"), ("update-repair", "test_updates")):
+            self.output = self.output.with_name(stage + ".zip")
+            p = self.root / (b.FIX + module + ".py")
+            p.write_text("changed")
+            with self.assertRaisesRegex(ValueError, "revision mismatch"):
+                self.build(stage)
+            self.assertFalse(self.output.exists())
+
+    def test_repair_gate_and_unchanged_expectations(self):
+        for stage in ("read-repair", "update-repair"):
+            text = b.brief(stage)
+            for required in ("BLOCKED", "EH-WEB-01 through EH-WEB-06", "EH-WEB-08", "SAME command", "unchanged", "not enforced", "PROPOSED / UNATTEMPTED", "No class certificates, badges, XP or points", "Programme certification"):
+                self.assertIn(required, text)
+
+    def test_reviewed_contract_pins(self):
+        self.assertEqual(b.PINS[b.FIX + "test_application.py"], "06532c5c90e06061722a02380ec39b3fb08fe1c8")
+        self.assertEqual(b.PINS[b.FIX + "test_updates.py"], "3d635596bbb05292a39dacb354abe4256eb3b15c")
+
+    def test_repair_status_capture_is_one_line(self):
+        for stage in ("read-repair", "update-repair"):
+            self.assertIn("printf 'contract test status=%s\\n' \"$result\"", b.brief(stage))
 
 if __name__ == "__main__":
     unittest.main()
