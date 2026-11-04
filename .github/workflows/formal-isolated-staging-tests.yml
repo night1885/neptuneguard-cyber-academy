@@ -7,6 +7,7 @@ on:
       - 'test-certification-isolated-staging.mjs'
       - 'formal-isolated-staging-entry.mjs'
       - 'test-formal-isolated-staging-entry.mjs'
+      - 'test-formal-staging-preflight.mjs'
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'package.json'
@@ -19,6 +20,7 @@ on:
       - 'test-certification-isolated-staging.mjs'
       - 'formal-isolated-staging-entry.mjs'
       - 'test-formal-isolated-staging-entry.mjs'
+      - 'test-formal-staging-preflight.mjs'
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'package.json'
@@ -49,6 +51,8 @@ jobs:
         run: node --check formal-isolated-staging-entry.mjs
       - name: Offline staging launcher contracts with injected dependencies
         run: node --test test-formal-isolated-staging-entry.mjs
+      - name: Actual offline preflight imports validators and private profile files
+        run: node --test test-formal-staging-preflight.mjs
       - name: Offline local-profile and composition unit tests
         run: node --test docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging.test.mjs docs/formal-ethical-hacking/authoring/discord-workspace-prototype/isolated-staging-cleanup.test.mjs
       - name: Draft first-journey reading constraints
