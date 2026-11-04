@@ -86,5 +86,43 @@ class BundleTests(unittest.TestCase):
                 self.assertEqual(b.blob(z.read(item["member"])), item["git_blob"])
 
 
+    def test_readme_commands_match_stage_members(self):
+        import shlex
+        for stage, script in (("read", "application_lab.py"), ("update", "update_lab.py")):
+            with self.subTest(stage=stage):
+                self.output = self.output.with_name(stage + ".zip")
+                self.build(stage)
+                with zipfile.ZipFile(self.output) as z:
+                    text = z.read("README.md").decode()
+                    commands = [shlex.split(line) for line in text.splitlines() if line.startswith("python3 ")]
+                    self.assertEqual(commands, [["python3", "-B", script]])
+                    self.assertIn(script, z.namelist())
+                    self.assertNotIn("-m unittest", text)
+
+    def test_readme_lists_exact_archive_members(self):
+        for stage in b.STAGES:
+            with self.subTest(stage=stage):
+                self.output = self.output.with_name(stage + ".zip")
+                self.build(stage)
+                with zipfile.ZipFile(self.output) as z:
+                    text = z.read("README.md").decode()
+                    section = text.split("## Included files\n", 1)[1].split("\n\n", 1)[0]
+                    self.assertEqual({line[2:] for line in section.splitlines()}, set(z.namelist()))
+
+    def test_handoff_retains_gates_and_policy(self):
+        for stage in b.STAGES:
+            text = b.brief(stage)
+            for required in ("EH-WEB-01 through EH-WEB-06", "EH-WEB-08", "BLOCKED",
+                             "expected to exit 1", "later reviewer-led tests are not included",
+                             "PROPOSED / UNATTEMPTED", "do not overwrite earlier edited work",
+                             "No class certificates, badges, XP or points", "Programme certification"):
+                self.assertIn(required, text)
+
+    def test_exposure_notice_only_in_update(self):
+        self.assertNotIn("## Read-policy dependency exposure", b.brief("read"))
+        self.assertIn("## Read-policy dependency exposure", b.brief("update"))
+        with self.assertRaisesRegex(ValueError, "Unknown stage"):
+            b.brief("all")
+
 if __name__ == "__main__":
     unittest.main()

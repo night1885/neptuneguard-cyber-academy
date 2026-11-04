@@ -37,22 +37,77 @@ def read_checked(root, relative, expected):
 
 
 def brief(stage):
+    if stage not in STAGES:
+        raise ValueError("Unknown stage")
+    script = "application_lab.py" if stage == "read" else "update_lab.py"
+    members = "\n".join("- " + Path(p).name for p in STAGES[stage])
     text = """# WP-C guided-practice candidate - not released
 
-Existing prerequisites, approved Python/SQLite setup, material transfer, support and private
-evidence handling remain required. This bundle grants no execution or editing permission.
-Use invented in-memory actors/records only. No listener, network client or real database is
-provided. Stop for missing setup; do not install or reconnect to bypass a blocker.
-Preserve predictions; distinguish observed, source-predicted, blocked and unattempted work.
-Record help/reference exposure. Keep repository originals unchanged. The existing report
-template is optional draft structure, not a grader or evidence-collection service.
-No class certificates, badges, XP or points. Programme certification remains a separate
-whole-programme decision. No unseen-task or independent-performance claim is established.
-Reference omission is not access control against someone with source-repository access.
+## Prerequisites and readiness
+Read-stage prerequisites remain EH-WEB-01 through EH-WEB-06 concepts plus the existing
+offline Python/SQL reading support. The update stage additionally requires the read-ownership
+bridge and EH-WEB-08 field-policy concepts. Earlier Linux checks do not replace them.
+An approved disposable copy, existing Python with sqlite3/wsgiref, supported launcher,
+material transfer, support/recovery contact and private evidence route must be supplied by
+the actual brief. Missing requirements mean BLOCKED. Do not install, elevate or reconnect.
+This candidate grants no execution, editing, collection or release permission.
+
+## Included files
+""" + members + """
+- README.md
+- bundle-manifest.json
+
+The manifest identifies selected source bytes, not authenticated checkout provenance.
+Tests, instructor walkthroughs and the stage's repair solution are intentionally omitted.
+Do not run reference/test commands from the full maintainer lesson in this starter-only
+bundle or fetch missing files as a workaround. Exclusion is not access control for someone
+with repository access. This is guided practice, not an unseen assessment.
+
+## Preserve a prediction first
+Read the source and sketch actor/context, selected object, policy and returned information.
+Record a legitimate case, a forbidden case, source anchors and an alternative explanation.
+For updates, separate object authority, writable fields, revision and transaction outcome.
+Preserve the original prediction and record hints/reference exposure.
+
+## Starter observation - only after separate approval
+Extract this stage into its own disposable directory; do not overwrite earlier edited work.
+From that directory, only on the approved POSIX-style python3 route:
+
+```sh
+python3 -B """ + script + """
+result=$?
+printf 'starter demo status=%s\n' "$result"
+```
+
+The deliberate starter is expected to exit 1 with a JSON teaching report. An import,
+syntax, dependency or missing-file error is not intended reproduction: stop and report it.
+Capture the actual status immediately. The final printf has its own status; -B is not a
+sandbox. The report is a selected summary, not complete response-byte or stored-row evidence.
+No listener, HTTP client, real account or persistent database is supplied. Use invented data
+only; do not deploy these fixtures or import them into academy runtime.
+
+## Repair and reviewer handoff
+Propose a narrow repair preserving legitimate behavior. Editing needs its own approved brief.
+The later reviewer-led tests are not included; do not claim a repair/retest was executed
+without the required files and actual observations. Preserve repository originals and label
+PROPOSED / UNATTEMPTED work honestly. Do not weaken expectations or reject every operation.
+Use INVESTIGATION-REPORT-TEMPLATE.md as optional draft structure, not a grading or collection
+service. Keep read/update findings separate; identify package, prediction, actual result or
+blocker, assistance, repair/retest status, uncertainty and final local state.
+The actual brief must identify the authorized reviewer/private route and support contact
+before collection. No public fallback, invented contact, credentials or unrelated host data.
+Preserve files for review until the approved retention/cleanup decision; no broad deletion.
+No class certificates, badges, XP or points. Programme certification requires the complete
+programme's separately approved requirements, not this task alone.
 """
-    if stage == "read":
-        return text + "\nTrace the actor, selected record, policy and response in application_lab.py. Preserve an allowed/forbidden prediction and alternative explanation before observations. Propose a narrow repair preserving legitimate behavior. Read repair, tests and instructor walkthroughs are omitted.\n"
-    return text + "\nTrace object authority, writable fields, revision, transaction and returned state in update_lab.py. application_repaired.py is its required read-policy dependency: this stage intentionally exposes the earlier read repair. It is NOT an unseen read assessment. Update repair, tests and instructor walkthroughs are omitted.\n"
+    if stage == "update":
+        text += """
+## Read-policy dependency exposure
+application_repaired.py is required by the update starter and intentionally exposes the
+earlier read repair. It is not the update solution. Record this exposure; subsequent read
+work must not be described as unseen or unaided. The update repair remains absent.
+"""
+    return text
 
 
 def build(repo, output, stage, *, pins=None):
