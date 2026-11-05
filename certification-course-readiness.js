@@ -49,8 +49,13 @@ export async function validateCourseLifecycleReadiness(pool) {
       NOT EXISTS (SELECT 1 FROM pg_class WHERE oid IN ($1::oid,$2::oid,$3::oid) AND pg_has_role(current_user,relowner,'MEMBER')) AS not_owner,
       NOT has_schema_privilege(current_user,(SELECT relnamespace FROM pg_class WHERE oid=$2::oid),'CREATE') AS no_schema_create,
       has_table_privilege(current_user,$1::oid,'SELECT') AS read_enrollment,has_any_column_privilege(current_user,$1::oid,'UPDATE') AS lock_enrollment,
-      has_table_privilege(current_user,$2::oid,'SELECT') AS read_courses,has_table_privilege(current_user,$2::oid,'INSERT') AS insert_courses,
-      has_table_privilege(current_user,$2::oid,'UPDATE') AS update_courses,has_table_privilege(current_user,$3::oid,'INSERT') AS insert_audit,
+      has_table_privilege(current_user,$2::oid,'SELECT') AS read_courses,
+      NOT EXISTS (SELECT 1 FROM unnest(ARRAY['discord_user_id','course_key','status','assigned_at','assigned_by']) AS required(name)
+        WHERE NOT has_column_privilege(current_user,$2::oid,required.name,'INSERT')) AS insert_courses,
+      NOT EXISTS (SELECT 1 FROM unnest(ARRAY['status','completed_at','completed_by']) AS required(name)
+        WHERE NOT has_column_privilege(current_user,$2::oid,required.name,'UPDATE')) AS update_courses,
+      NOT EXISTS (SELECT 1 FROM unnest(ARRAY['actor_discord_user_id','subject_discord_user_id','action','details','created_at']) AS required(name)
+        WHERE NOT has_column_privilege(current_user,$3::oid,required.name,'INSERT')) AS insert_audit,
       has_sequence_privilege(current_user,pg_get_serial_sequence($3::regclass::text,'event_id'),'USAGE') AS use_sequence,
       NOT EXISTS (SELECT 1 FROM unnest(ARRAY[$1::oid,$2::oid,$3::oid]) AS target(oid) WHERE has_table_privilege(current_user,target.oid,'DELETE,TRUNCATE,TRIGGER')) AS no_destructive,
       NOT has_any_column_privilege(current_user,$3::oid,'UPDATE') AS no_audit_update`, [tables.enrollment, tables.courses, tables.audit])).rows[0];
