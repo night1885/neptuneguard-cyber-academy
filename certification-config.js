@@ -1,4 +1,5 @@
 import { readRegistrationPilotOptions } from './certification-registration-pilot-guard.js';
+import { readCourseRequestReleaseOptions } from './certification-course-request-release.js';
 
 export function loadCertificationConfig(env = process.env) {
   const ownerId = env.ACADEMY_OWNER_ID || '1223123544301633567';
@@ -26,6 +27,7 @@ export function loadCertificationConfig(env = process.env) {
     manualReviewDecisionStudentIds = pilot.studentIds;
   }
   const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled,
+    ...readCourseRequestReleaseOptions(env),
     ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}),
     ...(manualReviewDecisionsEnabled ? { manualReviewDecisionsEnabled: true, manualReviewDecisionStudentIds } : {}) };
   const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
