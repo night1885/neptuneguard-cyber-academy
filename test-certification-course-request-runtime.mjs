@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readCourseRequestReleaseOptions } from './certification-course-request-release.js';
+import { validateCourseRequestReadiness } from './certification-course-request-readiness.js';
+import { withCourseRequests } from './certification-course-request-runtime.js';
+const owner='1223123544301633567', guild='1339276399390887957', channel='1339276399390887956';
+const config={enabled:true,ownerId:owner,adminChannelId:channel,courseRequestsEnabled:true,studentAccessEnabled:false};
+test('request release is default off, strict and cannot open students independently',()=>{
+ assert.deepEqual(readCourseRequestReleaseOptions({}),{});
+ assert.throws(()=>readCourseRequestReleaseOptions({CERTIFICATION_COURSE_REQUEST_STUDENTS_ENABLED:'true'}));
+ assert.throws(()=>readCourseRequestReleaseOptions({CERTIFICATION_COURSE_REQUESTS_ENABLED:'yes'}));
+ const env={CERTIFICATION_ENABLED:'true',CERTIFICATION_COURSES_ENABLED:'true',CERTIFICATION_COURSE_REQUESTS_ENABLED:'true'};
+ assert.deepEqual(readCourseRequestReleaseOptions(env),{courseRequestsEnabled:true,studentAccessEnabled:false});
+ assert.deepEqual(readCourseRequestReleaseOptions({...env,CERTIFICATION_COURSE_REQUEST_STUDENTS_ENABLED:'true'}),{courseRequestsEnabled:true,studentAccessEnabled:true});
+ assert.throws(()=>readCourseRequestReleaseOptions({...env,CERTIFICATION_REGISTRATION_PILOT:'true'}));
+});
+function pool({missing=false,privilege=true,index=true,trigger=true}={}){return {async query(sql){if(sql.includes('AS requests'))return {rows:[{requests:missing?null:'certification_course_requests'}]};if(sql.includes('LIMIT 0'))return {rows:[]};if(sql.includes('can_read'))return {rows:[{can_read:privilege,can_insert:privilege,can_update:privilege}]};if(sql.includes('pg_index'))return {rows:index?[{relname:'certification_one_pending_course_request',indisunique:true,indisvalid:true,indisready:true,definition:"CREATE UNIQUE INDEX certification_one_pending_course_request ON public.certification_course_requests USING btree (discord_user_id, course_key) WHERE (status = 'pending'::text)"}]:[]};if(sql.includes('pg_trigger'))return {rows:trigger?[{tgname:'certification_course_request_immutable',tgenabled:'O'}]:[]};throw new Error('Unexpected SQL');}};}
+test('readiness checks fail closed for missing schema, privileges, index or trigger',async()=>{assert.deepEqual(await validateCourseRequestReadiness(pool()),{ready:true});for(const option of [{missing:true},{privilege:false},{index:false},{trigger:false}])await assert.rejects(validateCourseRequestReadiness(pool(option)));});
+function fixture(){let baseCalls=0,handled=0,disposed=0;const base=async i=>{baseCalls++;await i.editReply({embeds:[{title:'Existing card'}],components:[]});return true;};base.initialize=async()=>{};base.dispose=()=>{disposed++;};const support={async handle(){handled++;return true;},views:{entry:owner=>({type:1,components:[{type:2,custom_id:owner?'cert:cr:queue:0':'cert:cr:catalog:0'}]})},dispose(){}};const route=withCourseRequests(base,{},config,guild,{validate:async()=>({ready:true}),createSupport:async()=>support});return {route,get baseCalls(){return baseCalls;},get handled(){return handled;},get disposed(){return disposed;}};}
+function interaction(actor=owner,id='cert:admin:overview:0',ephemeral=true){return {user:{id:actor},guildId:guild,channelId:channel,customId:id,ephemeral,async editReply(p){this.output=p;},async reply(p){this.output=p;}};}
+test('requests wait for initialization, then route without reaching legacy handlers',async()=>{const f=fixture();const i=interaction(owner,'cert:cr:queue:0');await f.route(i);assert.equal(f.handled,0);await f.route.initialize();await f.route(i);assert.equal(f.handled,1);assert.equal(f.baseCalls,0);});
+test('private owner card gets a button; public and closed student cards do not',async()=>{const f=fixture();await f.route.initialize();const own=interaction();await f.route(own);assert.equal(own.output.components[0].components[0].custom_id,'cert:cr:queue:0');const publicCard=interaction(owner,'cert:admin:overview:0',false);await f.route(publicCard);assert.equal(publicCard.output.components.length,0);const student=interaction('1565767429764943916','cert:initial:home');await f.route(student);assert.equal(student.output.components.length,0);});
+test('dispose is once only and does not reopen routes',async()=>{const f=fixture();await f.route.initialize();f.route.dispose();f.route.dispose();assert.equal(f.disposed,1);await f.route(interaction(owner,'cert:cr:queue:0'));assert.equal(f.handled,0);await assert.rejects(f.route.initialize());});
+test('startup schema failure prevents support construction',async()=>{let made=0;const base=async()=>true;const route=withCourseRequests(base,{},config,guild,{validate:async()=>{throw new Error('schema');},createSupport:async()=>{made++;}});await assert.rejects(route.initialize(),/schema/);assert.equal(made,0);});
