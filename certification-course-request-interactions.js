@@ -77,7 +77,7 @@ export function createCourseRequestInteractions({ service, reader, config, guild
       return true;
     } catch {
       if (issued) sessions.delete(issued);
-      if (!disposed) { const payload = views.result('The outcome could not be confirmed. Check the current request status before retrying.'); if (i.deferred || i.replied) await respond(i, payload); else await i.reply({ ...payload, flags: 64 }); }
+      if (!disposed) { const payload = views.result('The outcome could not be confirmed. Check the current request status before retrying.', isOwner(i)); if (i.deferred || i.replied) await respond(i, payload); else await i.reply({ ...payload, flags: 64 }); }
       return true;
     } finally { busy.delete(actor); }
   }
