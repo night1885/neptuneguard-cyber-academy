@@ -1,0 +1,98 @@
+name: PostgreSQL 18 manual-review failure context
+
+on:
+  push:
+    branches: [feat/academy-general-release]
+    paths:
+      - '.github/workflows/manual-review-pg18-diagnostic.yml'
+      - 'certification-manual-review*.mjs'
+      - 'test-certification-manual-review*.mjs'
+      - 'migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      context: ${{ steps.actual.outputs.context }}
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: manual_review_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U manual_review_ci -d certification_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://manual_review_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run unchanged tests and emit bounded sanitized context
+        id: actual
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess, sys, tempfile
+          context, status = 'pg18_ready', 0
+          for stage, filename in [('migration', 'test-certification-manual-review-postgres.mjs'), ('native', 'test-certification-manual-review-native-postgres.mjs')]:
+              with tempfile.TemporaryFile() as output:
+                  try:
+                      result = subprocess.run(['node', '--test', filename], stdout=output, stderr=subprocess.STDOUT, timeout=120)
+                      output.seek(0)
+                      text = output.read(262144).decode('utf-8', errors='replace')
+                      if result.returncode == 0 and not re.search(r'^# skipped [1-9][0-9]*$', text, re.MULTILINE):
+                          continue
+                      lines = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
+                      line = int(lines[-1]) if lines else 0
+                      codes = re.findall(r"\bcode:\s*['\"]([A-Z0-9_]{1,40})['\"]", text)
+                      code = codes[0] if codes else 'unknown'
+                      if not re.fullmatch(r'[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE', code):
+                          code = 'unknown'
+                      if result.returncode == 0:
+                          code = 'skipped'
+                      context = f'pg18_{stage}_L{line}_{code}'
+                  except subprocess.TimeoutExpired:
+                      context = f'pg18_{stage}_timeout'
+                  status = 1
+                  break
+          assert re.fullmatch(r'pg18_(ready|(migration|native)_(timeout|L[0-9]{1,5}_(unknown|skipped|[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE)))', context)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + chr(10))
+          print(context)
+          sys.exit(status)
+          PY
+
+  context:
+    name: pg18-actual-context (${{ needs.diagnose.outputs.context || 'setup_failure_or_missing' }})
+    needs: diagnose
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Preserve the diagnostic result without raw logs
+        env:
+          CONTEXT: ${{ needs.diagnose.outputs.context }}
+          RESULT: ${{ needs.diagnose.result }}
+        run: |
+          test -n "$CONTEXT"
+          test "$RESULT" = success
