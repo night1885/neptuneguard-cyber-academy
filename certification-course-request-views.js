@@ -17,7 +17,7 @@ export function createCourseRequestViews(catalog) {
     if (more && page < 9999) buttons.push(button(`${kind}:${page + 1}`, 'Next'));
     buttons.push(button(kind === 'queue' ? 'queue:0' : 'catalog:0', kind === 'queue' ? 'First page' : 'Course catalog'));
     if (kind !== 'queue') buttons.push(button('mine:0', 'My requests'));
-    return row(buttons);
+    return row(buttons.filter((item, index) => buttons.findIndex(other => other.custom_id === item.custom_id) === index));
   }
   function validateRecords(records) {
     if (!Array.isArray(records) || records.length > 6 || records.some(r => !validUuid(r.request_id) || !validId(r.discord_user_id) || !titles.has(r.course_key) || !['pending','approved','denied'].includes(r.status))) throw new Error('Invalid request records');
