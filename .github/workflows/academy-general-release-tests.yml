@@ -1,0 +1,77 @@
+name: Academy general release validation
+
+on:
+  push:
+    branches: [feat/academy-general-release]
+    paths:
+      - '.github/workflows/academy-general-release-tests.yml'
+      - 'certification-*.js'
+      - 'certification-*.mjs'
+      - 'test-certification-*.mjs'
+      - 'migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  course-request-integration:
+    if: contains(github.event.head_commit.message, '[academy-validate]')
+    name: Academy requests (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: certification_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U certification_ci -d certification_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check changed production modules and tests for syntax
+        run: |
+          for file in certification-config.js certification-course-runtime.js certification-course-readiness.js certification-course-requests.js certification-course-request-*.js test-certification-course*.mjs; do
+            node --check "$file" || exit 1
+          done
+      - name: Run request, interaction, runtime and existing lifecycle regressions
+        run: >-
+          node --unhandled-rejections=strict --test
+          test-certification-course-requests.mjs
+          test-certification-course-request-ui.mjs
+          test-certification-course-request-runtime.mjs
+          test-certification-course-runtime.mjs
+          test-certification-course-lifecycle.mjs
+          test-certification-course-readiness.mjs
+          test-certification-course-column-privileges.mjs

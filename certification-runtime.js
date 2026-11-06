@@ -4,6 +4,8 @@ import { createProvenancePilotHandlers as createRegistrationPilotHandlers } from
 import { createProvenanceOwnerRegistrationHandler as createOwnerRegistrationHandler } from './certification-provenance-pilot-handlers.js';
 import { createProvenanceInvitationHandler as createInvitationInteractionHandler } from './certification-provenance-pilot-handlers.js';
 import { createManualReviewDecisionPilotHandler } from './certification-manual-review-decision-pilot-handler.mjs';
+import { createCombinedRegistrationRouter } from './certification-combined-registration-router.mjs';
+import { validateScopedRegistrationCourseReadiness } from './certification-scoped-registration-readiness.js';
 import { Events, PermissionFlagsBits } from 'discord.js';
 import { readReadOnlyPreviewFlag, createReadOnlyPreviewPool, createReadOnlyPreviewRouter } from './certification-read-only-preview.js';
 import { loadCertificationConfig } from './certification-config.js';
@@ -19,6 +21,9 @@ import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certifica
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter, createDecisionHandler, formalReview } = {}) {
   const config = loadCertificationConfig(env);
+  const combinedRegistration = config.scopedRegistration?.combined === true;
+  if (combinedRegistration && config.scopedRegistration.guildId !== guildId) throw new Error('Combined registration guild mismatch');
+  let routeShutdownFailed = false;
   const readOnlyPreview = readReadOnlyPreviewFlag(env);
   const pilot = env.CERTIFICATION_REGISTRATION_PILOT === undefined ? Object.freeze({ enabled: false }) : readRegistrationPilotOptions(env);
   const closureEnabled = readApplicationClosureFlag(env);
@@ -67,6 +72,18 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
         route = createRegistrationPilotRouter({ settings: pilot, readViews: route, ...handlers, ownerDecisionsEnabled: true, ownerDecisions });
       } else route = createRegistrationPilotRouter({ settings: pilot, readViews: route, ...handlers });
     }
+    if (combinedRegistration) {
+      const readDatabase = createReadOnlyPreviewPool(backing);
+      const settings = config.scopedRegistration;
+      const policy = createRegistrationPilotPolicy(settings, { ownerDecisionsEnabled: true });
+      const scopedConfig = Object.freeze({ ...config, registrationPilotEnabled: true, registrationPilotPolicy: policy });
+      const handlers = createRegistrationPilotHandlers({ readPool: readDatabase, writePool: backing, config: scopedConfig, guildId,
+        createRegistration: createOwnerRegistrationHandler, createInvitation: createInvitationInteractionHandler });
+      const factory = createDecisionHandler ?? createManualReviewDecisionPilotHandler;
+      if (typeof factory !== 'function') throw new Error('Trusted owner-decision factory required');
+      ownerDecisions = factory(config, guildId, { env: { ...env }, readPool: readDatabase, createPool });
+      route = createCombinedRegistrationRouter({ settings, policy, base: route, ...handlers, ownerDecisions });
+    }
     if (formal) {
       const candidate = formal.createRoute({ client, guildId, config: Object.freeze({ ...config }), isReady: () => ready && !detached });
       if (candidate && typeof candidate.then === 'function') {
@@ -92,9 +109,13 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     if (initializing) return initializing;
     initializing = (async () => {
       ready = false;
-      await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);
-      if (pilot.enabled && detached) return;
-      await validateActiveEnrollmentAgreement(database, config);
+      if (combinedRegistration) {
+        await validateScopedRegistrationCourseReadiness({ pool: backing, config, connection, decisions: ownerDecisions });
+      } else {
+        await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);
+        if (pilot.enabled && detached) return;
+        await validateActiveEnrollmentAgreement(database, config);
+      }
       if (detached) return;
       if (typeof route.initialize === 'function') await route.initialize();
       if (detached) return;
@@ -172,7 +193,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   client.on(Events.InteractionCreate, onInteraction);
   client.once(Events.ClientReady, initialize);
   if (client.isReady()) void initialize();
-  return { enabled: true, readOnlyPreview, registrationPilot: pilot.enabled, get ready() { return ready; },
+  return { enabled: true, readOnlyPreview, registrationPilot: pilot.enabled, combinedRegistration, get ready() { return ready; },
     get formalReviewReady() { return ready && !detached && formalRoute?.enabled === true; },
     get manualReviewDecisionsReady() { return ready && !detached && ownerDecisions?.ready === true; }, getCourseAuthorization,
     detach() {
@@ -181,8 +202,8 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       client.off(Events.ClientReady, initialize);
       if (!closing) {
         let disposal = Promise.resolve();
-        try { if (typeof route.dispose === 'function') disposal = Promise.resolve(route.dispose()).catch(() => { console.error('Certification route shutdown requires attention.'); }); }
-        catch { console.error('Certification route shutdown requires attention.'); }
+        try { if (typeof route.dispose === 'function') disposal = Promise.resolve(route.dispose()).catch(() => { routeShutdownFailed = true; console.error('Certification route shutdown requires attention.'); }); }
+        catch { routeShutdownFailed = true; console.error('Certification route shutdown requires attention.'); }
         let formalDisposal = Promise.resolve();
         if (formalRoute) {
           try { formalDisposal = Promise.resolve(formalRoute.dispose()).then(result => {
@@ -193,6 +214,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
           const waiting=Promise.allSettled([...active, ...(initializing ? [initializing] : []), disposal, formalDisposal]);
           const complete=(async()=>{const results=await waiting;
             if(formal&&formalPrefix==='fnv:'&&results.at(-1).status==='rejected')throw new Error('First-practical drain incomplete; pool not closed');
+            if (combinedRegistration && routeShutdownFailed) throw new Error('Combined route disposal unconfirmed; primary pool not closed');
             await database.end();
             if(results.at(-1).status==='rejected')throw new Error('Formal review shutdown requires attention');
           })();

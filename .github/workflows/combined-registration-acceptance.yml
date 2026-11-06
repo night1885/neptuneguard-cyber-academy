@@ -1,0 +1,39 @@
+name: Combined registration acceptance baseline
+
+on:
+  push:
+    branches: [feat/academy-general-release]
+    paths:
+      - '.github/workflows/combined-registration-acceptance.yml'
+      - 'scripts/test-combined-registration-acceptance.mjs'
+      - 'certification-*.js'
+      - 'certification-*.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  native-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      CERTIFICATION_TEST_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Syntax-check the acceptance test
+        run: node --check scripts/test-combined-registration-acceptance.mjs
+      - name: Run native combined registration acceptance requirements
+        run: node --unhandled-rejections=strict --test scripts/test-combined-registration-acceptance.mjs

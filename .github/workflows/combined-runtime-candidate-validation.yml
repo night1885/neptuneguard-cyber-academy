@@ -1,0 +1,197 @@
+name: Combined runtime source candidate validation
+
+on:
+  push:
+    branches: [feat/academy-general-release]
+    paths: ['.github/workflows/combined-runtime-candidate-validation.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: '20'
+            postgres: '16'
+          - node: '22'
+            postgres: '18'
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: certification_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U certification_ci -d certification_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://certification_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Assemble the approved source recipe with guarded config corrections
+        id: assembly
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          revision = '238b3e7dca53ac6c730662ee119d13404ddf3f18'
+          path = '.github/workflows/combined-runtime-candidate-validation.yml'
+          original = subprocess.check_output(['git','show',revision+':'+path],text=True)
+          lines = original.splitlines()
+          start = lines.index("          python3 - <<'PY'")+1
+          end = lines.index('          PY',start)
+          body = lines[start:end]
+          if not body or any(line and not line.startswith('          ') for line in body):
+              raise SystemExit('Unexpected approved recipe indentation')
+          script = '\n'.join(line[10:] for line in body)+'\n'
+          fixes = [
+              ('const workflow = manualReviewEnabled ? readRegistrationWorkflowOptions(env) : null;', "const workflow = manualReviewDecisionsEnabled || (manualReviewEnabled && env.CERTIFICATION_COURSES_ENABLED === 'true') ? readRegistrationWorkflowOptions(env) : null;"),
+              ("workflow?.enabled !== true || flag !== 'false'", "(workflow?.combined !== true && env.CERTIFICATION_REGISTRATION_PILOT !== 'true') || flag !== 'false'")
+          ]
+          for old,new in fixes:
+              if script.count(old) != 1:
+                  raise SystemExit('Approved config correction anchor changed')
+              script = script.replace(old,new,1)
+          compile(script,'corrected-combined-runtime-recipe','exec')
+          subprocess.run(['python3','-c',script],check=True)
+          tests = r'''import test from 'node:test';import assert from 'node:assert/strict';import{loadCertificationConfig as load}from'./certification-config.js';
+          const env={CERTIFICATION_ENABLED:'true',CERTIFICATION_MANUAL_REVIEW_ENABLED:'true',CERTIFICATION_MANUAL_REVIEW_DECISIONS_ENABLED:'true',CERTIFICATION_COURSES_ENABLED:'true',CERTIFICATION_REGISTRATION_PILOT:'false',CERTIFICATION_READ_ONLY_PREVIEW:'false',CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED:'false',CERTIFICATION_APPLICATION_CLOSURE_ENABLED:'false',CERTIFICATION_COURSE_REQUESTS_ENABLED:'true',CERTIFICATION_COURSE_REQUEST_STUDENTS_ENABLED:'false',CERTIFICATION_REGISTRATION_PILOT_STUDENT_IDS:'100000000000000002',ACADEMY_OWNER_ID:'100000000000000001',GUILD_ID:'100000000000000003',ACADEMY_ADMIN_CHANNEL_ID:'100000000000000004',CERTIFICATION_ENROLLMENT_MANIFEST_JSON:JSON.stringify({agreementVersion:'fixture-v1',agreementSha256:'a'.repeat(64),comprehensionCheck:{version:'check-v1',questions:[{prompt:'Fixture?'}],correctAnswers:['yes']}})};
+          test('combined config remains supported without general submission or learner-request activation',()=>{const c=load(env);assert.equal(c.scopedRegistration.combined,true);assert.equal(c.manualReviewDecisionsEnabled,true);assert.equal(c.enrollmentSubmissionEnabled,false);assert.equal(c.studentAccessEnabled,false);});
+          for(const key of ['CERTIFICATION_MANUAL_REVIEW_DECISIONS_ENABLED','CERTIFICATION_COURSE_REQUESTS_ENABLED','CERTIFICATION_ENROLLMENT_MANIFEST_JSON','CERTIFICATION_REGISTRATION_PILOT_STUDENT_IDS','GUILD_ID','ACADEMY_OWNER_ID','ACADEMY_ADMIN_CHANNEL_ID','CERTIFICATION_READ_ONLY_PREVIEW','CERTIFICATION_APPLICATION_CLOSURE_ENABLED','CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED','CERTIFICATION_REGISTRATION_PILOT'])test('combined missing requirement still rejected: '+key,()=>{const e={...env};delete e[key];assert.throws(()=>load(e));});
+          '''
+          testfile = 'test-certification-combined-config-boundaries.mjs'
+          if Path(testfile).exists():
+              raise SystemExit('Candidate boundary test already exists')
+          Path(testfile).write_text(tests)
+          subprocess.run(['git','add','-N','--',testfile],check=True)
+          paths = ['certification-config.js','certification-runtime.js','certification-manual-review-decision-pilot-handler.mjs','certification-registration-workflow.mjs','certification-combined-registration-router.mjs',testfile]
+          patch = subprocess.check_output(['git','diff','--binary','--',*paths])
+          Path(os.environ['RUNNER_TEMP'],'combined-runtime-candidate.patch').write_bytes(patch)
+          PY
+      - name: Install locked dependencies without lifecycle scripts
+        id: install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check actual native source syntax and import graph
+        id: imports
+        run: |
+          for file in certification-config.js certification-runtime.js certification-manual-review-decision-pilot-handler.mjs certification-registration-workflow.mjs certification-combined-registration-router.mjs test-certification-combined-config-boundaries.mjs; do
+            node --check "$file" || exit 1
+          done
+          node --input-type=module -e "await import('./certification-runtime.js')"
+      - name: Run native acceptance and existing regression tests against candidate
+        id: acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test \
+            scripts/test-combined-registration-acceptance.mjs \
+            test-certification-combined-config-boundaries.mjs \
+            test-certification-runtime.mjs \
+            test-certification-manual-review-config.mjs \
+            test-certification-manual-review-decision-config.mjs \
+            test-certification-manual-review-decision-pilot-handler.mjs \
+            test-certification-course-runtime.mjs \
+            test-certification-course-request-runtime.mjs \
+            test-certification-scoped-registration-readiness.mjs \
+            2>&1 | tee "$RUNNER_TEMP/combined-unit.tap"
+      - name: Run existing real-database regressions without accepting skips
+        id: database
+        if: ${{ !cancelled() && steps.imports.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in test-certification-manual-review-postgres.mjs test-certification-manual-review-native-postgres.mjs test-certification-course-requests.mjs test-certification-course-column-privileges.mjs; do
+            log="$RUNNER_TEMP/combined-db-$file.tap"
+            node --unhandled-rejections=strict --test "$file" 2>&1 | tee "$log"
+            if grep -Eq '^# skipped [1-9][0-9]*$' "$log"; then
+              echo 'Required database test skipped; refusing a passing result.'
+              exit 1
+            fi
+          done
+      - name: Publish assembled source patch and candidate test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-runtime-candidate-node${{ matrix.node }}-pg${{ matrix.postgres }}
+          path: |
+            ${{ runner.temp }}/combined-runtime-candidate.patch
+            ${{ runner.temp }}/combined-unit.tap
+            ${{ runner.temp }}/combined-db-*.tap
+          if-no-files-found: warn
+          retention-days: 14
+
+  diagnostics:
+    needs: candidate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+      baseline: ${{ steps.inspect.outputs.baseline }}
+    steps:
+      - name: Read bounded candidate summaries and the known historical PG16 failure
+        id: inspect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const clean = value => String(value).replace(/\x1b\[[0-9;]*m/g, '').replace(/postgres(?:ql)?:\/\/\S+/gi, '[db-url]').replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ' ');
+            async function details(id) {
+              try {
+                const response = await github.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {...context.repo, job_id: id});
+                const text = typeof response.data === 'string' ? response.data : Buffer.isBuffer(response.data) ? response.data.toString('utf8') : '';
+                const hits = text.split(/\r?\n/).filter(line => /not ok [0-9]+|fatal:|Original source mismatch|Non-unique source anchor|Could not find|SyntaxError|ERR_MODULE_NOT_FOUND|Error:|error:|code:|Native fixture failed in phase:/.test(line) && !/token|password|secret|DATABASE_URL|connectionString/i.test(line));
+                const safe = hits.slice(0, 12).map(line => clean(line).replace(/^\d{4}-\d\d-\d\dT\S+\s*/, '').slice(0, 240));
+                for (const line of safe) core.info(line);
+                return safe;
+              } catch { return ['logs unavailable']; }
+            }
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...context.repo, run_id: context.runId});
+            const summaries = [];
+            for (const job of jobs.filter(job => job.name.startsWith('candidate ('))) {
+              const failed = (job.steps || []).find(step => step.conclusion === 'failure');
+              const db = (job.steps || []).find(step => step.name === 'Run existing real-database regressions without accepting skips')?.conclusion || 'unknown';
+              const hits = failed ? await details(job.id) : [];
+              summaries.push(clean(`${job.name} db=${db}: ${hits[0] || failed?.name || job.conclusion}`).slice(0, 110));
+            }
+            core.setOutput('context', summaries.join(' | ').slice(0, 230) || 'candidate jobs not found');
+            const historical = await details(128012613575);
+            core.setOutput('baseline', clean('historical 5f4c9ac PG16: ' + historical.slice(0, 3).join('; ')).slice(0, 220));
+
+  candidate-context:
+    needs: diagnostics
+    if: ${{ always() }}
+    name: candidate context (${{ needs.diagnostics.outputs.context || 'diagnostic unavailable' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: printf '%s\n' 'Read-only diagnostic context is in this job name. Candidate failures remain failed checks.'
+
+  historical-pg16-context:
+    needs: diagnostics
+    if: ${{ always() }}
+    name: baseline context (${{ needs.diagnostics.outputs.baseline || 'historical diagnostic unavailable' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: printf '%s\n' 'Historical failure details are informational; this is not a baseline test rerun or a passing test.'

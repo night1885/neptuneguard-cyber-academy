@@ -1,0 +1,144 @@
+name: Native combined journey acceptance
+on:
+  push:
+    branches: [feat/academy-general-release]
+    paths:
+      - '.github/workflows/combined-runtime-journey.yml'
+      - 'certification-*.js'
+      - 'certification-*.mjs'
+      - 'test-certification-combined-*.mjs'
+      - 'restoration.js'
+      - 'community-learning-*.mjs'
+      - 'test-community-learning-*.mjs'
+      - 'test-certification-restor*.mjs'
+      - 'test-certification-runtime-restored-routing.mjs'
+      - 'test-certification-ui-pilot-compatibility.mjs'
+      - 'test-certification-manual-review-config.mjs'
+      - 'test-certification-manual-review-decision-config.mjs'
+      - 'test-certification-runtime-legacy-drain.mjs'
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
+      - 'migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: '20'
+            postgres: '16'
+          - node: '22'
+            postgres: '18'
+          - node: '26.12.1'
+            postgres: '18.6'
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: combined_ci
+          POSTGRES_PASSWORD: disposable_combined_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U combined_ci -d certification_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CERTIFICATION_TEST_DATABASE_URL: postgresql://combined_ci:disposable_combined_fixture_only@127.0.0.1:5432/certification_test
+      CERTIFICATION_TEST_ALLOW_ROLE_DDL: 'true'
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DDL: 'true'
+      CERTIFICATION_TEST_ALLOW_MANUAL_REVIEW_DECISION_DDL: 'true'
+      CERTIFICATION_ENABLED: 'false'
+      CERTIFICATION_DATABASE_URL: ''
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check source and test syntax
+        run: |
+          node --check certification-combined-registration-router.mjs
+          node --check test-certification-combined-course-modal.mjs
+          node --check test-certification-combined-journey-postgres.mjs
+      - name: Run combined route and modal boundary regressions
+        run: node --unhandled-rejections=strict --test test-certification-combined-router.mjs test-certification-combined-course-modal.mjs test-certification-combined-config-boundaries.mjs
+      - name: Retained restoration, UI-pilot and Community regressions without skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test --test-concurrency=1 \
+            test-certification-restored-application.mjs \
+            test-certification-restored-runtime-composition.mjs \
+            test-certification-restoration-router.mjs \
+            test-certification-runtime-restored-routing.mjs \
+            test-certification-ui-pilot-compatibility.mjs \
+            test-certification-runtime-legacy-drain.mjs \
+            test-certification-manual-review-config.mjs \
+            test-certification-manual-review-decision-config.mjs \
+            test-community-learning-isolation.mjs \
+            test-community-learning-startup.mjs \
+            test-community-learning-runtime.mjs \
+            test-community-learning-policy.mjs \
+            test-community-learning-router.mjs \
+            2>&1 | tee "$RUNNER_TEMP/entrypoint-regressions.tap"
+          if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/entrypoint-regressions.tap"; then exit 1; fi
+      - name: Require the real same-database native journey without skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test test-certification-combined-journey-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/combined-journey.tap"
+          if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/combined-journey.tap"; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: native-combined-journey-node${{ matrix.node }}-pg${{ matrix.postgres }}
+          path: |
+            ${{ runner.temp }}/combined-journey.tap
+            ${{ runner.temp }}/entrypoint-regressions.tap
+          if-no-files-found: warn
+          retention-days: 14
+  diagnostics:
+    needs: journey
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      context: ${{ steps.read.outputs.context }}
+    steps:
+      - uses: actions/github-script@v7
+        id: read
+        with:
+          script: |
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...context.repo, run_id: context.runId});
+            const summaries = [];
+            for (const job of jobs.filter(j => j.name.startsWith('journey ('))) {
+              let detail = job.conclusion;
+              if (job.conclusion !== 'success') {
+                try {
+                  const result = await github.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {...context.repo, job_id: job.id});
+                  const text = typeof result.data === 'string' ? result.data : '';
+                  const lines = text.split(/\r?\n/).map(s => s.replace(/^\d{4}-\d\d-\d\dT\S+\s*/, ''));
+                  detail = lines.find(s => /^\s*error:.*Combined phase /.test(s)) || lines.find(s => /^\s*not ok [0-9]+ - /.test(s)) || (job.steps || []).find(s => s.conclusion === 'failure')?.name || detail;
+                } catch { detail = 'failed; logs unavailable'; }
+              }
+              summaries.push(`${job.name}: ${detail}`.replace(/postgres(?:ql)?:\/\/\S+/gi, '[db-url]').replace(/[\r\n]/g, ' ').slice(0, 110));
+            }
+            core.setOutput('context', summaries.join(' | ').slice(0, 230));
+  journey-context:
+    needs: diagnostics
+    if: ${{ always() }}
+    name: native journey (${{ needs.diagnostics.outputs.context || 'diagnostic unavailable' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: printf '%s\n' 'Diagnostic only; journey job failures remain failed checks.'
