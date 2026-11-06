@@ -7,9 +7,9 @@ const marker='        closing = (async () => {',start=source.indexOf(marker),end
 assert.ok(start>=0&&end>start,'Expected bounded root shutdown assignment');
 assert.equal(source.indexOf(marker,start+marker.length),-1,'Ambiguous shutdown assignment');
 const assignment=source.slice(start,end+'\n        })();'.length);
-function fixture({prefix='fws:',formal=null,timers=false,failedDrain=false,poolFailure=false,holdWork,holdEnd}={}){
+function fixture({prefix='fws:',formal=null,timers=false,failedDrain=false,poolFailure=false,combinedRegistration=false,routeShutdownFailed=false,holdWork,holdEnd}={}){
  const state={closeRequests:0,closed:0};
- const context={active:new Set(holdWork?[holdWork]:[]),initializing:null,disposal:Promise.resolve(),formalDisposal:failedDrain?Promise.reject(new Error('SCRIPTED DRAIN FAILURE')):Promise.resolve(),formal,formalPrefix:prefix,formalDrainMs:10,closing:null,
+ const context={active:new Set(holdWork?[holdWork]:[]),initializing:null,disposal:Promise.resolve(),formalDisposal:failedDrain?Promise.reject(new Error('SCRIPTED DRAIN FAILURE')):Promise.resolve(),formal,formalPrefix:prefix,formalDrainMs:10,closing:null,combinedRegistration,routeShutdownFailed,
   database:{async end(){state.closeRequests++;if(poolFailure)throw new Error('SCRIPTED POOL FAILURE');if(holdEnd)await holdEnd;state.closed++;}}};
  if(timers)Object.assign(context,{setTimeout,clearTimeout});
  runInNewContext('globalThis.close=()=>{'+assignment+';return closing;};',context);
@@ -24,3 +24,7 @@ test('fnv successful shutdown closes with real timer APIs',async()=>{const f=fix
 test('fnv unconfirmed drain never blindly closes pool',async()=>{const f=fixture({prefix:'fnv:',formal:{enabled:true},timers:true,failedDrain:true});await assert.rejects(f.close(),/drain incomplete/);assert.equal(f.state.closeRequests,0);});
 test('fnv unsettled admitted work remains a bounded incomplete shutdown',async t=>{const gate=held();t.after(()=>gate.release());const f=fixture({prefix:'fnv:',formal:{enabled:true},timers:true,holdWork:gate.promise});await assert.rejects(f.close(),/shutdown incomplete/);assert.equal(f.state.closeRequests,0);});
 test('fnv unsettled pool close is not reported complete',async t=>{const gate=held();t.after(()=>gate.release());const f=fixture({prefix:'fnv:',formal:{enabled:true},timers:true,holdEnd:gate.promise});await assert.rejects(f.close(),/shutdown incomplete/);assert.equal(f.state.closeRequests,1);assert.equal(f.state.closed,0);});
+test('combined root shutdown closes once when route disposal is confirmed',async()=>{const f=fixture({combinedRegistration:true});assert.equal(f.hasTimers,'undefined');await f.close();assert.equal(f.state.closeRequests,1);assert.equal(f.state.closed,1);});
+test('combined root shutdown does not close its primary pool after failed route disposal',async()=>{const f=fixture({combinedRegistration:true,routeShutdownFailed:true});await assert.rejects(f.close(),/Combined route disposal unconfirmed; primary pool not closed/);assert.equal(f.state.closeRequests,0);});
+test('legacy route disposal flag does not change existing non-combined close ordering',async()=>{const f=fixture({routeShutdownFailed:true});await f.close();assert.equal(f.state.closeRequests,1);});
+test('combined root shutdown drains admitted work before closing the primary pool',async()=>{const gate=held(),f=fixture({combinedRegistration:true,holdWork:gate.promise});const closing=f.close();await new Promise(r=>setImmediate(r));assert.equal(f.state.closeRequests,0);gate.release();await closing;assert.equal(f.state.closed,1);});
