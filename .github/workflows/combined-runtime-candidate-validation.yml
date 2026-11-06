@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   candidate:
@@ -42,175 +43,128 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - name: Assemble source-pinned candidate in this runner only
+      - name: Assemble the unchanged approved source recipe in this runner only
+        id: assembly
         shell: bash
         run: |
           python3 - <<'PY'
-          import hashlib, os, subprocess
-          from pathlib import Path
-          subprocess.run(['git','merge-base','--is-ancestor','293c693a105fe974a8c86491c2e34a3baa34f7e5','HEAD'],check=True)
-          scope = r'''import {readRegistrationPilotOptions,createRegistrationPilotPolicy} from './certification-registration-pilot-guard.js';
-          export function readRegistrationWorkflowOptions(env={}) {
-            if(env.CERTIFICATION_MANUAL_REVIEW_ENABLED!=='true'||env.CERTIFICATION_COURSES_ENABLED!=='true')return readRegistrationPilotOptions(env);
-            const expected={CERTIFICATION_ENABLED:'true',CERTIFICATION_REGISTRATION_PILOT:'false',CERTIFICATION_READ_ONLY_PREVIEW:'false',CERTIFICATION_ENROLLMENT_SUBMISSION_ENABLED:'false',CERTIFICATION_APPLICATION_CLOSURE_ENABLED:'false',CERTIFICATION_MANUAL_REVIEW_DECISIONS_ENABLED:'true',CERTIFICATION_COURSE_REQUESTS_ENABLED:'true'};
-            for(const [key,value]of Object.entries(expected))if(env[key]!==value)throw Error(`Combined registration requires explicit ${key}=${value}`);
-            const list=env.CERTIFICATION_REGISTRATION_PILOT_STUDENT_IDS;
-            if(typeof list!=='string'||list.length>104||!/^[0-9]{17,20}(,[0-9]{17,20}){0,4}$/.test(list))throw Error('Existing explicit registration target list required');
-            const s={enabled:true,combined:true,ownerId:env.ACADEMY_OWNER_ID,guildId:env.GUILD_ID,adminChannelId:env.ACADEMY_ADMIN_CHANNEL_ID,studentIds:Object.freeze(list.split(','))};
-            createRegistrationPilotPolicy(s,{ownerDecisionsEnabled:true});
-            return Object.freeze(s);
-          }
-          '''
-          router = r'''export function createCombinedRegistrationRouter({settings,policy,base,registration,learner,ownerDecisions}={}) {
-            if(settings?.combined!==true||settings.enabled!==true||!Array.isArray(settings.studentIds)||
-               ['classify','allowsStudent','allowsButton','allowsModal'].some(k=>typeof policy?.[k]!=='function')||
-               [base,registration,learner,ownerDecisions].some(fn=>typeof fn!=='function')||
-               [base,ownerDecisions].some(fn=>typeof fn.initialize!=='function'||typeof fn.dispose!=='function'))throw Error('Complete combined runtime dependencies required');
-            const s=Object.freeze({...settings,studentIds:Object.freeze([...settings.studentIds])});
-            let disposed=false,ready=false,initializing=null,closing=null;const active=new Set();
-            const ownPrivate=i=>{const m=i.message,origin=m?.interactionMetadata?.user?.id||m?.interaction?.user?.id;return m?.flags?.has?.(64)===true&&origin===i.user?.id&&typeof i.client?.user?.id==='string'&&m.author?.id===i.client.user.id;};
-            const hold=async i=>{const p={content:'This academy action is unavailable. No operation was admitted.',embeds:[],components:[],allowedMentions:{parse:[]}};if(i.deferred||i.replied)await i.followUp({...p,flags:64});else await i.reply({...p,flags:64});return true;};
-            const kind=i=>{const b=i.isButton?.()===true,m=i.isModalSubmit?.()===true,v=i.isStringSelectMenu?.()===true;return [b,m,v].filter(Boolean).length!==1?null:b?'button':m?'modal':'menu';};
-            const namespace=id=>typeof id==='string'&&/^cert:(?:course|cr):/.test(id);
-            function destination(i){
-              const actor=i.user?.id,id=i.customId,k=kind(i),owner=actor===s.ownerId;
-              if(!k||typeof actor!=='string'||!/^[0-9]{17,20}$/.test(actor)||typeof id!=='string'||i.guildId!==s.guildId||i.guild?.id!==s.guildId||(i.message?.flags?.has?.(64)===true&&!ownPrivate(i))||(owner&&i.channelId!==s.adminChannelId))return null;
-              const classified=policy.classify(i);
-              if(id.startsWith('cert:review:'))return owner&&classified==='decision'?'decision':null;
-              if(id.startsWith('cert:register:'))return owner&&classified==='registration'?'registration':null;
-              if(id.startsWith('cert:invite:'))return !owner&&classified==='learner'?'learner':null;
-              if(id.startsWith('cert:courselife:'))return owner?'base':null;
-              if(namespace(id))return 'base';
-              if(owner&&classified==='read')return 'base';
-              if(!owner&&k==='button'&&/^cert:(?:initial:(?:home|status|help)|learner:(?:home|status))$/.test(id))return 'base';
-              return null;
-            }
-            const json=v=>typeof v?.toJSON==='function'?v.toJSON():v;
-            function adapt(i){
-              const actor=i.user.id,owner=actor===s.ownerId;let privateReply=i.ephemeral===true;
-              const allowedButton=id=>typeof id==='string'&&(namespace(id)||(owner&&id.startsWith('cert:courselife:'))||policy.allowsButton(actor,id)||(!owner&&/^cert:(?:initial:(?:home|status|help)|learner:(?:home|status))$/.test(id)));
-              function present(p){
-                if(!p||typeof p!=='object'||Array.isArray(p))throw Error('Structured private payload required');
-                return {...p,allowedMentions:{parse:[]},components:(p.components||[]).map((raw,r)=>{
-                  const row=json(raw);if(row?.type!==1||!Array.isArray(row.components))throw Error('Unsupported row');
-                  return {...row,components:row.components.map((raw,c)=>{
-                    const item=json(raw);
-                    if(item?.type===2){if(allowedButton(item.custom_id))return {...item};const {url,sku_id,...rest}=item;return {...rest,style:2,disabled:true,custom_id:`cert:combined:disabled:${r}:${c}`};}
-                    if(item?.type===3&&owner&&item.custom_id==='cert:admin:section'){const options=(item.options||[]).filter(o=>['overview','enrollments','labs','students','courses'].includes(o.value));return {...item,options,disabled:item.disabled===true||!options.length};}
-                    if(item?.type===3&&owner&&item.custom_id?.startsWith('cert:courselife:assign:'))return {...item};
-                    if([3,5,6,7,8].includes(item?.type))return {...item,disabled:true};throw Error('Unsupported component');
-                  })};
-                })};
-              }
-              return new Proxy(i,{get(target,key){
-                if(['reply','followUp'].includes(key))return async p=>{const result=await target[key]({...present(p),flags:64});privateReply=true;return result;};
-                if(key==='editReply')return p=>{if(!privateReply&&!ownPrivate(i))throw Error('Private reply required');return target.editReply(present(p));};
-                if(key==='update')return p=>{if(!ownPrivate(i))throw Error('Own private message required');return target.update(present(p));};
-                if(key==='deferReply')return async()=>{const result=await target.deferReply({flags:64});privateReply=true;return result;};
-                if(key==='deferUpdate')return()=>{if(!ownPrivate(i))throw Error('Own private message required');privateReply=true;return target.deferUpdate();};
-                if(key==='showModal')return p=>{p=json(p);if(!policy.allowsModal(actor,p?.custom_id)&&!(typeof p?.custom_id==='string'&&p.custom_id.startsWith('cert:cr:')))throw Error('Modal not admitted');return target.showModal(p);};
-                const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
-              }});
-            }
-            const handlers={base,registration,learner,decision:ownerDecisions};
-            const route=async i=>{
-              if(disposed||!ready)return hold(i);const target=destination(i);if(!target)return hold(i);
-              const task=Promise.resolve().then(async()=>{if(disposed||!ready)return hold(i);if(await handlers[target](adapt(i),policy)!==true)throw Error('Admitted combined action not handled');return true;});
-              active.add(task);try{return await task;}finally{active.delete(task);}
-            };
-            route.initialize=()=>{
-              if(disposed)return Promise.reject(Error('Combined runtime disposed'));
-              if(!initializing)initializing=Promise.resolve().then(async()=>{await base.initialize();if(disposed)throw Error('Combined startup stopped');const result=await ownerDecisions.initialize();if(disposed||result?.ready!==true||ownerDecisions.ready!==true)throw Error('Decision readiness unconfirmed');ready=true;return Object.freeze({ready:true});}).catch(error=>{ready=false;throw error;});return initializing;
-            };
-            route.dispose=()=>{
-              if(closing)return closing;disposed=true;ready=false;
-              closing=(async()=>{await Promise.allSettled([...active,...(initializing?[initializing]:[])]);const results=await Promise.allSettled([base,ownerDecisions].map(fn=>Promise.resolve().then(()=>fn.dispose())));if(results.some(r=>r.status==='rejected'))throw Error('Combined runtime drain or disposal failed');})();return closing;
-            };
-            return route;
-          }
-          '''
-          changes = [
-            ('certification-config.js','2f76303b886043ef35027889565aa6cc01d59ff2',[
-              ("import { readRegistrationPilotOptions } from './certification-registration-pilot-guard.js';","import { readRegistrationWorkflowOptions } from './certification-registration-workflow.mjs';"),
-              ('  let manualReviewDecisionStudentIds;',"  const workflow = manualReviewEnabled ? readRegistrationWorkflowOptions(env) : null;\n  let manualReviewDecisionStudentIds;"),
-              ('const pilot = readRegistrationPilotOptions(env);','const pilot = workflow;'),
-              ("    ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}),","    ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}),\n    ...(workflow?.combined === true ? { scopedRegistration: workflow } : {}),"),
-              ("env.CERTIFICATION_REGISTRATION_PILOT !== 'true' || flag !== 'false'","workflow?.enabled !== true || flag !== 'false'")]),
-            ('certification-manual-review-decision-pilot-handler.mjs','98790970ba65d3644b158109e88b433bd0e37ef1',[
-              ("import { readRegistrationPilotOptions, createRegistrationPilotPolicy } from './certification-registration-pilot-guard.js';","import { createRegistrationPilotPolicy } from './certification-registration-pilot-guard.js';\nimport { readRegistrationWorkflowOptions } from './certification-registration-workflow.mjs';"),
-              ('pilot = readRegistrationPilotOptions(env)','pilot = readRegistrationWorkflowOptions(env)'),
-              ('      JSON.stringify(config.comprehensionCheck) !== JSON.stringify(checked.comprehensionCheck) ||','      JSON.stringify(config.comprehensionCheck) !== JSON.stringify(checked.comprehensionCheck) ||\n      JSON.stringify(config.manualReviewDecisionStudentIds) !== JSON.stringify(checked.manualReviewDecisionStudentIds) ||')]),
-            ('certification-runtime.js','2493af5fc74e91897f7badf1f199c0f609d74a1e',[
-              ("import { Events, PermissionFlagsBits } from 'discord.js';","import { createCombinedRegistrationRouter } from './certification-combined-registration-router.mjs';\nimport { validateScopedRegistrationCourseReadiness } from './certification-scoped-registration-readiness.js';\nimport { Events, PermissionFlagsBits } from 'discord.js';"),
-              ('  const readOnlyPreview = readReadOnlyPreviewFlag(env);',"  const combinedRegistration = config.scopedRegistration?.combined === true;\n  if (combinedRegistration && config.scopedRegistration.guildId !== guildId) throw new Error('Combined registration guild mismatch');\n  let routeShutdownFailed = false;\n  const readOnlyPreview = readReadOnlyPreviewFlag(env);"),
-              ('    if (formal) {\n      const candidate = formal.createRoute',"    if (combinedRegistration) {\n      const readDatabase = createReadOnlyPreviewPool(backing);\n      const settings = config.scopedRegistration;\n      const policy = createRegistrationPilotPolicy(settings, { ownerDecisionsEnabled: true });\n      const scopedConfig = Object.freeze({ ...config, registrationPilotEnabled: true, registrationPilotPolicy: policy });\n      const handlers = createRegistrationPilotHandlers({ readPool: readDatabase, writePool: backing, config: scopedConfig, guildId,\n        createRegistration: createOwnerRegistrationHandler, createInvitation: createInvitationInteractionHandler });\n      const factory = createDecisionHandler ?? createManualReviewDecisionPilotHandler;\n      if (typeof factory !== 'function') throw new Error('Trusted owner-decision factory required');\n      ownerDecisions = factory(config, guildId, { env: { ...env }, readPool: readDatabase, createPool });\n      route = createCombinedRegistrationRouter({ settings, policy, base: route, ...handlers, ownerDecisions });\n    }\n    if (formal) {\n      const candidate = formal.createRoute"),
-              ('      await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);\n      if (pilot.enabled && detached) return;\n      await validateActiveEnrollmentAgreement(database, config);','      if (combinedRegistration) {\n        await validateScopedRegistrationCourseReadiness({ pool: backing, config, connection, decisions: ownerDecisions });\n      } else {\n        await validateCertificationSchema(database, pilot.enabled ? { pilotConnection: connection } : undefined);\n        if (pilot.enabled && detached) return;\n        await validateActiveEnrollmentAgreement(database, config);\n      }'),
-              ('return { enabled: true, readOnlyPreview, registrationPilot: pilot.enabled,','return { enabled: true, readOnlyPreview, registrationPilot: pilot.enabled, combinedRegistration,'),
-              ("disposal = Promise.resolve(route.dispose()).catch(() => { console.error('Certification route shutdown requires attention.'); });","disposal = Promise.resolve(route.dispose()).catch(() => { routeShutdownFailed = true; console.error('Certification route shutdown requires attention.'); });"),
-              ("catch { console.error('Certification route shutdown requires attention.'); }","catch { routeShutdownFailed = true; console.error('Certification route shutdown requires attention.'); }"),
-              ('            await database.end();',"            if (combinedRegistration && routeShutdownFailed) throw new Error('Combined route disposal unconfirmed; primary pool not closed');\n            await database.end();")])
-          ]
-          pending = {}
-          for name, expected, replacements in changes:
-              raw = Path(name).read_bytes()
-              actual = hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
-              if actual != expected:
-                  raise SystemExit('Original source mismatch: '+name)
-              text = raw.decode()
-              for old, new in replacements:
-                  if text.count(old) != 1:
-                      raise SystemExit('Non-unique source anchor: '+name)
-                  text = text.replace(old,new,1)
-              pending[name] = text
-          for name, text in [('certification-registration-workflow.mjs',scope),('certification-combined-registration-router.mjs',router)]:
-              if Path(name).exists():
-                  raise SystemExit('Candidate file already exists: '+name)
-              pending[name] = text
-          for name,text in pending.items():
-              Path(name).write_text(text)
-          subprocess.run(['git','add','-N','--',*pending],check=True)
-          patch = subprocess.check_output(['git','diff','--binary','--',*pending])
-          Path(os.environ['RUNNER_TEMP'],'combined-runtime-candidate.patch').write_bytes(patch)
+          import subprocess
+          revision = '238b3e7dca53ac6c730662ee119d13404ddf3f18'
+          path = '.github/workflows/combined-runtime-candidate-validation.yml'
+          original = subprocess.check_output(['git','show',revision+':'+path],text=True)
+          lines = original.splitlines()
+          start = lines.index("          python3 - <<'PY'")+1
+          end = lines.index('          PY',start)
+          body = lines[start:end]
+          if not body or any(line and not line.startswith('          ') for line in body):
+              raise SystemExit('Unexpected approved recipe indentation')
+          script = '\n'.join(line[10:] for line in body)+'\n'
+          compile(script,'approved-combined-runtime-recipe','exec')
+          subprocess.run(['python3','-c',script],check=True)
           PY
       - name: Install locked dependencies without lifecycle scripts
+        id: install
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Check actual native source syntax and import graph
+        id: imports
         run: |
           for file in certification-config.js certification-runtime.js certification-manual-review-decision-pilot-handler.mjs certification-registration-workflow.mjs certification-combined-registration-router.mjs; do
             node --check "$file" || exit 1
           done
           node --input-type=module -e "await import('./certification-runtime.js')"
       - name: Run native acceptance and existing regression tests against candidate
-        run: >-
-          node --unhandled-rejections=strict --test
-          scripts/test-combined-registration-acceptance.mjs
-          test-certification-runtime.mjs
-          test-certification-manual-review-config.mjs
-          test-certification-manual-review-decision-config.mjs
-          test-certification-manual-review-decision-pilot-handler.mjs
-          test-certification-course-runtime.mjs
-          test-certification-course-request-runtime.mjs
-          test-certification-scoped-registration-readiness.mjs
+        id: acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test \
+            scripts/test-combined-registration-acceptance.mjs \
+            test-certification-runtime.mjs \
+            test-certification-manual-review-config.mjs \
+            test-certification-manual-review-decision-config.mjs \
+            test-certification-manual-review-decision-pilot-handler.mjs \
+            test-certification-course-runtime.mjs \
+            test-certification-course-request-runtime.mjs \
+            test-certification-scoped-registration-readiness.mjs \
+            2>&1 | tee "$RUNNER_TEMP/combined-unit.tap"
       - name: Run existing real-database regressions without accepting skips
+        id: database
+        if: ${{ !cancelled() && steps.imports.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
           for file in test-certification-manual-review-postgres.mjs test-certification-manual-review-native-postgres.mjs test-certification-course-requests.mjs test-certification-course-column-privileges.mjs; do
-            node --unhandled-rejections=strict --test "$file" | tee "$RUNNER_TEMP/combined-db.tap"
-            if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/combined-db.tap"; then
+            log="$RUNNER_TEMP/combined-db-$file.tap"
+            node --unhandled-rejections=strict --test "$file" 2>&1 | tee "$log"
+            if grep -Eq '^# skipped [1-9][0-9]*$' "$log"; then
               echo 'Required database test skipped; refusing a passing result.'
               exit 1
             fi
           done
-      - name: Publish assembled source patch for review
+      - name: Publish assembled source patch and candidate test reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: combined-runtime-candidate-node${{ matrix.node }}-pg${{ matrix.postgres }}
-          path: ${{ runner.temp }}/combined-runtime-candidate.patch
+          path: |
+            ${{ runner.temp }}/combined-runtime-candidate.patch
+            ${{ runner.temp }}/combined-unit.tap
+            ${{ runner.temp }}/combined-db-*.tap
           if-no-files-found: warn
           retention-days: 14
+
+  diagnostics:
+    needs: candidate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+    steps:
+      - name: Read only this run's candidate failure summaries
+        id: inspect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const target = {...context.repo, run_id: context.runId};
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, target);
+            const selected = jobs.filter(job => job.name.startsWith('candidate ('));
+            const clean = value => String(value)
+              .replace(/\x1b\[[0-9;]*m/g, '')
+              .replace(/postgres(?:ql)?:\/\/\S+/gi, '[db-url]')
+              .replace(/[\r\n]+/g, ' ')
+              .replace(/[^\x20-\x7e]/g, ' ');
+            const summaries = [];
+            for (const job of selected) {
+              const failed = (job.steps || []).find(step => step.conclusion === 'failure');
+              let detail = '';
+              if (failed) {
+                try {
+                  const response = await github.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {...context.repo, job_id: job.id});
+                  const text = typeof response.data === 'string' ? response.data : Buffer.isBuffer(response.data) ? response.data.toString('utf8') : '';
+                  const hits = text.split(/\r?\n/).filter(line =>
+                    /not ok [0-9]+|fatal:|Original source mismatch|Non-unique source anchor|Could not find|SyntaxError|ERR_MODULE_NOT_FOUND|Error:/.test(line) &&
+                    !/token|password|secret|DATABASE_URL|connectionString/i.test(line));
+                  for (const hit of hits.slice(0, 8)) core.info(clean(hit).slice(0, 240));
+                  detail = clean(hits[0] || '').replace(/^\d{4}-\d\d-\d\dT\S+\s*/, '');
+                } catch {
+                  detail = 'logs unavailable; failed step identified';
+                }
+              }
+              summaries.push(clean(`${job.name}: ${job.conclusion}; ${failed?.name || 'no failed step'}; ${detail}`).slice(0, 110));
+            }
+            core.setOutput('context', summaries.join(' | ').slice(0, 230) || 'candidate jobs not found');
+
+  candidate-context:
+    needs: diagnostics
+    if: ${{ always() }}
+    name: candidate context (${{ needs.diagnostics.outputs.context || 'diagnostic unavailable' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: printf '%s\n' 'Read-only diagnostic context is in this job name. Candidate failures remain failed checks.'
