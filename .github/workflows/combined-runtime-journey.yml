@@ -4,6 +4,7 @@ on:
     branches: [feat/academy-general-release]
     paths:
       - '.github/workflows/combined-runtime-journey.yml'
+      - '.node-version'
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'test-certification-combined-*.mjs'
@@ -37,6 +38,8 @@ jobs:
             postgres: '18'
           - node: '26.12.1'
             postgres: '18.6'
+          - node: '26.13.0'
+            postgres: '18.6'
     services:
       postgres:
         image: postgres:${{ matrix.postgres }}
@@ -65,6 +68,34 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify the runtime pin and installed patched dependency
+        env:
+          SELECTED_NODE: ${{ matrix.node }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const read=p=>JSON.parse(readFileSync(p,'utf8'));
+          const pkg=read('package.json'),lock=read('package-lock.json');
+          const pin=readFileSync('.node-version','utf8').trim();
+          assert.equal(pin,'26.13.0');
+          assert.equal(pkg.engines.node,'>=20.0.0 <27.0.0');
+          assert.equal(lock.packages[''].engines.node,pkg.engines.node);
+          assert.equal(pkg.overrides.undici,'6.29.1');
+          const entries=Object.entries(lock.packages).filter(([p])=>p.endsWith('node_modules/undici'));
+          assert.equal(entries.length,1);
+          assert.equal(entries[0][1].version,'6.29.1');
+          assert.equal(entries[0][1].resolved,'https://registry.npmjs.org/undici/-/undici-6.29.1.tgz');
+          assert.equal(entries[0][1].integrity,'sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==');
+          for(const [name,version]of Object.entries({'undici':'6.29.1','discord.js':'14.27.0','pg':'8.23.1','dotenv':'18.0.5'})) {
+            assert.equal(read(`node_modules/${name}/package.json`).version,version);
+          }
+          const selected=process.env.SELECTED_NODE;
+          if(selected.includes('.'))assert.equal(process.versions.node,selected);
+          else assert.equal(process.versions.node.split('.')[0],selected);
+          console.log(JSON.stringify({node:process.version,deploymentPin:pin,npmUndici:'6.29.1',bundledUndici:process.versions.undici??null}));
+          NODE
       - name: Check source and test syntax
         run: |
           node --check certification-combined-registration-router.mjs
@@ -98,6 +129,11 @@ jobs:
           set -euo pipefail
           node --unhandled-rejections=strict --test test-certification-combined-journey-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/combined-journey.tap"
           if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/combined-journey.tap"; then exit 1; fi
+      - name: Require a fresh clean npm audit without automatic fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --json 2>&1 | tee "$RUNNER_TEMP/security-audit.json"
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
@@ -105,6 +141,7 @@ jobs:
           path: |
             ${{ runner.temp }}/combined-journey.tap
             ${{ runner.temp }}/entrypoint-regressions.tap
+            ${{ runner.temp }}/security-audit.json
           if-no-files-found: warn
           retention-days: 14
   diagnostics:
