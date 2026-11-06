@@ -1,5 +1,6 @@
 import { loadCertificationConfig } from './certification-config.js';
-import { readRegistrationPilotOptions, createRegistrationPilotPolicy } from './certification-registration-pilot-guard.js';
+import { createRegistrationPilotPolicy } from './certification-registration-pilot-guard.js';
+import { readRegistrationWorkflowOptions } from './certification-registration-workflow.mjs';
 import { createCertificationDatabasePool } from './certification-database-pool.js';
 import { loadManualReviewDecisionConnection } from './certification-manual-review-decision-connection.mjs';
 import { validateManualReviewDecisionCapabilities } from './certification-manual-review-decision-capabilities.mjs';
@@ -16,11 +17,12 @@ export const decisionConnectionBindingSql = `SELECT current_user::pg_catalog.tex
 // env, readPool, createPool, and onDiagnostic are trusted server dependencies, not interaction input.
 export function createManualReviewDecisionPilotHandler(config, guildId, { env = {}, readPool, createPool = createCertificationDatabasePool,
   onDiagnostic = detail => console.error('Owner manual-review interaction failed.', detail) } = {}) {
-  const checked = loadCertificationConfig(env), pilot = readRegistrationPilotOptions(env);
+  const checked = loadCertificationConfig(env), pilot = readRegistrationWorkflowOptions(env);
   if (config?.enabled !== true || config.manualReviewEnabled !== true || config.manualReviewDecisionsEnabled !== true ||
       config.enrollmentSubmissionEnabled !== false || checked.manualReviewDecisionsEnabled !== true || pilot.guildId !== guildId ||
       ['ownerId','adminChannelId','activeAgreementVersion','activeAgreementSha256'].some(key => config[key] !== checked[key]) ||
       JSON.stringify(config.comprehensionCheck) !== JSON.stringify(checked.comprehensionCheck) ||
+      JSON.stringify(config.manualReviewDecisionStudentIds) !== JSON.stringify(checked.manualReviewDecisionStudentIds) ||
       typeof readPool?.query !== 'function' || typeof createPool !== 'function' || typeof onDiagnostic !== 'function') {
     throw new Error('Explicit matching pilot owner-decision configuration required');
   }

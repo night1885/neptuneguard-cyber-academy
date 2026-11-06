@@ -1,4 +1,4 @@
-import { readRegistrationPilotOptions } from './certification-registration-pilot-guard.js';
+import { readRegistrationWorkflowOptions } from './certification-registration-workflow.mjs';
 import { readCourseRequestReleaseOptions } from './certification-course-request-release.js';
 
 export function loadCertificationConfig(env = process.env) {
@@ -17,10 +17,11 @@ export function loadCertificationConfig(env = process.env) {
   const decisionFlag = env.CERTIFICATION_MANUAL_REVIEW_DECISIONS_ENABLED;
   if (decisionFlag !== undefined && decisionFlag !== 'true' && decisionFlag !== 'false') throw new Error('Invalid manual-review owner-decision flag');
   const manualReviewDecisionsEnabled = decisionFlag === 'true';
+  const workflow = manualReviewDecisionsEnabled || (manualReviewEnabled && env.CERTIFICATION_COURSES_ENABLED === 'true') ? readRegistrationWorkflowOptions(env) : null;
   let manualReviewDecisionStudentIds;
   if (manualReviewDecisionsEnabled) {
     if (!enabled || !manualReviewEnabled) throw new Error('Owner decisions require enabled certification and manual review');
-    const pilot = readRegistrationPilotOptions(env);
+    const pilot = workflow;
     if (pilot.enabled !== true || pilot.ownerId !== ownerId || pilot.adminChannelId !== adminChannelId) {
       throw new Error('Owner decisions require explicit restricted registration-pilot settings');
     }
@@ -29,10 +30,11 @@ export function loadCertificationConfig(env = process.env) {
   const base = { ownerId, adminChannelId, enabled, enrollmentSubmissionEnabled,
     ...readCourseRequestReleaseOptions(env),
     ...(manualReviewEnabled ? { manualReviewEnabled: true } : {}),
+    ...(workflow?.combined === true ? { scopedRegistration: workflow } : {}),
     ...(manualReviewDecisionsEnabled ? { manualReviewDecisionsEnabled: true, manualReviewDecisionStudentIds } : {}) };
   const raw = env.CERTIFICATION_ENROLLMENT_MANIFEST_JSON;
   if (manualReviewEnabled && (!enabled || raw === undefined)) throw new Error('Manual review requires enabled certification and an enrollment manifest');
-  if (manualReviewEnabled && (env.CERTIFICATION_REGISTRATION_PILOT !== 'true' || flag !== 'false')) {
+  if (manualReviewEnabled && ((workflow?.combined !== true && env.CERTIFICATION_REGISTRATION_PILOT !== 'true') || flag !== 'false')) {
     throw new Error('Manual review currently requires the registration pilot and explicitly disabled general enrollment');
   }
   if (!enrollmentSubmissionEnabled && (!enabled || raw === undefined)) return Object.freeze(base);
