@@ -7,6 +7,16 @@ on:
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'test-certification-combined-*.mjs'
+      - 'restoration.js'
+      - 'community-learning-*.mjs'
+      - 'test-community-learning-*.mjs'
+      - 'test-certification-restor*.mjs'
+      - 'test-certification-runtime-restored-routing.mjs'
+      - 'test-certification-ui-pilot-compatibility.mjs'
+      - 'test-certification-manual-review-config.mjs'
+      - 'test-certification-manual-review-decision-config.mjs'
+      - 'test-certification-runtime-legacy-drain.mjs'
+      - 'docs/formal-ethical-hacking/authoring/discord-workspace-prototype/**'
       - 'migrations/**'
       - 'package.json'
       - 'package-lock.json'
@@ -62,6 +72,26 @@ jobs:
           node --check test-certification-combined-journey-postgres.mjs
       - name: Run combined route and modal boundary regressions
         run: node --unhandled-rejections=strict --test test-certification-combined-router.mjs test-certification-combined-course-modal.mjs test-certification-combined-config-boundaries.mjs
+      - name: Retained restoration, UI-pilot and Community regressions without skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test --test-concurrency=1 \
+            test-certification-restored-application.mjs \
+            test-certification-restored-runtime-composition.mjs \
+            test-certification-restoration-router.mjs \
+            test-certification-runtime-restored-routing.mjs \
+            test-certification-ui-pilot-compatibility.mjs \
+            test-certification-runtime-legacy-drain.mjs \
+            test-certification-manual-review-config.mjs \
+            test-certification-manual-review-decision-config.mjs \
+            test-community-learning-isolation.mjs \
+            test-community-learning-startup.mjs \
+            test-community-learning-runtime.mjs \
+            test-community-learning-policy.mjs \
+            test-community-learning-router.mjs \
+            2>&1 | tee "$RUNNER_TEMP/entrypoint-regressions.tap"
+          if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/entrypoint-regressions.tap"; then exit 1; fi
       - name: Require the real same-database native journey without skips
         shell: bash
         run: |
@@ -72,7 +102,9 @@ jobs:
         if: ${{ always() }}
         with:
           name: native-combined-journey-node${{ matrix.node }}-pg${{ matrix.postgres }}
-          path: ${{ runner.temp }}/combined-journey.tap
+          path: |
+            ${{ runner.temp }}/combined-journey.tap
+            ${{ runner.temp }}/entrypoint-regressions.tap
           if-no-files-found: warn
           retention-days: 14
   diagnostics:
