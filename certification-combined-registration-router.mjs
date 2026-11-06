@@ -45,7 +45,7 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
       if(key==='update')return p=>{if(!ownPrivate(i))throw Error('Own private message required');return target.update(present(p));};
       if(key==='deferReply')return async()=>{const result=await target.deferReply({flags:64});privateReply=true;return result;};
       if(key==='deferUpdate')return()=>{if(!ownPrivate(i))throw Error('Own private message required');privateReply=true;return target.deferUpdate();};
-      if(key==='showModal')return p=>{p=json(p);if(!policy.allowsModal(actor,p?.custom_id)&&!(typeof p?.custom_id==='string'&&p.custom_id.startsWith('cert:cr:')))throw Error('Modal not admitted');return target.showModal(p);};
+      if(key==='showModal')return p=>{p=json(p);if(!policy.allowsModal(actor,p?.custom_id)&&!(typeof p?.custom_id==='string'&&(p.custom_id.startsWith('cert:cr:')||/^cert:course:submit:[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(p.custom_id))))throw Error('Modal not admitted');return target.showModal(p);};
       const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
     }});
   }
