@@ -46,6 +46,16 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
       })};
     }
     return new Proxy(i,{get(target,key){
+      // Filter legacy controls before trusted card conversion; retain private transport guards.
+      if(key===Symbol.for('neptuneguard.academy.course-card-transport'))return async(method,p,convert)=>{
+        if(!['reply','editReply','update'].includes(method)||typeof convert!=='function')throw Error('Invalid card transport');
+        if(method==='editReply'&&!privateReply&&!ownPrivate(i))throw Error('Private reply required');
+        if(method==='update'&&!ownPrivate(i))throw Error('Own private message required');
+        const payload=convert(present(p));
+        const result=await target[method](method==='reply'?{...payload,flags:(payload.flags||0)|64}:payload);
+        if(method==='reply')privateReply=true;
+        return result;
+      };
       if(['reply','followUp'].includes(key))return async p=>{const result=await target[key]({...present(p),flags:64});privateReply=true;return result;};
       if(key==='editReply')return p=>{if(!privateReply&&!ownPrivate(i))throw Error('Private reply required');return target.editReply(present(p));};
       if(key==='update')return p=>{if(!ownPrivate(i))throw Error('Own private message required');return target.update(present(p));};

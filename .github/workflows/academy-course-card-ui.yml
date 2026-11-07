@@ -1,0 +1,48 @@
+name: Academy course-card integration
+'on':
+  push:
+    branches: [feat/academy-course-card-ui]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: course-card-review-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '26.13.0']
+    env:
+      DISCORD_TOKEN: ''
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      CERTIFICATION_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Syntax checks
+        run: |
+          for file in academy-course-card-ui.mjs certification-course-runtime.js certification-runtime.js certification-retention-hold.js test-academy-course-card-*.mjs; do
+            node --check "$file" || exit 1
+          done
+      - name: SDK, recovery, all certification unit fixtures and Community Learning regression
+        run: >-
+          node --unhandled-rejections=strict --test
+          test-academy-course-card-ui.mjs
+          test-academy-course-card-sdk.mjs
+          test-academy-course-card-recovery.mjs
+          test-certification-*.mjs
+          test-community-learning-router.mjs
+      - name: Bounded diagnostic parser tests
+        run: python3 -m unittest discover -s scripts -p 'test_academy_course_card_pg16_diagnostic.py'

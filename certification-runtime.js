@@ -160,8 +160,9 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
 
   async function handleInteraction(interaction) {
     const respond = content => {
-      const payload = { content, embeds: [], components: [], allowedMentions: { parse: [] } };
-      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
+      const card = interaction.message?.flags?.has?.(32768) === true || interaction[Symbol.for('neptuneguard.academy.course-card-response')] === true;
+      const payload = card ? { flags: 32768, components: [{ type: 10, content }], allowedMentions: { parse: [] } } : { content, embeds: [], components: [], allowedMentions: { parse: [] } };
+      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: (payload.flags || 0) | 64 });
     };
     try {
       if (formal && interaction.customId?.startsWith(formalPrefix)) {

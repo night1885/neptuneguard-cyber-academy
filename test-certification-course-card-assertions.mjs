@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {courseMessageControls,courseMessageText,assertCourseMessageBounds,assertCourseTeachingView} from './test-support/academy-course-message.mjs';
+const mentions={parse:[]};
+const button={type:2,style:2,label:'Module 1',custom_id:'cert:course:page:fixture:module:0:0'};
+const card=()=>({flags:32768,allowedMentions:mentions,components:[{type:17,components:[{type:10,content:'Course lesson\nRead-only learning: no saved progress or awards.'},{type:1,components:[{...button}]}]}]});
+test('legacy text and menu preserved',()=>{const p={content:'Status',embeds:[{title:'Title',description:'Description',fields:[{name:'Field',value:'Value'}],footer:{text:'Footer'}}],components:[{type:1,components:[{type:3,custom_id:'select'}]}],allowedMentions:mentions};assert.equal(courseMessageControls(p)[0].type,3);for(const text of ['Status','Title','Description','Field','Value','Footer'])assert.ok(courseMessageText(p).includes(text));assertCourseMessageBounds(p);});
+test('nested controls reached without treating rows or headings as controls',()=>assert.deepEqual(courseMessageControls(card()),[button]));
+test('teaching card enforces format and disclaimer',()=>assertCourseTeachingView(card()));
+test('custom IDs are not visible message text',()=>assert.ok(!courseMessageText(card()).includes(button.custom_id)));
+test('mixed legacy content rejected',()=>assert.throws(()=>assertCourseMessageBounds({...card(),content:''})));
+test('mixed legacy embeds rejected',()=>assert.throws(()=>assertCourseMessageBounds({...card(),embeds:[]})));
+test('unsafe mentions rejected',()=>assert.throws(()=>assertCourseMessageBounds({...card(),allowedMentions:{parse:['everyone']}})));
+test('component budget enforced',()=>assert.throws(()=>assertCourseMessageBounds({...card(),components:Array.from({length:41},()=>({type:10,content:'x'}))})));
+test('text budget enforced',()=>assert.throws(()=>assertCourseMessageBounds({...card(),components:[{type:10,content:'x'.repeat(4001)}]})));
+test('legacy row budget retained',()=>assert.throws(()=>assertCourseMessageBounds({allowedMentions:mentions,components:Array.from({length:6},()=>({type:1,components:[button]}))})));
+test('plain denial is not accepted as teaching',()=>{const p={flags:32768,allowedMentions:mentions,components:[{type:10,content:'Access denied'}]};assertCourseMessageBounds(p);assert.throws(()=>assertCourseTeachingView(p));});
+test('builder rows supported without mutation',()=>{const row={type:1,components:[button]},p={components:[{toJSON:()=>row}]};const before=JSON.stringify(row);assert.deepEqual(courseMessageControls(p),[button]);assert.equal(JSON.stringify(row),before);});
+
+test('visible text uses actual line breaks',()=>assert.equal(courseMessageText({content:'A',embeds:[{description:'B'}]}),['A','B'].join(String.fromCharCode(10))));

@@ -1,0 +1,86 @@
+name: Academy card PostgreSQL 16 baseline comparison
+'on':
+  push:
+    branches: [feat/academy-course-card-ui]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: card-pg16-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      baseline: ${{ steps.probe.outputs.baseline }}
+      candidate: ${{ steps.probe.outputs.candidate }}
+    services:
+      baseline_postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: manual_review_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['15432:5432']
+        options: >-
+          --health-cmd "pg_isready -U manual_review_ci -d certification_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      candidate_postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: manual_review_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['15433:5432']
+        options: >-
+          --health-cmd "pg_isready -U manual_review_ci -d certification_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DISCORD_TOKEN: ''
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      CERTIFICATION_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 4a3839e0d2cbddb3b25d617b387e656ec07ee245
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: candidate/package-lock.json
+      - name: Install both locked checkouts without lifecycle scripts
+        run: |
+          npm ci --prefix baseline --ignore-scripts --no-audit --no-fund
+          npm ci --prefix candidate --ignore-scripts --no-audit --no-fund
+      - name: Compare actual migration test on isolated CI databases
+        id: probe
+        run: python3 candidate/scripts/academy_course_card_pg16_diagnostic.py
+  baseline_context:
+    needs: compare
+    if: ${{ always() }}
+    name: PG16 baseline (${{ needs.compare.outputs.baseline || 'missing' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - env:
+          VALUE: ${{ needs.compare.outputs.baseline }}
+        run: test "$VALUE" = PASS
+  candidate_context:
+    needs: compare
+    if: ${{ always() }}
+    name: PG16 candidate (${{ needs.compare.outputs.candidate || 'missing' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - env:
+          VALUE: ${{ needs.compare.outputs.candidate }}
+        run: test "$VALUE" = PASS
