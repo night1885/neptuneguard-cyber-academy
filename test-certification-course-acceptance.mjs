@@ -11,6 +11,7 @@ import { createCertificationSubmission } from './certification-submission.js';
 import { createCertificationService } from './certification-service.js';
 import { COURSE_SECTION_KEYS } from './certification-course-sections.js';
 import { studentCourseContentGaps } from './certification-student-course-content.js';
+import { courseMessageControls, courseMessageText, assertCourseMessageBounds, assertCourseTeachingView } from './test-support/academy-course-message.mjs';
 
 const databaseUrl = process.env.CERTIFICATION_TEST_DATABASE_URL;
 const roleDdl = process.env.CERTIFICATION_TEST_ALLOW_ROLE_DDL === 'true';
@@ -23,8 +24,7 @@ const manifest = { agreementVersion: 'combined-course-fixture', agreementSha256:
 const config = { enabled: true, ownerId: owner, enrollmentSubmissionEnabled: true, activeAgreementVersion: manifest.agreementVersion, activeAgreementSha256: hash, comprehensionCheck: manifest.comprehensionCheck };
 const input = { ageEligibility: 'yes', acknowledgmentAccepted: true, confirmedRead: true, agreementVersion: manifest.agreementVersion, agreementSha256: hash, comprehensionCheckVersion: manifest.comprehensionCheck.version, answers: ['stop'] };
 const tick = () => new Promise(resolve => setImmediate(resolve));
-const json = value => typeof value?.toJSON === 'function' ? value.toJSON() : value;
-const controls = payload => (payload.components || []).flatMap(row => json(row).components.map(json));
+const controls = courseMessageControls;
 function control(payload, prefix) { const id = controls(payload).find(item => item.custom_id?.startsWith(prefix))?.custom_id; assert.ok(id, `Expected ${prefix} control`); return id; }
 function ending(payload, suffix) { const id = controls(payload).find(item => item.custom_id?.endsWith(suffix))?.custom_id; assert.ok(id, `Expected ${suffix} control`); return id; }
 async function waitFor(predicate) {
@@ -82,7 +82,7 @@ async function isolated(operation, { enabled = true, migration = true, approved 
       async send(id, { actor = owner, kind = 'button', values = [], studentId = approval?.studentId || 'NG-not-issued', reason = 'Disposable acceptance review', server = guildId } = {}) {
         let resolve, reject; const done = new Promise((yes, no) => { resolve = yes; reject = no; });
         function finish(payload, modal = false) {
-          try { if (!modal) { assert.deepEqual(payload.allowedMentions, { parse: [] }); assert.ok((payload.components || []).length <= 5); } resolve(payload); }
+          try { if (!modal) assertCourseMessageBounds(payload); resolve(payload); }
           catch (error) { reject(error); throw error; }
         }
         const i = { customId: id, guildId: server, guild, user: { id: actor }, values: [...values], deferred: false, replied: false,
@@ -90,7 +90,7 @@ async function isolated(operation, { enabled = true, migration = true, approved 
           fields: { getTextInputValue: key => key === 'reason' ? reason : studentId },
           async deferReply(payload) { assert.equal(payload.flags, 64); this.deferred = true; },
           async showModal(modal) { this.replied = true; finish({ modal: modal.toJSON() }, true); },
-          async reply(payload) { assert.equal(payload.flags, 64); this.replied = true; finish(payload); },
+          async reply(payload) { assert.equal(payload.flags & 64, 64); this.replied = true; finish(payload); },
           async editReply(payload) { assert.equal(this.deferred || this.replied, true); finish(payload); } };
         let timer;
         try { client.emit('interactionCreate', i);
@@ -138,30 +138,31 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
     assert.ok(controls(panel).some(item => item.type === 3));
     const canceled = await selectCourses(f, [first, second]), canceledId = control(canceled, 'cert:courselife:confirm:');
     await f.send(control(canceled, 'cert:courselife:cancel:'));
-    assert.match((await f.send(canceledId)).content, /already used/); assert.deepEqual(await courses(f), []);
+    assert.match(courseMessageText(await f.send(canceledId)), /already used/); assert.deepEqual(await courses(f), []);
     const preview = await selectCourses(f, [first, second]), token = control(preview, 'cert:courselife:confirm:');
-    assert.ok(preview.content.includes(student) && preview.content.includes(first) && preview.content.includes(second));
-    assert.match((await f.send(token, { actor: student })).content, /Owner authorization/);
-    assert.match((await f.send(token, { server: stranger })).content, /Owner authorization/);
+    assert.ok(courseMessageText(preview).includes(student) && courseMessageText(preview).includes(first) && courseMessageText(preview).includes(second));
+    assert.match(courseMessageText(await f.send(token, { actor: student })), /Owner authorization/);
+    assert.match(courseMessageText(await f.send(token, { server: stranger })), /Owner authorization/);
     assert.deepEqual(await courses(f), []);
     await f.send(token); await f.send(token); assert.equal(await countAction(f, 'courses_assigned'), 1); assert.equal((await courses(f)).length, 2);
     const home = await f.send('cert:initial:home', { actor: student });
     const catalog = await f.send(control(home, 'cert:course:catalog:'), { actor: student });
-    assert.match(catalog.embeds[0].description, /listing does not grant access/);
-    const a = await enter(f, first), b = await enter(f, second); assert.ok(a.embeds.length && b.embeds.length);
+    assert.equal((catalog.flags || 0) & 32768, 32768);
+    assert.match(courseMessageText(catalog), /listing does not grant access/);
+    const a = await enter(f, first), b = await enter(f, second); assertCourseTeachingView(a); assertCourseTeachingView(b);
     const aPage = ending(a, ':module:0:0'), bPage = control(b, 'cert:course:page:');
     const historyBeforeViews = await actions(f);
-    const module = await f.send(aPage, { actor: student });
-    for (const kind of ['lesson', 'lab', 'hint']) { const view = await f.send(ending(module, `:${kind}:0:0`), { actor: student }); assert.ok(view.embeds.length); }
-    const quiz = await f.send(ending(module, ':quiz:0:0'), { actor: student });
+    const module = await f.send(aPage, { actor: student }); assertCourseTeachingView(module);
+    for (const kind of ['lesson', 'lab', 'hint']) { const view = await f.send(ending(module, `:${kind}:0:0`), { actor: student }); assertCourseTeachingView(view); }
+    const quiz = await f.send(ending(module, ':quiz:0:0'), { actor: student }); assertCourseTeachingView(quiz);
     assert.ok(!JSON.stringify(quiz).includes('"correct"'));
-    const answer = await f.send(ending(quiz, ':answer:0:0:b'), { actor: student }); assert.match(answer.embeds[0].description, /Correct for this practice question/);
+    const answer = await f.send(ending(quiz, ':answer:0:0:b'), { actor: student }); assertCourseTeachingView(answer); assert.match(courseMessageText(answer), /Correct for this practice question/);
     assert.deepEqual(await actions(f), historyBeforeViews); assert.ok((await courses(f)).every(course => course.status === 'active'));
-    const one = await complete(f, first); assert.match(one.content, /Active courses: 1/); assert.match(one.content, /All assigned courses complete: No/);
-    assert.match((await f.send(aPage, { actor: student })).content, /no longer authorized/);
-    assert.ok((await f.send(bPage, { actor: student })).embeds.length);
-    const all = await complete(f, second); assert.match(all.content, /All assigned courses complete: Yes/); assert.match(all.content, /not deletion authorization/);
-    assert.match((await f.send(bPage, { actor: student })).content, /no longer authorized/);
+    const one = await complete(f, first); assert.match(courseMessageText(one), /Active courses: 1/); assert.match(courseMessageText(one), /All assigned courses complete: No/);
+    assert.match(courseMessageText(await f.send(aPage, { actor: student })), /no longer authorized/);
+    assertCourseTeachingView(await f.send(bPage, { actor: student }));
+    const all = await complete(f, second); assert.match(courseMessageText(all), /All assigned courses complete: Yes/); assert.match(courseMessageText(all), /not deletion authorization/);
+    assert.match(courseMessageText(await f.send(bPage, { actor: student })), /no longer authorized/);
     assert.ok((await courses(f)).every(course => course.status === 'completed'));
     assert.equal(await countAction(f, 'course_completed'), 2);
     const after = await enrollment(f); assert.equal(after.status, 'approved'); assert.equal(after.student_id, before.student_id);
@@ -173,21 +174,21 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
 
   await t.test('approved enrollment without assignments and a wrong ID do not grant course teaching access', async () => isolated(async f => {
     await waitFor(() => f.runtime.ready);
-    assert.match((await enter(f, first)).content, /could not be verified/); assert.deepEqual(await courses(f), []);
-    await assign(f, [first]); assert.match((await enter(f, first, { studentId: 'NG-wrong-id' })).content, /could not be verified/);
+    assert.match(courseMessageText(await enter(f, first)), /could not be verified/); assert.deepEqual(await courses(f), []);
+    await assign(f, [first]); assert.match(courseMessageText(await enter(f, first, { studentId: 'NG-wrong-id' })), /could not be verified/);
     assert.equal(await countAction(f, 'course_completed'), 0);
   }));
 
   await t.test('assignment/completion audit failures roll back and fresh confirmations can retry', async () => isolated(async f => {
     await waitFor(() => f.runtime.ready); await failAudit(f);
     const preview = await selectCourses(f, [first, second]), id = control(preview, 'cert:courselife:confirm:');
-    const failed = await f.send(id); assert.match(failed.content, /Review the current/); assert.ok(!failed.content.includes('Private injected'));
+    const failed = await f.send(id); assert.match(courseMessageText(failed), /Review the current/); assert.ok(!courseMessageText(failed).includes('Private injected'));
     assert.deepEqual(await courses(f), []); assert.equal(await countAction(f, 'courses_assigned'), 0);
-    assert.match((await f.send(id)).content, /already used/); await restoreAudit(f); await assign(f);
+    assert.match(courseMessageText(await f.send(id)), /already used/); await restoreAudit(f); await assign(f);
     const entered = await enter(f, first), page = control(entered, 'cert:course:page:'); await failAudit(f);
     const completion = await f.send(`cert:courselife:complete:${student}:${first}`), completionId = control(completion, 'cert:courselife:confirm:');
-    assert.match((await f.send(completionId)).content, /Review the current/); assert.ok((await courses(f)).every(course => course.status === 'active'));
-    assert.equal(await countAction(f, 'course_completed'), 0); assert.ok((await f.send(page, { actor: student })).embeds.length);
+    assert.match(courseMessageText(await f.send(completionId)), /Review the current/); assert.ok((await courses(f)).every(course => course.status === 'active'));
+    assert.equal(await countAction(f, 'course_completed'), 0); assertCourseTeachingView(await f.send(page, { actor: student }));
     await restoreAudit(f); await complete(f, first); assert.equal(await countAction(f, 'course_completed'), 1);
   }));
 
@@ -196,8 +197,8 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
     const entered = await enter(f, first), page = control(entered, 'cert:course:page:');
     const pending = await selectCourses(f, [second]), id = control(pending, 'cert:courselife:confirm:');
     await suspend(f); assert.equal((await enrollment(f)).status, 'suspended');
-    assert.match((await f.send(id)).content, /Review the current/); assert.equal((await courses(f)).length, 1);
-    assert.match((await f.send(page, { actor: student })).content, /no longer authorized/);
+    assert.match(courseMessageText(await f.send(id)), /Review the current/); assert.equal((await courses(f)).length, 1);
+    assert.match(courseMessageText(await f.send(page, { actor: student })), /no longer authorized/);
     await complete(f, first); assert.equal((await enrollment(f)).status, 'suspended'); assert.equal(await countAction(f, 'course_completed'), 1);
     assert.equal((await enrollment(f)).student_id, f.approval.studentId);
   }));
@@ -205,18 +206,18 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
   await t.test('account isolation, Verified-role withdrawal, ID challenges and expiry protect sessions and confirmations', async () => isolated(async f => {
     await waitFor(() => f.runtime.ready);
     const expires = await selectCourses(f, [first]), id = control(expires, 'cert:courselife:confirm:'); f.advance(300000);
-    assert.match((await f.send(id)).content, /expired/); assert.deepEqual(await courses(f), []);
+    assert.match(courseMessageText(await f.send(id)), /expired/); assert.deepEqual(await courses(f), []);
     await assign(f); const entered = await enter(f, first), page = control(entered, 'cert:course:page:');
-    assert.match((await f.send(page, { actor: stranger })).content, /unavailable/); assert.ok((await f.send(page, { actor: student })).embeds.length);
-    f.setVerified(false); assert.match((await f.send(page, { actor: student })).content, /unavailable/); f.setVerified(true);
+    assert.match(courseMessageText(await f.send(page, { actor: stranger })), /unavailable/); assertCourseTeachingView(await f.send(page, { actor: student }));
+    f.setVerified(false); assert.match(courseMessageText(await f.send(page, { actor: student })), /unavailable/); f.setVerified(true);
     const fresh = await enter(f, first), freshPage = control(fresh, 'cert:course:page:'); f.advance(300000);
-    assert.match((await f.send(freshPage, { actor: student })).content, /expired/);
+    assert.match(courseMessageText(await f.send(freshPage, { actor: student })), /expired/);
     assert.equal(await countAction(f, 'course_completed'), 0);
   }));
 
   await t.test('missing migration blocks enabled startup while default-off preserves the base runtime', async () => {
     await isolated(async f => { await waitFor(() => f.released > 0); await tick(); assert.equal(f.runtime.ready, false); assert.equal(f.lookups, 0);
-      assert.match((await f.send('cert:course:catalog:0', { actor: student })).content, /unavailable/); }, { migration: false });
+      assert.match(courseMessageText(await f.send('cert:course:catalog:0', { actor: student })), /unavailable/); }, { migration: false });
     await isolated(async f => { await waitFor(() => f.runtime.ready); const panel = await f.send('cert:initial:home', { actor: student });
       assert.ok(!controls(panel).some(item => item.custom_id?.startsWith('cert:course:'))); assert.equal(f.released, 0); }, { migration: false, enabled: false });
   });
@@ -225,7 +226,7 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
     await waitFor(() => f.runtime.ready); const detail = await f.send(`cert:students:detail:${student}`);
     const coursePanel = await f.send(control(detail, 'cert:courselife:open:'));
     assert.ok(!controls(coursePanel).some(item => item.type === 3));
-    const forged = await selectCourses(f, [first]); assert.match(forged.content, /could not be confirmed/); assert.deepEqual(await courses(f), []);
+    const forged = await selectCourses(f, [first]); assert.match(courseMessageText(forged), /could not be confirmed/); assert.deepEqual(await courses(f), []);
     const closurePanel = await f.send(control(detail, 'cert:closure:open:'));
     const choice = await f.send(control(closurePanel, 'cert:closure:choose:withdrawn:'));
     await f.send(control(choice, 'cert:closure:confirm:'));
