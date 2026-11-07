@@ -17,7 +17,7 @@ function interaction(customId, verified = true) {
   return { customId, user: { id: actor }, guildId, guild: { id: guildId, members: { async fetch(id) { return { id, roles: { cache: new Set(verified ? [roleId] : []) } }; } } },
     deferred: false, replied: false, messages: [], isButton: () => true, isModalSubmit: () => false,
     async deferReply(payload) { assert.equal(payload.flags, 64); this.deferred = true; },
-    async reply(payload) { assert.equal(payload.flags, 64); this.replied = true; this.messages.push(payload); }, async editReply(payload) { this.messages.push(payload); } };
+    async reply(payload) { assert.equal(payload.flags & 64, 64); this.replied = true; this.messages.push(payload); }, async editReply(payload) { this.messages.push(payload); } };
 }
 function startupFixture() {
   let ended = 0, lookups = 0; const everyone = {}, me = {};
@@ -62,9 +62,12 @@ test('catalog is metadata only and entry is appended to private learner panels w
   assert.equal(panel.messages.at(-1).components[0].components[0].custom_id, 'cert:course:catalog:0');
   assert.match(panel.messages.at(-1).content, /separate active assignment/);
   const catalog = interaction('cert:course:catalog:0'); await route(catalog);
-  assert.match(catalog.messages.at(-1).embeds[0].description, /listing does not grant access/);
-  assert.ok(catalog.messages.at(-1).components[0].components.every(button => button.custom_id.startsWith('cert:course:open:')));
-  const denied = interaction('cert:course:catalog:0', false); await route(denied); assert.match(denied.messages.at(-1).content, /could not be verified/); route.dispose();
+  assert.equal(catalog.messages.at(-1).flags, 32768);
+  assert.match(JSON.stringify(catalog.messages.at(-1)), /listing does not grant access/);
+  const flatten = items => items.flatMap(item => [item, ...(item.components ? flatten(item.components) : [])]);
+  const openControls = flatten(catalog.messages.at(-1).components).filter(item => item.type === 2 && item.custom_id.startsWith('cert:course:open:'));
+  assert.equal(openControls.length, 4);
+  const denied = interaction('cert:course:catalog:0', false); await route(denied); assert.match(JSON.stringify(denied.messages.at(-1)), /could not be verified/); route.dispose();
 });
 
 test('restoration section-login protections are preserved by base routing', async () => {
@@ -80,7 +83,7 @@ test('shutdown disposes completed candidates and the base without reopening navi
     async createNavigation() { await new Promise(resolve => { release = resolve; }); return { async handle() { assert.fail('Disposed navigation must not run'); }, dispose() { disposed++; } }; } });
   const pending = route.initialize(); await tick(); route.dispose(); release(); await assert.rejects(pending, /stopped/);
   assert.equal(disposed, 1); assert.equal(baseDisposed, 1);
-  const i = interaction('cert:course:catalog:0'); await route(i); assert.match(i.messages[0].content, /unavailable/);
+  const i = interaction('cert:course:catalog:0'); await route(i); assert.match(JSON.stringify(i.messages[0]), /unavailable/);
 });
 
 test('default-off runtime never constructs course routing', async () => {

@@ -19,6 +19,7 @@ import { createCertificationService } from './certification-service.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
 import { createClosureRuntimeRouter, readApplicationClosureFlag } from './certification-application-closure-runtime.js';
 import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
+import { replyAcademyCardNotice } from './academy-course-card-ui.mjs';
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter, createDecisionHandler, formalReview } = {}) {
   const config = loadCertificationConfig(env);
@@ -159,10 +160,7 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   async function handleInteraction(interaction) {
-    const respond = content => {
-      const payload = { content, embeds: [], components: [], allowedMentions: { parse: [] } };
-      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
-    };
+    const respond = content => replyAcademyCardNotice(interaction, content);
     try {
       if (formal && interaction.customId?.startsWith(formalPrefix)) {
         if (!ready || detached || !formalRoute || interaction.isButton?.() !== true) {

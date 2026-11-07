@@ -4,6 +4,7 @@ import { createCertificationRouter } from './certification-admin-router.js';
 import { createStatusReadGuard } from './certification-status-read-guard.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
 import { withCourseRequests } from './certification-course-request-runtime.js';
+import { withAcademyCourseCards } from './academy-course-card-ui.mjs';
 
 const validId = value => typeof value === 'string' && /^[0-9]{17,20}$/.test(value);
 export function readCourseRuntimeOptions(env = {}) {
@@ -89,7 +90,7 @@ export function createCourseRuntimeRouter(pool, config, guildId, { verifiedRoleI
     try { navigation?.dispose(); }
     finally { navigation = null; if (typeof base.dispose === 'function') base.dispose(); }
   };
-  return config.courseRequestsEnabled === true
+  return withAcademyCourseCards(config.courseRequestsEnabled === true
     ? withCourseRequests(route, pool, config, guildId, { verifiedRoleId, now })
-    : route;
+    : route, { guildId });
 }
