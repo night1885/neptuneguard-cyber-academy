@@ -20,6 +20,28 @@ import { replyRetentionHold } from './certification-retention-hold.js';
 import { createClosureRuntimeRouter, readApplicationClosureFlag } from './certification-application-closure-runtime.js';
 import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
 
+const diagnosticFamilies = new Set(['initial','learner','course','courselife','cr','register','invite','review']);
+const diagnosticClasses = new Set(['Error','TypeError','RangeError','SyntaxError','ReferenceError','AggregateError','AbortError','DiscordAPIError']);
+const diagnosticCodes = new Set(['10062','40060','50001','50013','50035','42501','23505','23503','23514','23502','40001','40P01','57014']);
+const diagnosticRead = (value,key) => { try { return value?.[key]; } catch { return undefined; } };
+const diagnosticPredicate = (value,key) => { try { const fn=diagnosticRead(value,key); return typeof fn==='function'&&fn.call(value)===true; } catch { return false; } };
+function describeCertificationInteractionFailure(interaction,error) {
+  const id=diagnosticRead(interaction,'customId');
+  let routeFamily='unknown';
+  if(typeof id==='string'&&id.length<=100) {
+    if(id.startsWith('fws:'))routeFamily='formal-review';
+    else if(id.startsWith('fnv:'))routeFamily='formal-practical';
+    else if(id.startsWith('cert:')) { const family=id.split(':',3)[1]; routeFamily=diagnosticFamilies.has(family)?family:'other-cert'; }
+  }
+  const name=diagnosticRead(error,'name'),value=diagnosticRead(error,'code');
+  const errorClass=diagnosticClasses.has(name)?name:typeof name==='string'&&/^DiscordAPIError\[[0-9]{1,6}\]$/.test(name)?'DiscordAPIError':'unknown';
+  const code=typeof value==='string'?value:typeof value==='number'&&Number.isSafeInteger(value)?String(value):'';
+  return Object.freeze({routeFamily,
+    interactionType:diagnosticPredicate(interaction,'isButton')?'button':diagnosticPredicate(interaction,'isModalSubmit')?'modal':diagnosticPredicate(interaction,'isStringSelectMenu')?'select':'other',
+    deferred:diagnosticRead(interaction,'deferred')===true,replied:diagnosticRead(interaction,'replied')===true,
+    errorClass,errorCode:diagnosticCodes.has(code)?code:'unknown'});
+}
+
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter, createDecisionHandler, formalReview } = {}) {
   const config = loadCertificationConfig(env);
   const combinedRegistration = config.scopedRegistration?.combined === true;
@@ -175,13 +197,13 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
       }
       if (!ready || detached) { await replyRetentionHold(interaction); return; }
       if (!await route(interaction)) await respond('This action is unavailable. Reopen the Admin Dashboard or your student panel.');
-    } catch {
-      console.error('Certification interaction failed.');
+    } catch (error) {
+      console.error('Certification interaction failed.', describeCertificationInteractionFailure(interaction, error));
       try {
         if (formal && interaction.customId?.startsWith(formalPrefix)) {
           if (!interaction.deferred && !interaction.replied) await respond('Formal review workspace is unavailable.');
         } else await respond('This action could not be completed. Reopen the dashboard or student panel and check the current status before retrying.');
-      } catch { console.error('Certification error reply failed.'); }
+      } catch (error) { console.error('Certification error reply failed.', describeCertificationInteractionFailure(interaction, error)); }
     }
   }
 
