@@ -31,7 +31,7 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
   const json=v=>typeof v?.toJSON==='function'?v.toJSON():v;
   function adapt(i){
     const actor=i.user.id,owner=actor===s.ownerId;let privateReply=i.ephemeral===true;
-    const allowedButton=id=>typeof id==='string'&&(namespace(id)||(owner&&id.startsWith('cert:courselife:'))||policy.allowsButton(actor,id)||(!owner&&/^cert:(?:initial:(?:home|status|help)|learner:(?:home|status))$/.test(id)));
+    const allowedButton=id=>typeof id==='string'&&(!owner||i.channelId===s.adminChannelId||(s.generalMembers===true&&/^cert:initial:(?:home|status|help)$/.test(id)))&&(namespace(id)||(owner&&id.startsWith('cert:courselife:'))||policy.allowsButton(actor,id)||(!owner&&/^cert:(?:initial:(?:home|status|help)|learner:(?:home|status))$/.test(id)));
     function present(p){
       if(!p||typeof p!=='object'||Array.isArray(p))throw Error('Structured private payload required');
       return {...p,allowedMentions:{parse:[]},components:(p.components||[]).map((raw,r)=>{
