@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { COURSES } from './course-registry.js';
+import { FORMAL_ADMIN_PREVIEW_INDEX, FORMAL_ADMIN_PREVIEW_TITLE, canInspectFormalAdminPreview, loadFormalAdminPreview } from './certification-formal-admin-preview.mjs';
 const PREFIX = 'cert:admin:courses:';
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(disabled ? `cert:disabled:courses:${id}` : id).setLabel(label.slice(0, 80)).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 const row = buttons => new ActionRowBuilder().addComponents(buttons);
@@ -34,10 +35,42 @@ export async function handleConsoleCourses(interaction, config, guildId) {
       embed.addFields(courses.map(course => ({ name: course.title.slice(0, 256), value: `${course.modules.length} modules • ${course.key}` })));
       components.push(row(courses.map((course, index) => button(`${PREFIX}course:${page * 5 + index}:0`, course.title))));
     }
+    if (page === 0 && canInspectFormalAdminPreview(interaction, config, guildId)) {
+      let preview;
+      try { preview = await loadFormalAdminPreview({ interaction, config, guildId }); } catch {}
+      embed.addFields({ name: 'Formal programme — unpublished draft', value: preview
+        ? `${FORMAL_ADMIN_PREVIEW_TITLE}. ${preview.lessons.length} catalogue-listed draft lessons/capstones; not additional registered courses. Source availability is checked when each lesson is opened.`
+        : 'Draft preview unavailable; its source could not be validated. Registered courses are unchanged.' });
+      components.push(row([button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:0`, FORMAL_ADMIN_PREVIEW_TITLE, !preview)]));
+    }
     components.push(row([button(`${PREFIX}${Math.max(0, page - 1)}`, 'Previous courses', page === 0), button(`${PREFIX}${page}`, 'Refresh courses'), button(`${PREFIX}${page + 1}`, 'Next courses', page + 1 >= pages)]));
   } else {
     const match = moduleView || courseView;
     const courseIndex = Number(match[1]), course = COURSES[courseIndex];
+    if (courseIndex === FORMAL_ADMIN_PREVIEW_INDEX) {
+      try {
+        embed.setColor(0x8e44ad).setFooter({ text: 'Owner draft preview • Not published • No learner access, progress, submission or exercise authorization' });
+        if (courseView) {
+          const page = Number(courseView[2]), preview = await loadFormalAdminPreview({ interaction, config, guildId, page });
+          const pages = Math.ceil(preview.lessons.length / 5), lessons = preview.lessons.slice(page * 5, page * 5 + 5);
+          embed.setTitle(FORMAL_ADMIN_PREVIEW_TITLE).setDescription(`Unpublished authoring material — owner inspection only.\n\n${preview.lessons.length} catalogue-listed draft lessons/capstones, not ${preview.lessons.length} courses. Lab delivery: student-built; reading grants no exercise permission. No XP, progress, submissions, grades or awards are recorded.\n\nLesson group ${page + 1}/${pages}. Supporting/instructor documents are not silently added.`);
+          embed.addFields(lessons.map(lesson => ({ name: lesson.id, value: `Draft lesson • ${lesson.requires.length} catalogue prerequisite(s). Open to inspect the authored source.` })));
+          components.push(row(lessons.map((lesson, index) => button(`${PREFIX}module:${FORMAL_ADMIN_PREVIEW_INDEX}:${page * 5 + index}:0`, lesson.id))));
+          components.push(row([button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:${Math.max(0, page - 1)}`, 'Previous lessons', page === 0), button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:${page}`, 'Refresh draft lessons'), button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:${page + 1}`, 'Next lessons', page + 1 >= pages)]));
+        } else {
+          const lessonIndex = Number(moduleView[2]), page = Number(moduleView[3]);
+          const lesson = await loadFormalAdminPreview({ interaction, config, guildId, lessonIndex, page });
+          embed.setTitle(`${lesson.id} — ${lesson.heading}`.slice(0, 256)).setDescription(lesson.text).addFields(
+            { name: 'Unpublished draft inspection', value: `Authored content page ${page + 1}/${lesson.pageCount}. Read-only; not learner release, prerequisite validation or permission to execute examples.` },
+            { name: 'Catalogue prerequisites', value: lesson.requires.join(' • ') || 'None listed in the draft catalogue.' });
+          components.push(row([button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:${Math.floor(lessonIndex / 5)}`, 'Back to draft lessons'), button(`${PREFIX}module:${FORMAL_ADMIN_PREVIEW_INDEX}:${lessonIndex}:${Math.max(0, page - 1)}`, 'Previous draft page', page === 0), button(`${PREFIX}module:${FORMAL_ADMIN_PREVIEW_INDEX}:${lessonIndex}:${page + 1}`, 'Next draft page', page + 1 >= lesson.pageCount)]));
+          if (lesson.requires.length) components.push(row(lesson.requires.slice(0, 5).map((id, index) => button(`${PREFIX}module:${FORMAL_ADMIN_PREVIEW_INDEX}:${lesson.prerequisiteIndexes[index]}:0`, `Read prerequisite ${id}`))));
+        }
+        await respond({ embeds: [embed], components }); return true;
+      } catch {
+        await respond({ content: 'Formal draft preview is unavailable in this context or its source could not be validated. Registered courses are unchanged.' }); return true;
+      }
+    }
     if (!course) return invalid();
     if (courseView) {
       const page = Number(courseView[2]), pages = Math.max(1, Math.ceil(course.modules.length / 5));
