@@ -1,5 +1,5 @@
 name: Academy course-card integration
-on:
+'on':
   push:
     branches: [feat/academy-course-card-ui]
   workflow_dispatch:
@@ -29,25 +29,20 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - name: Verify tested patch is already integrated
-        run: git apply --reverse --check --unidiff-zero docs/academy-course-card-ui.patch
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Syntax checks
         run: |
-          for file in academy-course-card-ui.mjs certification-course-runtime.js certification-runtime.js certification-retention-hold.js test-academy-course-card-ui.mjs test-academy-course-card-sdk.mjs test-certification-course-runtime.mjs; do
+          for file in academy-course-card-ui.mjs certification-course-runtime.js certification-runtime.js certification-retention-hold.js test-academy-course-card-*.mjs; do
             node --check "$file" || exit 1
           done
-      - name: SDK and retained regressions
+      - name: SDK, recovery, all certification unit fixtures and Community Learning regression
         run: >-
           node --unhandled-rejections=strict --test
           test-academy-course-card-ui.mjs
           test-academy-course-card-sdk.mjs
-          test-certification-course-runtime.mjs
-          test-certification-course-navigation.mjs
-          test-certification-student-course-renderer.mjs
-          test-certification-course-request-runtime.mjs
-          test-certification-course-request-ui.mjs
-          test-certification-runtime.mjs
-          test-certification-process-shutdown.mjs
+          test-academy-course-card-recovery.mjs
+          test-certification-*.mjs
           test-community-learning-router.mjs
+      - name: Bounded diagnostic parser tests
+        run: python3 -m unittest discover -s scripts -p 'test_academy_course_card_pg16_diagnostic.py'

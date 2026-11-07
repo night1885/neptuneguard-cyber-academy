@@ -1,4 +1,4 @@
-const V2=32768, PRIVATE=64, marker=Symbol('academy-card-response'), adapted=Symbol('academy-card-adapter');
+const V2=32768, PRIVATE=64, marker=Symbol.for('neptuneguard.academy.course-card-response'), adapted=Symbol('academy-card-adapter');
 const json=x=>typeof x?.toJSON==='function'?x.toJSON():x;
 export function academyCardPayload(p={}){
  if(!p||typeof p!=='object'||Array.isArray(p)||Object.keys(p).some(k=>!['content','embeds','components','flags','allowedMentions'].includes(k)))throw Error('Unsupported payload');

@@ -19,7 +19,6 @@ import { createCertificationService } from './certification-service.js';
 import { replyRetentionHold } from './certification-retention-hold.js';
 import { createClosureRuntimeRouter, readApplicationClosureFlag } from './certification-application-closure-runtime.js';
 import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
-import { replyAcademyCardNotice } from './academy-course-card-ui.mjs';
 
 export function attachCertificationRuntime(client, _pool, guildId, env = process.env, { createPool = createCertificationDatabasePool, createRouter = createCertificationRouter, createClosureRouter = createClosureRuntimeRouter, createCourseRouter = createCourseRuntimeRouter, createDecisionHandler, formalReview } = {}) {
   const config = loadCertificationConfig(env);
@@ -160,7 +159,11 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
   }
 
   async function handleInteraction(interaction) {
-    const respond = content => replyAcademyCardNotice(interaction, content);
+    const respond = content => {
+      const card = interaction.message?.flags?.has?.(32768) === true || interaction[Symbol.for('neptuneguard.academy.course-card-response')] === true;
+      const payload = card ? { flags: 32768, components: [{ type: 10, content }], allowedMentions: { parse: [] } } : { content, embeds: [], components: [], allowedMentions: { parse: [] } };
+      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: (payload.flags || 0) | 64 });
+    };
     try {
       if (formal && interaction.customId?.startsWith(formalPrefix)) {
         if (!ready || detached || !formalRoute || interaction.isButton?.() !== true) {
