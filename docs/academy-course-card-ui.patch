@@ -1,0 +1,58 @@
+diff --git a/certification-course-runtime.js b/certification-course-runtime.js
+--- a/certification-course-runtime.js
++++ b/certification-course-runtime.js
+@@ -6,1 +6,2 @@
+-import { withCourseRequests } from './certification-course-request-runtime.js';
++import { withCourseRequests } from './certification-course-request-runtime.js';
++import { withAcademyCourseCards } from './academy-course-card-ui.mjs';
+@@ -96,3 +97,3 @@
+-  return config.courseRequestsEnabled === true
+-    ? withCourseRequests(route, pool, config, guildId, { verifiedRoleId, now })
+-    : route;
++  return withAcademyCourseCards(config.courseRequestsEnabled === true
++    ? withCourseRequests(route, pool, config, guildId, { verifiedRoleId, now })
++    : route, { guildId });
+diff --git a/certification-runtime.js b/certification-runtime.js
+--- a/certification-runtime.js
++++ b/certification-runtime.js
+@@ -21,1 +21,2 @@
+-import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
++import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
++import { replyAcademyCardNotice } from './academy-course-card-ui.mjs';
+@@ -171,4 +172,1 @@
+-    const respond = content => {
+-      const payload = { content, embeds: [], components: [], allowedMentions: { parse: [] } };
+-      return interaction.deferred || interaction.replied ? interaction.editReply(payload) : interaction.reply({ ...payload, flags: 64 });
+-    };
++    const respond = content => replyAcademyCardNotice(interaction, content);
+diff --git a/certification-retention-hold.js b/certification-retention-hold.js
+--- a/certification-retention-hold.js
++++ b/certification-retention-hold.js
+@@ -1,1 +1,2 @@
+-export const RETENTION_HOLD_MESSAGE = 'Learner-account workflows are temporarily unavailable while dashboard and registration integration checks are completed. No registration, approval, course activity, or saved-progress action was performed. Existing records have not been deleted.';
++import { replyAcademyCardNotice } from './academy-course-card-ui.mjs';
++export const RETENTION_HOLD_MESSAGE = 'Learner-account workflows are temporarily unavailable while dashboard and registration integration checks are completed. No registration, approval, course activity, or saved-progress action was performed. Existing records have not been deleted.';
+@@ -4,3 +5,1 @@
+-  const payload = { content: RETENTION_HOLD_MESSAGE, components: [], embeds: [], allowedMentions: { parse: [] } };
+-  if (interaction.deferred || interaction.replied) await interaction.editReply(payload);
+-  else await interaction.reply({ ...payload, flags: 64 });
++  await replyAcademyCardNotice(interaction, RETENTION_HOLD_MESSAGE);
+diff --git a/test-certification-course-runtime.mjs b/test-certification-course-runtime.mjs
+--- a/test-certification-course-runtime.mjs
++++ b/test-certification-course-runtime.mjs
+@@ -26,1 +26,1 @@
+-    async reply(payload) { assert.equal(payload.flags, 64); this.replied = true; this.messages.push(payload); }, async editReply(payload) { this.messages.push(payload); } };
++    async reply(payload) { assert.equal(payload.flags & 64, 64); this.replied = true; this.messages.push(payload); }, async editReply(payload) { this.messages.push(payload); } };
+@@ -72,3 +72,6 @@
+-  assert.match(catalog.messages.at(-1).embeds[0].description, /listing does not grant access/);
+-  assert.ok(catalog.messages.at(-1).components[0].components.every(button => button.custom_id.startsWith('cert:course:open:')));
+-  const denied = interaction('cert:course:catalog:0', false); await route(denied); assert.match(denied.messages.at(-1).content, /could not be verified/); route.dispose();
++  assert.equal(catalog.messages.at(-1).flags, 32768);
++  assert.match(JSON.stringify(catalog.messages.at(-1)), /listing does not grant access/);
++  const flatten = items => items.flatMap(item => [item, ...(item.components ? flatten(item.components) : [])]);
++  const openControls = flatten(catalog.messages.at(-1).components).filter(item => item.type === 2 && item.custom_id.startsWith('cert:course:open:'));
++  assert.equal(openControls.length, 4);
++  const denied = interaction('cert:course:catalog:0', false); await route(denied); assert.match(JSON.stringify(denied.messages.at(-1)), /could not be verified/); route.dispose();
+@@ -93,1 +96,1 @@
+-  const i = interaction('cert:course:catalog:0'); await route(i); assert.match(i.messages[0].content, /unavailable/);
++  const i = interaction('cert:course:catalog:0'); await route(i); assert.match(JSON.stringify(i.messages[0]), /unavailable/);
