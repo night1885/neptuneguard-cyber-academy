@@ -32,7 +32,9 @@ export function createInitialConsoleHandler(pool, config, guildId) {
     if (!valid || (origin && origin !== interaction.user.id)) {
       await interaction.reply({ content: 'Open your own student console in the configured server.', flags: 64, allowedMentions: { parse: [] } }); return true;
     }
-    await interaction.deferReply({ flags: 64 });
+    const updateInPlace = Boolean(origin === interaction.user.id && interaction.client?.user?.id && interaction.message?.author?.id === interaction.client.user.id && interaction.message?.flags?.has?.(64));
+    if (updateInPlace) await interaction.deferUpdate();
+    else await interaction.deferReply({ flags: 64 });
     const respond = payload => interaction.editReply({ content: '', embeds: [], components: [], allowedMentions: { parse: [] }, ...payload });
     if (!['cert:initial:home', 'cert:initial:status', 'cert:initial:help'].includes(id)) { await respond({ content: 'Unknown console action. Run /start again.' }); return true; }
     try {
