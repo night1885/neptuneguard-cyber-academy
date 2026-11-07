@@ -1,3 +1,4 @@
+import { isGeneralRegistrationScope } from './certification-general-registration.mjs';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { buildAdminNavigation } from './certification-admin-navigation.js';
 import { buildAccessControls } from './certification-access-actions.js';
@@ -63,7 +64,9 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
       const scopedIds = config.manualReviewDecisionStudentIds;
       const canReview = config.manualReviewDecisionsEnabled === true && config.manualReviewEnabled === true &&
         /^[0-9]{17,20}$/.test(config.adminChannelId || '') && interaction.channelId === config.adminChannelId &&
-        Array.isArray(scopedIds) && Object.isFrozen(scopedIds) && scopedIds.includes(studentId) &&
+        ((isGeneralRegistrationScope(config.scopedRegistration) && config.scopedRegistration.ownerId === config.ownerId &&
+          config.scopedRegistration.guildId === guildId && config.scopedRegistration.adminChannelId === config.adminChannelId && studentId !== config.ownerId) ||
+          (Array.isArray(scopedIds) && Object.isFrozen(scopedIds) && scopedIds.includes(studentId))) &&
         record.discord_user_id === studentId && hasManualReviewAcknowledgment(record) && record.approved_by == null && record.approved_at == null &&
         record.agreement_version === config.activeAgreementVersion && record.agreement_content_sha256 === config.activeAgreementSha256 &&
         record.comprehension_check_version === config.comprehensionCheck?.version &&
