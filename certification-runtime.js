@@ -1,3 +1,4 @@
+import { createGeneralRegistrationPolicy } from './certification-general-registration.mjs';
 import { isGeneralChatUiReviewOptions } from './docs/formal-ethical-hacking/authoring/discord-workspace-prototype/general-chat-ui-review.mjs';
 import { readRegistrationPilotOptions, createRegistrationPilotPolicy, createRegistrationPilotRouter } from './certification-registration-pilot-guard.js';
 import { createProvenancePilotHandlers as createRegistrationPilotHandlers } from './certification-provenance-pilot-handlers.js';
@@ -75,7 +76,9 @@ export function attachCertificationRuntime(client, _pool, guildId, env = process
     if (combinedRegistration) {
       const readDatabase = createReadOnlyPreviewPool(backing);
       const settings = config.scopedRegistration;
-      const policy = createRegistrationPilotPolicy(settings, { ownerDecisionsEnabled: true });
+      const policy = settings.generalMembers === true
+        ? createGeneralRegistrationPolicy(settings, { ownerDecisionsEnabled: true })
+        : createRegistrationPilotPolicy(settings, { ownerDecisionsEnabled: true });
       const scopedConfig = Object.freeze({ ...config, registrationPilotEnabled: true, registrationPilotPolicy: policy });
       const handlers = createRegistrationPilotHandlers({ readPool: readDatabase, writePool: backing, config: scopedConfig, guildId,
         createRegistration: createOwnerRegistrationHandler, createInvitation: createInvitationInteractionHandler });

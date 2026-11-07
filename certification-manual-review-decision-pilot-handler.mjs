@@ -1,3 +1,4 @@
+import { createGeneralRegistrationPolicy } from './certification-general-registration.mjs';
 import { loadCertificationConfig } from './certification-config.js';
 import { createRegistrationPilotPolicy } from './certification-registration-pilot-guard.js';
 import { readRegistrationWorkflowOptions } from './certification-registration-workflow.mjs';
@@ -23,11 +24,14 @@ export function createManualReviewDecisionPilotHandler(config, guildId, { env = 
       ['ownerId','adminChannelId','activeAgreementVersion','activeAgreementSha256'].some(key => config[key] !== checked[key]) ||
       JSON.stringify(config.comprehensionCheck) !== JSON.stringify(checked.comprehensionCheck) ||
       JSON.stringify(config.manualReviewDecisionStudentIds) !== JSON.stringify(checked.manualReviewDecisionStudentIds) ||
+      JSON.stringify(config.scopedRegistration) !== JSON.stringify(checked.scopedRegistration) ||
       typeof readPool?.query !== 'function' || typeof createPool !== 'function' || typeof onDiagnostic !== 'function') {
     throw new Error('Explicit matching pilot owner-decision configuration required');
   }
   const descriptor = loadManualReviewDecisionConnection(env);
-  const policy = createRegistrationPilotPolicy(pilot, { ownerDecisionsEnabled: true });
+  const policy = pilot.generalMembers === true
+    ? createGeneralRegistrationPolicy(pilot, { ownerDecisionsEnabled: true })
+    : createRegistrationPilotPolicy(pilot, { ownerDecisionsEnabled: true });
   const active = new Set();
   let pool, flow, adapter, initializing, closing, poolClosing, disposed = false, ready = false;
   const closePool = () => {
