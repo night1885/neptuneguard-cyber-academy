@@ -8,6 +8,7 @@ on:
       - 'certification-*.js'
       - 'certification-*.mjs'
       - 'test-certification-combined-*.mjs'
+      - 'test-certification-general-*.mjs'
       - 'restoration.js'
       - 'community-learning-*.mjs'
       - 'test-community-learning-*.mjs'
@@ -101,8 +102,17 @@ jobs:
           node --check certification-combined-registration-router.mjs
           node --check test-certification-combined-course-modal.mjs
           node --check test-certification-combined-journey-postgres.mjs
+          node --check test-certification-general-policy.mjs
+          node --check test-certification-general-routing.mjs
+          node --check test-certification-general-sdk.mjs
       - name: Run combined route and modal boundary regressions
         run: node --unhandled-rejections=strict --test test-certification-combined-router.mjs test-certification-combined-course-modal.mjs test-certification-combined-config-boundaries.mjs
+      - name: General-member policy, routing and SDK regressions without skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test test-certification-general-policy.mjs test-certification-general-routing.mjs test-certification-general-sdk.mjs 2>&1 | tee "$RUNNER_TEMP/general-member-regressions.tap"
+          if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/general-member-regressions.tap"; then exit 1; fi
       - name: Retained restoration, UI-pilot and Community regressions without skips
         shell: bash
         run: |
@@ -140,6 +150,7 @@ jobs:
           name: native-combined-journey-node${{ matrix.node }}-pg${{ matrix.postgres }}
           path: |
             ${{ runner.temp }}/combined-journey.tap
+            ${{ runner.temp }}/general-member-regressions.tap
             ${{ runner.temp }}/entrypoint-regressions.tap
             ${{ runner.temp }}/security-audit.json
           if-no-files-found: warn
