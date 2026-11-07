@@ -1,8 +1,10 @@
+import { isGeneralRegistrationScope, isGeneralRegistrationActor } from './certification-general-registration.mjs';
 export function createCombinedRegistrationRouter({settings,policy,base,registration,learner,ownerDecisions}={}) {
   if(settings?.combined!==true||settings.enabled!==true||!Array.isArray(settings.studentIds)||
      ['classify','allowsStudent','allowsButton','allowsModal'].some(k=>typeof policy?.[k]!=='function')||
      [base,registration,learner,ownerDecisions].some(fn=>typeof fn!=='function')||
      [base,ownerDecisions].some(fn=>typeof fn.initialize!=='function'||typeof fn.dispose!=='function'))throw Error('Complete combined runtime dependencies required');
+  if (settings.generalMembers === true && !isGeneralRegistrationScope(settings)) throw Error('Valid general member scope required');
   const s=Object.freeze({...settings,studentIds:Object.freeze([...settings.studentIds])});
   let disposed=false,ready=false,initializing=null,closing=null;const active=new Set();
   const ownPrivate=i=>{const m=i.message,origin=m?.interactionMetadata?.user?.id||m?.interaction?.user?.id;return m?.flags?.has?.(64)===true&&origin===i.user?.id&&typeof i.client?.user?.id==='string'&&m.author?.id===i.client.user.id;};
@@ -11,11 +13,15 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
   const namespace=id=>typeof id==='string'&&/^cert:(?:course|cr):/.test(id);
   function destination(i){
     const actor=i.user?.id,id=i.customId,k=kind(i),owner=actor===s.ownerId;
-    if(!k||typeof actor!=='string'||!/^[0-9]{17,20}$/.test(actor)||typeof id!=='string'||i.guildId!==s.guildId||i.guild?.id!==s.guildId||(i.message?.flags?.has?.(64)===true&&!ownPrivate(i))||(owner&&i.channelId!==s.adminChannelId))return null;
+    const ownerHome=owner&&s.generalMembers===true&&k==='button'&&/^cert:initial:(?:home|status|help)$/.test(id);
+    if(!k||typeof actor!=='string'||!/^[0-9]{17,20}$/.test(actor)||typeof id!=='string'||i.guildId!==s.guildId||i.guild?.id!==s.guildId||(i.message?.flags?.has?.(64)===true&&!ownPrivate(i))||(owner&&!ownerHome&&i.channelId!==s.adminChannelId))return null;
+    if(s.generalMembers===true&&!owner&&!isGeneralRegistrationActor(i,s))return null;
+    if(ownerHome)return 'base';
     const classified=policy.classify(i);
     if(id.startsWith('cert:review:'))return owner&&classified==='decision'?'decision':null;
     if(id.startsWith('cert:register:'))return owner&&classified==='registration'?'registration':null;
     if(id.startsWith('cert:invite:'))return !owner&&classified==='learner'?'learner':null;
+    if(id.startsWith('cert:access:'))return owner&&s.generalMembers===true&&classified==='management'?'base':null;
     if(id.startsWith('cert:courselife:'))return owner?'base':null;
     if(namespace(id))return 'base';
     if(owner&&classified==='read')return 'base';

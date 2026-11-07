@@ -1,3 +1,4 @@
+import { requireGeneralRegistrationTarget } from './certification-general-registration.mjs';
 import { randomUUID } from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createOwnerRegistrationService } from './certification-owner-registration.js';
@@ -5,7 +6,10 @@ import { createOwnerRegistrationService } from './certification-owner-registrati
 export function createOwnerRegistrationHandler(pool, config, guildId, { now = Date.now, createRegistrationService = createOwnerRegistrationService } = {}) {
   if (typeof createRegistrationService !== 'function') throw new Error('Trusted owner registration service factory required');
   const service = createRegistrationService(pool, config);
-  const registrationEntry = config.registrationPilotEnabled === true
+  const general = config.scopedRegistration?.generalMembers === true;
+  const registrationEntry = general
+    ? 'Next step: ask the learner to open Registration / application console in this server. An invitation is not enrollment; only a separate owner decision can approve the completed application.'
+    : config.registrationPilotEnabled === true
     ? 'Next step: after a pilot registration entry is separately approved and published, ask the learner to open it in this server.'
     : 'Next step: ask the learner to run /start in this server and open Registration / application console.';
   const pending = new Map();
@@ -28,6 +32,7 @@ export function createOwnerRegistrationHandler(pool, config, guildId, { now = Da
     if (id === 'cert:register:submit' && interaction.isModalSubmit()) {
       const studentId = interaction.fields.getTextInputValue('discord_user_id').trim();
       if (!/^\d{17,20}$/.test(studentId)) { await reply('Enter a numeric Discord user ID of 17–20 digits.'); return true; }
+      if (general) await requireGeneralRegistrationTarget(interaction, config.scopedRegistration, studentId);
       if (pending.size >= 100) { await reply('Too many pending registrations. Retry after five minutes.'); return true; }
       const token = randomUUID();
       pending.set(token, { actorId: interaction.user.id, studentId, expiresAt: timestamp + 300000 });
@@ -41,8 +46,9 @@ export function createOwnerRegistrationHandler(pool, config, guildId, { now = Da
     pending.delete(match[2]);
     if (match[1] === 'cancel') { await reply('Registration canceled. No record changed.'); return true; }
     await interaction.deferReply({ flags: 64 });
+    if (general) await requireGeneralRegistrationTarget(interaction, config.scopedRegistration, record.studentId);
     const result = await service.register(record.actorId, record.studentId);
-    await interaction.editReply({ content: result.created ? `Registered Discord user ${record.studentId}; awaiting learner acknowledgment. Course access is not active.\n\n${registrationEntry} With the agreement manifest configured, eligible admin-registered learners can complete invited registration while general enrollment remains closed. The learner must complete their own acknowledgment and declarations, then await a separate admin decision. No DM was sent.` : `A record already exists for Discord user ${record.studentId}. No record or access was changed.`, allowedMentions: { parse: [] }, components: [row(button(`cert:students:detail:${record.studentId}`, 'Open student record'))] });
+    await interaction.editReply({ content: result.created ? `Registered Discord user ${record.studentId}; awaiting learner acknowledgment. Course access is not active.\n\n${registrationEntry} With the agreement manifest configured, eligible admin-registered learners can complete invited registration without granting enrollment or course/lab access. ${general ? 'Eligible verified server members do not require a test-account allowlist.' : 'General enrollment remains closed.'} The learner must complete their own acknowledgment and declarations, then await a separate admin decision. No DM was sent.` : `A record already exists for Discord user ${record.studentId}. No record or access was changed.`, allowedMentions: { parse: [] }, components: [row(button(`cert:students:detail:${record.studentId}`, 'Open student record'))] });
     return true;
   };
 }
