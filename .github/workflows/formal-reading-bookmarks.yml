@@ -1,0 +1,46 @@
+name: Formal reading bookmark candidate tests
+on:
+  push:
+    branches: [feat/consolidated-course-authoring]
+    paths: ['formal-reading-bookmarks*.mjs', 'formal-bookmark-course-authorizer.mjs', 'docs/formal-course-authoring/reading-bookmarks-schema.sql', 'docs/formal-course-authoring/READING-BOOKMARKS.md', 'certification-course-lifecycle.js', 'certification-account-acknowledgment.js', 'certification-manual-review-data.mjs', 'certification-age-declaration.js', 'package*.json', '.github/workflows/formal-reading-bookmarks.yml']
+  pull_request:
+    branches: [main]
+    paths: ['formal-reading-bookmarks*.mjs', 'formal-bookmark-course-authorizer.mjs', 'docs/formal-course-authoring/reading-bookmarks-schema.sql', 'docs/formal-course-authoring/READING-BOOKMARKS.md', 'certification-course-lifecycle.js', 'certification-account-acknowledgment.js', 'certification-manual-review-data.mjs', 'certification-age-declaration.js', 'package*.json', '.github/workflows/formal-reading-bookmarks.yml']
+permissions:
+  contents: read
+jobs:
+  bookmarks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [16, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: bookmark_ci_admin
+          POSTGRES_PASSWORD: disposable-ci-only
+          POSTGRES_DB: formal_bookmark_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bookmark_ci_admin -d formal_bookmark_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      FORMAL_BOOKMARK_CI: 'true'
+      FORMAL_BOOKMARK_TEST_DATABASE_URL: postgresql://bookmark_ci_admin:disposable-ci-only@127.0.0.1:5432/formal_bookmark_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Unit regressions with explicit test doubles
+        run: node --test formal-reading-bookmarks.test.mjs
+      - name: Require disposable PostgreSQL profile
+        run: node --input-type=module -e "if(process.env.FORMAL_BOOKMARK_CI!=='true'||!process.env.FORMAL_BOOKMARK_TEST_DATABASE_URL)throw new Error('Required native test profile missing')"
+      - name: Actual restricted-role persistence and concurrency checks
+        run: node --test formal-reading-bookmarks.postgres.test.mjs
