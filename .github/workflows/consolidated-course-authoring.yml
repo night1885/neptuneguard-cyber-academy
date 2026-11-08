@@ -6,6 +6,9 @@ on:
       - 'docs/formal-course-authoring/**'
       - 'docs/formal-ethical-hacking/curriculum-catalogue.json'
       - 'docs/formal-ethical-hacking/lessons/**'
+      - 'docs/formal-ethical-hacking/fixtures/native-observation/**'
+      - 'docs/formal-ethical-hacking/fixtures/application-ownership/**'
+      - 'docs/formal-ethical-hacking/fixtures/python-foundations/**'
       - 'soc-analyst.js'
       - '.github/workflows/consolidated-course-authoring.yml'
   pull_request:
@@ -14,6 +17,9 @@ on:
       - 'docs/formal-course-authoring/**'
       - 'docs/formal-ethical-hacking/curriculum-catalogue.json'
       - 'docs/formal-ethical-hacking/lessons/**'
+      - 'docs/formal-ethical-hacking/fixtures/native-observation/**'
+      - 'docs/formal-ethical-hacking/fixtures/application-ownership/**'
+      - 'docs/formal-ethical-hacking/fixtures/python-foundations/**'
       - 'soc-analyst.js'
       - '.github/workflows/consolidated-course-authoring.yml'
 permissions:
@@ -39,3 +45,36 @@ jobs:
           path: ${{ runner.temp }}/consolidated-course-review/
           retention-days: 7
           if-no-files-found: error
+  native-practicals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install native tools only in the ephemeral CI runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y curl nmap
+      - name: Test selected native observation boundaries
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: python3 -B -m unittest -v test_native
+      - name: Require actual owned curl Nmap and Linux observations
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: python3 -B verify_native.py --require-all-tools > "$RUNNER_TEMP/native-tools.json"
+      - name: Retain existing scripting regression checks
+        working-directory: docs/formal-ethical-hacking/fixtures/python-foundations
+        run: python3 -B -m unittest -v test_summary test_summary_additional
+      - name: Retain existing repaired loopback transport checks without scanning that helper
+        working-directory: docs/formal-ethical-hacking/fixtures/application-ownership
+        run: python3 -B -m unittest -v test_loopback
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: native-owned-observation-record
+          path: ${{ runner.temp }}/native-tools.json
+          retention-days: 7
+          if-no-files-found: warn
