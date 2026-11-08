@@ -1,0 +1,83 @@
+name: Frozen formal-preview failure diagnosis
+on:
+  push:
+    branches: [feat/formal-admin-course-preview]
+    paths:
+      - '.github/workflows/formal-preview-failure-diagnostics.yml'
+      - '.github/scripts/formal-preview-failure-diagnostics.py'
+permissions:
+  contents: read
+concurrency:
+  group: frozen-formal-diagnosis-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      base_unit_code: ${{ steps.probe.outputs.base_unit_code }}
+      base_unit_context: ${{ steps.probe.outputs.base_unit_context }}
+      head_unit_code: ${{ steps.probe.outputs.head_unit_code }}
+      head_unit_context: ${{ steps.probe.outputs.head_unit_context }}
+      base_pg16_code: ${{ steps.probe.outputs.base_pg16_code }}
+      base_pg16_context: ${{ steps.probe.outputs.base_pg16_context }}
+      head_pg16_code: ${{ steps.probe.outputs.head_pg16_code }}
+      head_pg16_context: ${{ steps.probe.outputs.head_pg16_context }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: manual_review_ci
+          POSTGRES_PASSWORD: disposable_ci_fixture_only
+          POSTGRES_DB: certification_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U manual_review_ci -d certification_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CERTIFICATION_ENABLED: 'false'
+      CERTIFICATION_DATABASE_URL: ''
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+      PROBE_DATABASE_URL: postgresql://manual_review_ci:disposable_ci_fixture_only@127.0.0.1:5432/certification_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check diagnostic parser without accessing any database
+        run: python3 .github/scripts/formal-preview-failure-diagnostics.py --self-test
+      - name: Compare frozen base and failing head with bounded metadata only
+        id: probe
+        run: python3 .github/scripts/formal-preview-failure-diagnostics.py
+  context:
+    needs: probe
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: base-unit
+            context: ${{ needs.probe.outputs.base_unit_context || 'setup_failed' }}
+            code: ${{ needs.probe.outputs.base_unit_code || 'missing' }}
+          - case: head-unit
+            context: ${{ needs.probe.outputs.head_unit_context || 'setup_failed' }}
+            code: ${{ needs.probe.outputs.head_unit_code || 'missing' }}
+          - case: base-pg16
+            context: ${{ needs.probe.outputs.base_pg16_context || 'setup_failed' }}
+            code: ${{ needs.probe.outputs.base_pg16_code || 'missing' }}
+          - case: head-pg16
+            context: ${{ needs.probe.outputs.head_pg16_context || 'setup_failed' }}
+            code: ${{ needs.probe.outputs.head_pg16_code || 'missing' }}
+    name: diagnostic (${{ matrix.case }}, ${{ matrix.context }})
+    steps:
+      - name: Preserve command exit status without raw test output
+        env:
+          CODE: ${{ matrix.code }}
+        run: test "$CODE" = 0

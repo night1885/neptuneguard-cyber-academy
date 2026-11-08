@@ -57,6 +57,7 @@ export function createCertificationRouter(pool, config, guildId) {
     }
     if (interaction.customId.startsWith('cert:admin:')) {
       const adapter = { user: interaction.user, guildId: interaction.guildId, customId: interaction.customId,
+        guild: interaction.guild, channelId: interaction.channelId, client: interaction.client, message: interaction.message,
         isButton: () => true, deferReply: options => interaction.deferReply(options),
         editReply: async payload => {
           if (config.enabled && interaction.user.id === config.ownerId && interaction.guildId === guildId && payload.components?.length) {
