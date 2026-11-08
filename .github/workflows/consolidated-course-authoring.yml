@@ -78,3 +78,39 @@ jobs:
           path: ${{ runner.temp }}/native-tools.json
           retention-days: 7
           if-no-files-found: warn
+  windows-owned-process:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Parse selected PowerShell sources without executing them
+        shell: pwsh
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: |
+          foreach ($name in @('verify_windows.ps1','test_windows.ps1')) {
+            $tokens=$null; $parseErrors=$null
+            $null=[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $name),[ref]$tokens,[ref]$parseErrors)
+            if ($null -ne $parseErrors -and $parseErrors.Count -gt 0) { throw "PowerShell parse failed: $name" }
+          }
+      - name: Check invented snapshot cases separately from native execution
+        shell: pwsh
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: ./test_windows.ps1
+      - name: Require actual owned Windows process evidence and cleanup
+        shell: pwsh
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: |
+          $ErrorActionPreference='Stop'
+          $json = & ./verify_windows.ps1
+          $record = ($json -join "`n") | ConvertFrom-Json
+          if ($record.executed -ne $true -or $record.owned_child_closed -ne $true) { throw 'Native Windows result incomplete' }
+          $json | Set-Content -Encoding utf8 (Join-Path $env:RUNNER_TEMP 'windows-owned-process.json')
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: windows-owned-process-record
+          path: ${{ runner.temp }}/windows-owned-process.json
+          retention-days: 7
+          if-no-files-found: warn
