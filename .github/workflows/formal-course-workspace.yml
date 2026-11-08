@@ -1,0 +1,31 @@
+name: Formal course workspace candidate validation
+on:
+  push:
+    branches: [feat/consolidated-course-authoring]
+    paths: ['formal-course-workspace*.mjs', 'formal-student-packages.mjs', 'formal-reading-bookmarks.mjs', 'formal-reading-bookmarks.test.mjs', 'docs/formal-course-authoring/COURSE-WORKSPACE.md', 'package*.json', '.github/workflows/formal-course-workspace.yml']
+  pull_request:
+    branches: [main]
+    paths: ['formal-course-workspace*.mjs', 'formal-student-packages.mjs', 'formal-reading-bookmarks.mjs', 'formal-reading-bookmarks.test.mjs', 'docs/formal-course-authoring/COURSE-WORKSPACE.md', 'package*.json', '.github/workflows/formal-course-workspace.yml']
+permissions:
+  contents: read
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install existing locked SDK without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Workspace/package and existing bookmark regressions
+        run: node --test formal-course-workspace.test.mjs formal-reading-bookmarks.test.mjs
+      - name: Installed SDK checks with blocked real REST and synthetic data
+        run: node --test formal-course-workspace.sdk.test.mjs
