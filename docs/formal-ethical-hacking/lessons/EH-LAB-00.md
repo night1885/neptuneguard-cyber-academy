@@ -1,62 +1,71 @@
 # EH-LAB-00 — Authorization and Computer Readiness
 
-Status: draft student lesson; not approved for publication. This is not a live agreement, legal advice or permission to test any system. Community Learning is excluded.
+Status: draft student lesson; not approved for publication. This is not a live agreement, legal advice or testing permission. Students build their own authorized labs. Community Learning is excluded.
 
 ## Learning outcomes
-Distinguish technical access from authorization. Identify a lab's exact targets and permitted actions. Recognize stop conditions. Prepare a privacy-conscious computer inventory and explain the next setup gate.
+Distinguish access from authorization; identify exact targets/actions and stop conditions; prepare a minimal host inventory; explain the next setup gate. Admission, assignment, exercise permission and awards are separate decisions.
 
-## 1. Understand the boundary
-A course card, Verified role, enrolment approval, installed tool or reachable address is not general testing permission. Course admission, specific-course assignment, restricted-lab authorization and formal awards are separate controls. Before any practical action, use the actual approved lab brief and its current scope. If authorization or identity is unclear, stop and clarify.
+## 1. Read the actual brief
+A course card, Verified role, installed tool or reachable address is not general testing permission. Use the current approved brief. Record its objective, environment and exact peer/service; allowed actions; exclusions; time window; setup checks; evidence rules; support/incident contact; and recovery procedure. Missing details are blockers, not permission to guess. Do not reuse an earlier exercise's scope or infer ownership from a private address.
 
-## 2. Read the lab brief
-Write down the objective; authorized environment, target and service; permitted actions; exclusions; setup checks; allowed time window; evidence rules; stop conditions; support contact; and reset procedure. Missing details require clarification, not guessed permission. Do not assume a private IP address belongs to the course or reuse an old exercise's authorization.
+Planning reference: NIST SP 800-115, https://csrc.nist.gov/pubs/sp/800/115/final . This reference is not endorsement or legal protection.
 
-Planning reference: NIST SP 800-115 and its rules-of-engagement guidance, https://csrc.nist.gov/pubs/sp/800/115/final . This reference does not imply endorsement or legal protection.
+## 2. Separate the systems
+Draw the physical host, hypervisor, learner VM, practice peer and external connections. Label authorized and prohibited paths. A diagram is not a measured isolation test. Clean teaching fixtures do not authorize substitution of a public or vulnerable target.
 
-## 3. Separate the systems
-Draw your host computer, hypervisor, learner VM, practice peer and external connections. Label authorized and prohibited paths. Later guides must provide tested settings and checks; this diagram alone does not prove isolation. The first practical sequence uses clean course fixtures, not unrestricted vulnerable targets.
+Obtain installation approval for managed equipment. Do not bypass management, alter a VPN, disable protections or change firmware to force an exercise to work.
 
-If a device is managed by an employer or school, obtain the required installation approval. Do not bypass management controls, disable host protections or use an organizational VPN/network as an improvised lab.
+## 3. Make a minimal host record
+Work on the physical host, not inside a guest, container, WSL session or remote server. Confirm which machine the displayed information describes before copying it.
 
-## 4. Prepare a minimal readiness inventory
-Record host OS/version, CPU architecture, available memory/storage, virtualization availability, permission to install and relevant restrictions. Do not include serial numbers, passwords, tokens, full unredacted system reports or unrelated personal files. Hardware thresholds and supported routes must come from tested course configurations; none are established by this lesson.
+1. Open the host's existing system-information interface. Record only the OS name/version, CPU architecture and required memory information. Do not copy a whole screen or diagnostic bundle.
+2. Distinguish CPU architecture from an OS's 32/64-bit label. Record an established architecture, such as x86_64 or Arm64, or write unknown. A 64-bit label alone is insufficient.
+3. Record available storage on the intended VM volume without listing personal files. Record memory availability with its observation time; it is not a permanent capacity guarantee.
+4. Record installation permission, restrictions, support needs and whether virtualization availability is known. Inventory does not authorize firmware changes.
+5. Compare the exact combination against publisher documentation and the course's actual reviewed route. Publisher-listed support, a documented candidate and a course-tested route are different claims.
 
-| Field | Student worksheet entry | Limit |
+| Record | Include | Exclude |
 |---|---|---|
-| Host OS/version | To complete in approved private workflow | No full system report |
-| CPU architecture | To complete | No serial number |
-| Available memory/storage | To complete | No personal directory listing |
-| Virtualization availability | To complete | No unreviewed firmware changes |
-| Installation permission | To complete | No confidential policy documents |
-| Restrictions or unresolved issues | To complete | No credentials |
-| Supported setup route | Pending validated course guidance | Do not guess compatibility |
+| Platform | OS/release and established architecture | Serial number/full system report |
+| Resources | Relevant memory/storage | Personal filenames/account details |
+| Permission | Present, absent or unresolved approval | Confidential policy documents |
+| Route | Exact proposed hypervisor/guest versions and source | Guessed compatibility/purchases |
+| Unknowns | Missing support, unmeasured capacity or unclear identity | Invented output/success/timestamps |
 
-This repository document collects and stores no student answers. Real input, access, retention and deletion policies must be approved before collection.
+No universal minimum or academy-tested configuration is established here. This file collects/stores no answers. Real collection requires approved private access, retention and deletion arrangements; do not create a public submission or machine-readable learner record from this table.
+
+## 4. Reason about capacity
+The later exercise uses two VMs simultaneously. Account for the host's own work, both guest allocations, both virtual disks and recovery data. A dynamically allocated disk's maximum and present usage are different quantities. A snapshot is not a separate backup.
+
+Write proposed values beside actual observations and explain the difference. Leave unmeasured values unknown. Wizard defaults are not a validated two-VM resource budget. Stop rather than over-allocate or buy equipment because a draft is unfinished.
 
 ## 5. Know when to stop
-Stop when the target is uncertain, the network differs from the approved setup, an unexpected external route appears, an action exceeds scope, sensitive data appears, verification fails or the device becomes unstable. Preserve minimal non-sensitive observations and use the approved support process. Do not expand testing, validate exposed credentials, copy additional data or erase evidence to hide a mistake. If escalation contacts or policy are missing, do not invent them or continue intrusive work.
+Stop and clarify unclear targets, instructions, compatibility or permission. Stop and use the actual incident process for sensitive data, unexplained external connections, verification failures or instability. Preserve only necessary non-sensitive observations. Do not test exposed credentials, expand scope, copy extra data or erase evidence to hide a mistake. Missing support/incident contacts are themselves blockers.
 
 ## 6. Worked fictional example
-A lab permits GET / and HEAD / only against an identified clean internal peer. A learner suggests scanning a public website while that peer is unavailable. The website is not an authorized substitute. Stop the practical work and request peer recovery or an explicitly approved alternative. Tool availability and internet reachability do not expand scope.
+A brief permits GET / and HEAD / only against an identified clean internal peer. The peer is unavailable. A public website is not a permitted replacement. Stop and request recovery or an explicitly approved alternative. Reachability and tool availability do not enlarge scope.
 
 ## 7. Independent fictional scenarios
-For each scenario, state whether to proceed within stated scope, stop and clarify, or stop and escalate. Explain the decisive evidence, what remains unknown and the next permitted action. These scenarios grant no real permission.
+Choose proceed within stated scope, stop and clarify, or stop and escalate. Explain the decisive evidence, uncertainty and next permitted action. These scenarios grant no real permission.
 
-1. The exact authorized peer and setup checks match the current brief; the proposed request is explicitly permitted.
-2. A scanning tool is installed, but no scanning target or permission is named.
-3. Unexpected output contains an apparent password; credential testing is not authorized.
-4. The guest has an unexplained connection to the physical home network.
-5. A managed computer requires administrator installation approval that has not been obtained.
-6. A proposed readiness screenshot exposes a device serial number and personal files.
-7. The chosen installation guide does not support the host's CPU architecture.
+1. The identified peer/setup checks match the current brief and the request is explicitly permitted.
+2. A scanner is installed, but no target or scanning permission is named.
+3. Output contains an apparent password; credential testing is not authorized.
+4. A guest has an unexplained connection to the physical home network.
+5. A managed computer's installation approval has not been obtained.
+6. A readiness screenshot exposes a serial number and personal files.
+7. The installation guide does not support the host architecture.
 
-Do not submit invented command output, timestamps or completed setup claims. An analysis of fictional scenarios must remain labelled as fictional and cannot substitute for executed lab evidence. Instructor marking guidance must be protected separately in the eventual delivery system.
+Label fictional reasoning as fictional. Do not manufacture setup completion, output or execution times. Instructor marking/calibration material must remain separate from eventual learner delivery.
 
-## 8. Assessment and feedback
-Required draft evidence: non-sensitive readiness inventory, system-boundary diagram, lab-scope summary and reasoned scenario answers. A reviewer should assess scope discipline, uncertainty handling, privacy and sensible next actions. Exact rubrics, resubmission rules and instructor calibration remain pending. Reading pages, answering scenarios or checking boxes does not automatically establish readiness, grant access or issue an award.
+## 8. Review checkpoint
+Prepare a redacted inventory, boundary diagram, actual-brief summary and reasoned answers through an approved private process, or record an honest blocker. Distinguish observation, proposal and inference. The reviewer should understand the machine, route and uncertainty without receiving credentials or unrelated personal information.
 
-## 9. Next lesson gate
-Proceed to EH-LAB-01 only when installation permission, a validated supported route and the course's actual support/incident procedures are available. Do not buy hardware or subscribe to hosted services merely to satisfy an unfinished draft. Terminal commands in authorized practical lessons remain subject matter; the no-slash-command requirement concerns learner-interface navigation. The intended delivery uses buttons and an in-place private workspace without modal navigation, but that architecture is not yet implemented.
+These learner-facing expectations are draft criteria, not calibrated pass bands, runtime states, enrolment approval, exercise permission or an award. Reading/checking boxes does not establish readiness automatically.
 
-## Publication blockers
-Approved authorization and incident policies; real support contacts; privacy and retention review; tested hardware/platform routes; instructor rubric and calibration; accessible private delivery; reviewed identity and course-authorization adapters. The manifest remains draft-not-published. No course activation, real learner decision, lab spending or production change is authorized by this file.
+## 9. Next gate and publication blockers
+EH-LAB-01 requires installation permission, an actual reviewed supported route and real support/incident procedures. Documentation does not replace unperformed hardware reproduction. Do not buy hardware, licences or hosted subscriptions to satisfy an unfinished draft.
+
+The deployed owner-only Discord inspector supports draft review; it is not the finished learner workspace or evidence-submission service. Intended learner navigation remains private and button-driven without slash-command or modal navigation. Commands taught within authorized lessons are subject matter, not interface navigation.
+
+Publication remains blocked on actual policy/support, privacy/retention, supported route reproduction, licensing/provisioning, assessment calibration, accessibility and reviewed learner authorization/delivery. Draft publication metadata remains unchanged. This file authorizes no activation, learner decision, spending or production change.

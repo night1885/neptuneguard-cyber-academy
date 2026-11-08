@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { COURSES } from './course-registry.js';
+import { formalLessonTitle } from './certification-formal-lesson-title.mjs';
 const PREFIX = 'cert:admin:courses:';
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(disabled ? `cert:disabled:courses:${id}` : id).setLabel(label.slice(0, 80)).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
 const row = buttons => new ActionRowBuilder().addComponents(buttons);
@@ -60,7 +61,7 @@ export async function handleConsoleCourses(interaction, config, guildId, formalP
         } else {
           const lessonIndex = Number(moduleView[2]), page = Number(moduleView[3]);
           const lesson = await loadFormalAdminPreview({ interaction, config, guildId, lessonIndex, page });
-          embed.setTitle(`${lesson.id} — ${lesson.heading}`.slice(0, 256)).setDescription(lesson.text).addFields(
+          embed.setTitle(formalLessonTitle(lesson)).setDescription(lesson.text).addFields(
             { name: 'Unpublished draft inspection', value: `Authored content page ${page + 1}/${lesson.pageCount}. Read-only; not learner release, prerequisite validation or permission to execute examples.` },
             { name: 'Catalogue prerequisites', value: lesson.requires.join(' • ') || 'None listed in the draft catalogue.' });
           components.push(row([button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:${Math.floor(lessonIndex / 5)}`, 'Back to draft lessons'), button(`${PREFIX}module:${FORMAL_ADMIN_PREVIEW_INDEX}:${lessonIndex}:${Math.max(0, page - 1)}`, 'Previous draft page', page === 0), button(`${PREFIX}module:${FORMAL_ADMIN_PREVIEW_INDEX}:${lessonIndex}:${page + 1}`, 'Next draft page', page + 1 >= lesson.pageCount)]));
