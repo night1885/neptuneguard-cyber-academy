@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/formal-admin-preview-tests.yml'
       - 'certification-console-courses.js'
+      - 'certification-console-course-view.js'
+      - 'certification-router.js'
+      - 'instructor-application.js'
       - 'certification-formal-admin-preview.mjs'
       - 'certification-general-registration.mjs'
       - 'certification-course-sections.js'
@@ -21,6 +24,9 @@ on:
     paths:
       - '.github/workflows/formal-admin-preview-tests.yml'
       - 'certification-console-courses.js'
+      - 'certification-console-course-view.js'
+      - 'certification-router.js'
+      - 'instructor-application.js'
       - 'certification-formal-admin-preview.mjs'
       - 'certification-general-registration.mjs'
       - 'certification-course-sections.js'
@@ -64,13 +70,17 @@ jobs:
         run: |
           node --check certification-formal-admin-preview.mjs
           node --check certification-console-courses.js
+          node --check certification-console-course-view.js
+          node --check certification-router.js
+          node --check instructor-application.js
           node --check test-certification-formal-admin-preview.mjs
+          node --check test-certification-formal-admin-preview-routing.mjs
           node --check test-certification-console-courses.mjs
       - name: Require preview contracts and registered-course regressions without skips
         shell: bash
         run: |
           set -euo pipefail
-          node --unhandled-rejections=strict --test --test-reporter=tap test-certification-formal-admin-preview.mjs test-certification-console-courses.mjs 2>&1 | tee "$RUNNER_TEMP/formal-admin-preview.tap"
+          node --unhandled-rejections=strict --test --test-reporter=tap test-certification-formal-admin-preview*.mjs test-certification-console-courses.mjs test-certification-instructor-mode.mjs test-certification-instructor-panel.mjs 2>&1 | tee "$RUNNER_TEMP/formal-admin-preview.tap"
           if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/formal-admin-preview.tap"; then exit 1; fi
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-admin-preview.tap"
       - uses: actions/upload-artifact@v4

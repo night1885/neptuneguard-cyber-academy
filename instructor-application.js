@@ -1,5 +1,5 @@
 import { Events, GatewayIntentBits, Options } from 'discord.js';
-import { handleConsoleCourses } from './certification-console-courses.js';
+import { handleConsoleCourses } from './certification-console-course-view.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
 
 export function createInstructorClientOptions() {
