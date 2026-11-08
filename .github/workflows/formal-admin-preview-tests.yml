@@ -1,7 +1,7 @@
 name: Formal owner-preview acceptance
 on:
   push:
-    branches: [feat/formal-admin-course-preview]
+    branches: [feat/formal-admin-course-preview, feat/formal-foundation-readiness]
     paths:
       - '.github/workflows/formal-admin-preview-tests.yml'
       - 'certification-console-courses.js'
@@ -9,6 +9,8 @@ on:
       - 'certification-router.js'
       - 'instructor-application.js'
       - 'certification-formal-admin-preview.mjs'
+      - 'certification-formal-lesson-title.mjs'
+      - 'docs/formal-ethical-hacking/authoring/**'
       - 'certification-general-registration.mjs'
       - 'certification-course-sections.js'
       - 'course-registry.js'
@@ -28,6 +30,8 @@ on:
       - 'certification-router.js'
       - 'instructor-application.js'
       - 'certification-formal-admin-preview.mjs'
+      - 'certification-formal-lesson-title.mjs'
+      - 'docs/formal-ethical-hacking/authoring/**'
       - 'certification-general-registration.mjs'
       - 'certification-course-sections.js'
       - 'course-registry.js'
@@ -69,6 +73,8 @@ jobs:
       - name: Check reader, console and test syntax
         run: |
           node --check certification-formal-admin-preview.mjs
+          node --check certification-formal-lesson-title.mjs
+          node --check test-certification-formal-admin-preview-titles.mjs
           node --check certification-console-courses.js
           node --check certification-console-course-view.js
           node --check certification-router.js
@@ -83,10 +89,29 @@ jobs:
           node --unhandled-rejections=strict --test --test-reporter=tap test-certification-formal-admin-preview*.mjs test-certification-console-courses.mjs test-certification-instructor-mode.mjs test-certification-instructor-panel.mjs 2>&1 | tee "$RUNNER_TEMP/formal-admin-preview.tap"
           if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/formal-admin-preview.tap"; then exit 1; fi
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-admin-preview.tap"
+      - name: Run selected maintainer authoring checks, not hardware validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B docs/formal-ethical-hacking/authoring/check_authoring.py 2>&1 | tee "$RUNNER_TEMP/foundation-authoring.log"
+          python3 -B - <<'PY'
+          import sys
+          from pathlib import Path
+          root = Path('docs/formal-ethical-hacking').resolve()
+          sys.path.insert(0, str(root / 'authoring'))
+          from check_authoring import check_documents
+          errors = check_documents(root, documents=(
+              'lessons/EH-LAB-00.md', 'lessons/EH-LAB-01.md', 'lessons/EH-LAB-02.md',
+              'lessons/HOME-LAB-VALIDATION.md', 'authoring/FOUNDATION-SETUP-REVIEW.md'))
+          if errors:
+              raise SystemExit(chr(10).join(errors))
+          PY
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
           name: formal-owner-preview-node${{ matrix.node }}
-          path: ${{ runner.temp }}/formal-admin-preview.tap
+          path: |
+            ${{ runner.temp }}/formal-admin-preview.tap
+            ${{ runner.temp }}/foundation-authoring.log
           if-no-files-found: warn
           retention-days: 14
