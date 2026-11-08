@@ -1,0 +1,22 @@
+# Formal learning-data retention: confirmed policy, unwired calculation
+
+Confirmed requirements: support Windows/macOS/Linux lab hosts; keep course submissions, assessment feedback and saved reading positions for 24 hours after completion or leaving; retain certificate verification records long-term outside that cleanup. Supported lab routes are not validated by this document. Long-term certificate duration remains unspecified: neither permanent retention nor a fixed number of years is invented.
+
+## Scope and calculation
+formal-course-retention.mjs is a pure deadline/eligibility component, not a deletion executor, scheduler, database adapter, legal determination or access-authorisation service. It imports no database/filesystem/network client. It covers only ethical-hacking and incident-response and the three named learning-data categories. Certificate verification is always excluded from this 24-hour cleanup, with no expiry supplied by this policy.
+
+The clock is 24 elapsed hours (86,400 seconds), not the next local calendar day or the older application business-day schedule. Explicit-offset ISO strings with up to six fractional digits preserve microsecond boundaries. Invalid/naive/imprecise timestamps, calendar overflows and future terminal events are rejected rather than guessed or rounded. Exactly at the deadline the result is due; one microsecond before is waiting.
+
+Evaluation requires an explicit course/enrollment reference and a matching completed/left event. The enrollmentRef is an adapter binding, not a new database column or an authenticated token. The component does not authenticate the supplied event: only a reviewed server adapter may construct this snapshot from current authoritative records. Re-enrollment/new identity must not reuse an old terminal event. Suspension/revocation/expiry are not silently classified as leaving. A missing terminal event produces no deadline, not proof that missing lifecycle telemetry is acceptable.
+
+The original terminal event anchors the deadline; late feedback, edits, reads or a new bookmark must not restart it. Ordinary access/write cutoff at the deadline and refusal of late data creation must be enforced by the future integration. This module does not implement those controls. Its result always states destructiveActionAuthorized=false, including when due.
+
+## Preserve unrelated records
+Do not route this helper into the existing shared-enrollment/account/application/audit deletion executors as a policy override. Their parent/dependency/preservation controls and schedules remain unchanged. Do not delete certificate verification, Community Learning, enrollment consent, identity or unrelated course data because one formal course's learning data became due. A retained certificate record is not permission to retain the underlying submission/feedback or copy it into long-lived logs.
+
+Before actual cleanup, implement and test: authoritative per-course completion/exit mapping; current snapshot/version binding and rechecks; exact category/table/resource allowlists; dependencies and preservation/conflict handling; restricted executor identity and row-count checks; access cutoff; scheduling/recovery without blind destructive retries; and copy inventories covering attachments/messages, exports, logs and backups. No policy exception, hold duration, backup guarantee or automatic deletion approval is created here. Unresolved conflicts require explicit review, not silently extending retention or purging protected records.
+
+## Validation and status
+Thirty selected tests passed locally on Node v20.20.1. They cover elapsed-hour and DST-boundary examples, offsets, microsecond precision, exact expiry, three learning-data categories, certificate exclusion, cross-course/enrollment mismatches, invalid/future events, non-terminal states, input immutability and neutral metadata. Two JavaScript syntax checks and workflow YAML parsing passed locally. Hosted Node 20/22 results remain unclaimed until inspected after commit.
+
+No existing source, startup/router, schema, migration, registry, retention executor, permissions, real learner record, Discord message or production setting is changed. The earlier six-file private-workspace bundle remains uncommitted; this policy batch does not silently commit it. Policy calculation is implemented; automatic 24-hour disposal and certificate persistence are not. No merge, deployment, paid service or live deletion is authorised.
