@@ -1,0 +1,82 @@
+name: Formal owner-preview acceptance
+on:
+  push:
+    branches: [feat/formal-admin-course-preview]
+    paths:
+      - '.github/workflows/formal-admin-preview-tests.yml'
+      - 'certification-console-courses.js'
+      - 'certification-formal-admin-preview.mjs'
+      - 'certification-general-registration.mjs'
+      - 'certification-course-sections.js'
+      - 'course-registry.js'
+      - 'test-certification-formal-admin-preview*.mjs'
+      - 'test-certification-console-courses.mjs'
+      - 'docs/formal-ethical-hacking/curriculum-catalogue.json'
+      - 'docs/formal-ethical-hacking/lessons/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.node-version'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/formal-admin-preview-tests.yml'
+      - 'certification-console-courses.js'
+      - 'certification-formal-admin-preview.mjs'
+      - 'certification-general-registration.mjs'
+      - 'certification-course-sections.js'
+      - 'course-registry.js'
+      - 'test-certification-formal-admin-preview*.mjs'
+      - 'test-certification-console-courses.mjs'
+      - 'docs/formal-ethical-hacking/curriculum-catalogue.json'
+      - 'docs/formal-ethical-hacking/lessons/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.node-version'
+permissions:
+  contents: read
+concurrency:
+  group: formal-owner-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '26.12.1', '26.13.0']
+    env:
+      CERTIFICATION_ENABLED: 'false'
+      CERTIFICATION_DATABASE_URL: ''
+      CERTIFICATION_TEST_DATABASE_URL: ''
+      DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check reader, console and test syntax
+        run: |
+          node --check certification-formal-admin-preview.mjs
+          node --check certification-console-courses.js
+          node --check test-certification-formal-admin-preview.mjs
+          node --check test-certification-console-courses.mjs
+      - name: Require preview contracts and registered-course regressions without skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --unhandled-rejections=strict --test --test-reporter=tap test-certification-formal-admin-preview.mjs test-certification-console-courses.mjs 2>&1 | tee "$RUNNER_TEMP/formal-admin-preview.tap"
+          if grep -Eq '^# skipped [1-9][0-9]*$' "$RUNNER_TEMP/formal-admin-preview.tap"; then exit 1; fi
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-admin-preview.tap"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: formal-owner-preview-node${{ matrix.node }}
+          path: ${{ runner.temp }}/formal-admin-preview.tap
+          if-no-files-found: warn
+          retention-days: 14
