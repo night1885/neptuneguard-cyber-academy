@@ -3,25 +3,25 @@
   "status": "draft-source-review",
   "runtimeIntegration": false,
   "publishable": false,
-  "sourceCommit": "80c7803a147154912ee12b729ce527768f963c2d",
+  "sourceCommit": "f92216c3372cf3b565227c8e3e9b4d87c2eefa34",
   "entries": [
     {
       "id": "EH-LAB-00",
       "path": "lessons/EH-LAB-00.md",
-      "gitBlob": "667a660b19f0fc3dab1000b22d85bb73a5cbb311",
-      "sha256": "b0a2eb9bf1f1759ac522968a6c3c368c749736e8775c674ad5a712730cd35852"
+      "gitBlob": "deb5a0c5f0daabc1d6ef38bff6e52702fdb27ad3",
+      "sha256": "132c6fa8cde317a6696237e6917cb2c4635ae8aeff750d89e51c31449ff5db9f"
     },
     {
       "id": "EH-LAB-01",
       "path": "lessons/EH-LAB-01.md",
-      "gitBlob": "57f099471b478e123e654756ca29616f430ecd53",
-      "sha256": "4c6a607df922e107622c115deeddb19d86c461985683c309920321e8ca0d3326"
+      "gitBlob": "e0efe10259b928080e2a38dcb6362820ef3fb865",
+      "sha256": "4a417380087f66b62651972e767854e562fe302446658c376599b90e23a0af45"
     },
     {
       "id": "EH-LAB-02",
       "path": "lessons/EH-LAB-02.md",
-      "gitBlob": "75190943022586f0a3186d8f76cdd3738ced17e2",
-      "sha256": "16b3acab32cefa7b7c08d738a8661259f0b7f104a17de07e1697a8624dfde75c"
+      "gitBlob": "301845465b282d8fdb4d64cb647be638dbde0bfc",
+      "sha256": "ad3cd7ca56375b1374f786c42889c75b36bc8240a4acdd1b547b95fefe568cda"
     }
   ]
 }
