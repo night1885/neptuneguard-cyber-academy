@@ -37,8 +37,12 @@ jobs:
           python-version: '3.12'
       - name: Test source boundaries without importing teaching code
         run: python3 -B -m unittest discover -s docs/formal-course-authoring -p test_build_review.py -v
+      - name: Test owner-review output verification against synthetic checkouts
+        run: python3 -B -m unittest discover -s docs/formal-course-authoring -p test_verify_review.py -v
       - name: Assemble actual checkout sources for owner review only
         run: python3 -B docs/formal-course-authoring/build_review.py --output "$RUNNER_TEMP/consolidated-course-review"
+      - name: Verify generated books and audit against the checkout
+        run: python3 -B docs/formal-course-authoring/verify_review.py --output "$RUNNER_TEMP/consolidated-course-review"
       - uses: actions/upload-artifact@v4
         with:
           name: consolidated-owner-course-source-review
