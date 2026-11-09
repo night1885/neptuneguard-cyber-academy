@@ -80,3 +80,10 @@ jobs:
           node --check test-certification-formal-review-owner-postgres.mjs
           node --test test-certification-formal-review-owner-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review-owner.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review-owner.tap"
+      - name: Validate composition with PostgreSQL and fictional source HTTP responses
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check formal-review-composition.mjs
+          node --test test-certification-formal-review-composition-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review-composition.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review-composition.tap"
