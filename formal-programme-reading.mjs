@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TextDecoder } from 'node:util';
-export const FORMAL_READING_PROGRAMME = Object.freeze({key:'ethical-hacking',title:'Formal Ethical Hacking — draft reading'});
+export const FORMAL_READING_PROGRAMME = Object.freeze({key:'ethical-hacking-reading',title:'Formal Ethical Hacking — draft reading'});
 const footer='Draft reading only. No practical execution, saved progress, grade, programme completion or certificate is granted. Enrollment and an active reading assignment remain required.';
 const pattern=/^EH-(?:LAB|LINUX|NET|WEB|TLS|ASSESS|EVIDENCE|MODEL|AUTO)-(?:[0-9]{2}|CAPSTONE|PRACTICAL-CAPSTONE)$/;
 async function readSource(path, options={}) {
