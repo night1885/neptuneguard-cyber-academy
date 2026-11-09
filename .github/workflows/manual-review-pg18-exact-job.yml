@@ -1,0 +1,109 @@
+name: Inspect exact historical PostgreSQL 18 manual-review failure
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/manual-review-pg18-exact-job.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: manual-review-pg18-exact-job-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+    steps:
+      - name: Inspect fixed failed job without executing repository code
+        id: inspect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys, urllib.request, urllib.error, urllib.parse
+          if os.environ['GH_REPOSITORY'] != 'night1885/neptuneguard-cyber-academy':
+              raise SystemExit('Unexpected diagnostic repository')
+          root = 'https://api.github.com/repos/night1885/neptuneguard-cyber-academy/actions/jobs/129501968045'
+          limit = 2097152
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect())
+          def fetch(logs=False):
+              request = urllib.request.Request(root + ('/logs' if logs else ''), headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              })
+              try:
+                  with opener.open(request, timeout=30) as response:
+                      data = response.read(limit + 1)
+              except urllib.error.HTTPError as error:
+                  if not logs or error.code not in (301, 302, 303, 307, 308):
+                      raise
+                  location = error.headers.get('Location', '')
+                  parsed = urllib.parse.urlparse(location)
+                  if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
+                      raise ValueError('Unsafe log redirect')
+                  anonymous = urllib.request.Request(location, headers={'Accept': 'text/plain'})
+                  with opener.open(anonymous, timeout=30) as response:
+                      data = response.read(limit + 1)
+              if len(data) > limit:
+                  raise ValueError('Diagnostic response exceeds bound')
+              return data
+          status = 0
+          try:
+              metadata = json.loads(fetch())
+              if metadata.get('id') != 129501968045 or metadata.get('run_id') != 42717279089 or metadata.get('name') != 'manual-review-migration (PostgreSQL 18)' or metadata.get('conclusion') != 'failure':
+                  raise ValueError('Unexpected diagnostic target')
+              failed = [s for s in metadata.get('steps', []) if s.get('conclusion') in ('failure', 'cancelled', 'timed_out')]
+              step = failed[0].get('number', 0) if failed else 0
+              if type(step) is not int or not 0 <= step <= 100:
+                  step = 0
+              text = fetch(logs=True).decode('utf-8', errors='replace')
+              text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+              def locations(filename):
+                  values = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
+                  return '_'.join(str(x) for x in sorted(set(map(int, values)))[:4]) or 'none'
+              migration = locations('test-certification-manual-review-postgres.mjs')
+              native = locations('test-certification-manual-review-native-postgres.mjs')
+              codes = re.findall(r"\bcode:\s*['\"]([A-Z0-9_]{1,40})['\"]", text)
+              sql = [c for c in codes if re.fullmatch(r'[0-9A-Z]{5}', c)]
+              known = [c for c in codes if c in {'ERR_ASSERTION', 'ERR_TEST_FAILURE', 'ERR_MODULE_NOT_FOUND'}]
+              code = sql[0] if sql else known[0] if known else 'unknown'
+              phases = re.findall(r'Native fixture failed in phase: ([a-z0-9:_-]{1,80})', text)
+              allowed = {'setup', 'admin-connection', 'database-create', 'fixture-and-restricted-role', 'readiness', 'registration', 'form-opening', 'submission', 'replay-and-owner-inspection', 'negative-authorization-and-age', 'permission-boundaries'}
+              phase = phases[-1] if phases and phases[-1] in allowed else 'unknown'
+              phase = phase.replace('-', '_')
+              context = f'pg18_s{step}_m{migration}_n{native}_{code}_phase_{phase}'
+          except urllib.error.HTTPError as error:
+              context, status = 'inspection_http_' + str(error.code), 1
+          except Exception:
+              context, status = 'inspection_unavailable', 1
+          if not re.fullmatch(r'[A-Za-z0-9_]{1,180}', context):
+              raise SystemExit('Invalid bounded diagnostic')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + '\n')
+          print(context)
+          sys.exit(status)
+          PY
+  result:
+    name: historical-pg18-exact-job (${{ needs.inspect.outputs.context || 'inspection_unavailable' }})
+    needs: inspect
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Validate diagnostic transport only, not acceptance
+        env:
+          RESULT: ${{ needs.inspect.result }}
+          CONTEXT: ${{ needs.inspect.outputs.context }}
+        run: |
+          test "$RESULT" = success
+          test -n "$CONTEXT"
