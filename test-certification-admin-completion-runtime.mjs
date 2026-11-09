@@ -42,6 +42,11 @@ test('disposal invalidates pending confirmations and disposes managed navigation
   const f = await fixture(), i = interaction(`cert:admincomplete:request:${student}:${course}`); await f.route(i); const confirm = token(i); f.route.dispose();
   await f.route(interaction(confirm)); assert.equal(f.state.calls.length, 0); assert.equal(f.state.disposed, 1); await assert.rejects(f.route.initialize(), /disposed/);
 });
-test('normal startup uses integrated runtime and retains separate UI-review selection', async () => {
-  const source = await readFile(new URL('./restoration.js', import.meta.url), 'utf8'); assert.match(source, /attachAdministratorCertificationRuntime\(sharedClient/); assert.match(source, /uiReviewEnabled \? \{ formalReview:/);
+test('application default selects integrated runtime while executable retains isolated UI-review hook', async () => {
+  const application = await readFile(new URL('./certification-restored-application.js', import.meta.url), 'utf8');
+  assert.match(application, /import \{ attachAdministratorCertificationRuntime as attachCertificationRuntime \} from '\.\/certification-admin-completion-runtime\.js'/);
+  assert.match(application, /attachRuntime = attachCertificationRuntime/);
+  const source = await readFile(new URL('./restoration.js', import.meta.url), 'utf8');
+  assert.match(source, /uiReviewEnabled \? \{ attachRuntime/);
+  assert.match(source, /attachCertificationRuntime\(sharedClient/);
 });
