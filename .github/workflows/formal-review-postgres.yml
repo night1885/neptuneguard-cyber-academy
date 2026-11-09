@@ -51,5 +51,5 @@ jobs:
           set -euo pipefail
           test -n "$FORMAL_REVIEW_TEST_DATABASE_URL"
           node --check formal-review-postgres.mjs
-          node --test test-certification-formal-review-core.mjs test-certification-formal-review-postgres.mjs test-certification-formal-review-integration.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review.tap"
+          node --test test-certification-formal-review-core.mjs test-certification-formal-review-postgres.mjs test-certification-formal-review-integration.mjs test-certification-formal-review-owner.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review.tap"

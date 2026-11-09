@@ -1,0 +1,9 @@
+# Reconstructed reviewer source checkpoint
+
+Recovered from the recorded implementation, not from user-supplied archives. The local baseline core matched Git blob fd032673f1463b59006e3faa00afd70c9dab7c3b and policy matched 6623633c8e0ca755c0bce9f1ca5d2289cc3c97fa. Neither baseline file is changed by this checkpoint.
+
+The restored default-off owner flow and interaction handler support private report inspection, exact-revision feedback preparation, changes-requested/review-recorded decisions, explicit confirmation, immutable same-key retries, read-only recorded feedback and bounded session cleanup. No grading, practical authorization, course completion or certificate operation exists. No startup import, listener, command, publication, SQL or grant is added.
+
+Fresh local results: 27 passed, zero failed, one installed-SDK serialization test skipped. The new regression suite uses the actual recovered owner flow/handler and committed core with a scripted serialized rollback-capable in-memory transaction provider and interaction methods. Earlier archive test counts are not reused. These are not local PostgreSQL, actual gateway/REST, integrated cleanup-gate or independent-review evidence. The existing PostgreSQL 16/18 job now runs these tests alongside its database suite and requires zero skips; the reviewer UI itself is not yet composed with PostgreSQL in this new suite.
+
+This checkpoint recovers only the reviewer component. The other lost drafts still require reconstruction and fresh testing. Navigation still opens separate private replies; button-driven in-place navigation must be corrected before final acceptance. Work provisioning/discovery, consent/exercise grants, erasure/dependency integration, durable cleanup/recovery, learner views, complete startup composition and native validation remain unfinished. The handlers must not be wired to real evidence collection until those release gates are satisfied and deployment is separately approved.
