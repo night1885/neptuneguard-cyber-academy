@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID,createHash} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {createCertificationCourseRemoval} from './certification-course-removal.mjs';
+import {createCertificationCourseLifecycle} from './certification-course-lifecycle.js';
+import {createCertificationSubmission} from './certification-submission.js';
+import {createCertificationService} from './certification-service.js';
+const O='100000000000000001',A='100000000000000002',keys=['fixture-one','fixture-two','fixture-three'];
+test('course removal is default off and rejects foreign owner before connection',async()=>{const pool={query(){assert.fail();},connect(){assert.fail();}};const off=createCertificationCourseRemoval(pool,{enabled:true});assert.equal(off.enabled,false);assert.deepEqual(await off.removeCourse(O,A,keys[0]),{ok:false});const service=createCertificationCourseRemoval(pool,{enabled:true,courseRemovalEnabled:true,ownerId:O},{courseKeys:keys,isReady:()=>true});try{await assert.rejects(service.removeCourse(A,A,keys[0]),/unavailable/);}finally{service.dispose();await service.drain();}});
+const url=process.env.FORMAL_REVIEW_TEST_DATABASE_URL;
+test('administrator removal and scoped access on disposable PostgreSQL',{skip:!url,timeout:90000},async()=>{
+ assert.equal(process.env.GITHUB_ACTIONS,'true');assert.equal(process.env.CERTIFICATION_ENABLED,'false');assert.equal(process.env.DISCORD_TOKEN||'','');assert.equal(process.env.DATABASE_URL||'','');
+ const u=new URL(url);assert.equal(u.hostname,'127.0.0.1');assert.equal(u.port,'5432');assert.equal(u.pathname,'/formal_review_test');assert.equal(u.username,'formal_review_admin');assert.equal(u.search,'');assert.equal(u.hash,'');
+ const {default:pg}=await import('pg'),schema='course_remove_'+randomUUID().replaceAll('-','');
+ const pool=new pg.Pool({connectionString:url,max:4,connectionTimeoutMillis:5000,options:'-c search_path='+schema+' -c statement_timeout=15000 -c lock_timeout=5000'});let created=false,service;
+ try{
+  assert.equal((await pool.query('SELECT current_database() AS db')).rows[0].db,'formal_review_test');await pool.query(`CREATE SCHEMA "${schema}"`);created=true;
+  for(const file of ['001-certification.sql','002-typed-acknowledgment.sql','003-enrollment-submission-metadata.sql','004-immutable-agreement-versions.sql','005-account-acknowledgment-age.sql','006-application-closure-metadata.sql','007-course-enrollment-lifecycle.sql','013-course-removal-events.sql'])await pool.query(await readFile(new URL('./migrations/'+file,import.meta.url),'utf8'));
+  const content='Disposable course removal agreement.',hash=createHash('sha256').update(content).digest('hex'),config={enabled:true,courseRemovalEnabled:true,ownerId:O,enrollmentSubmissionEnabled:true,activeAgreementVersion:'remove-fixture',activeAgreementSha256:hash,comprehensionCheck:{version:'remove-check',correctAnswers:['stop']}};
+  await pool.query('INSERT INTO certification_agreements(version,content,content_sha256) VALUES($1,$2,$3)',[config.activeAgreementVersion,content,hash]);
+  await createCertificationSubmission(pool,config).submitEnrollment(A,{ageEligibility:'yes',acknowledgmentAccepted:true,confirmedRead:true,agreementVersion:config.activeAgreementVersion,agreementSha256:hash,comprehensionCheckVersion:config.comprehensionCheck.version,answers:['stop']});
+  await createCertificationService(pool,config).approveEnrollment(O,A);
+  let clock=Date.now()-60000;const now=()=>new Date(clock+=1000);
+  service=createCertificationCourseRemoval(pool,config,{courseKeys:keys,schema,isReady:()=>true,now});
+  await service.assignCourses(O,A,keys);assert.ok(await service.getCourseAuthorization(A,keys[0]));
+  const enrollmentBefore=(await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1',[A])).rows[0];
+  const [first,second]=await Promise.all([service.removeCourse(O,A,keys[0]),service.removeCourse(O,A,keys[0])]);assert.equal(first.ok,true);assert.equal(second.ok,true);assert.deepEqual([first.alreadyRemoved,second.alreadyRemoved].sort(),[false,true]);assert.equal(first.reference,second.reference);assert.equal(first.removedAt,second.removedAt);assert.equal(Date.parse(first.eligibleAt)-Date.parse(first.removedAt),86400000);
+  assert.equal(await service.getCourseAuthorization(A,keys[0]),null);assert.ok(await service.getCourseAuthorization(A,keys[1]));assert.deepEqual((await pool.query('SELECT * FROM certification_enrollments WHERE discord_user_id=$1',[A])).rows[0],enrollmentBefore);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM certification_audit_events WHERE action='course_removed'")).rows[0].n,1);
+  await assert.rejects(service.assignCourses(O,A,[keys[0]]));await assert.rejects(service.completeCourse(O,A,keys[0]));
+  const oldBase=createCertificationCourseLifecycle(pool,config,{courseKeys:keys,now});await assert.rejects(oldBase.completeCourse(O,A,keys[0]),/Removed course cannot be completed/);
+  await assert.rejects(pool.query("UPDATE certification_course_removals SET removed_at=removed_at+interval '1 second' WHERE discord_user_id=$1",[A]),/Immutable/);
+  await assert.rejects(pool.query('DELETE FROM certification_course_enrollments WHERE discord_user_id=$1 AND course_key=$2',[A,keys[0]]),e=>['23503','23001'].includes(e.code));
+  await pool.query("CREATE FUNCTION fail_removal_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='course_removed' THEN RAISE EXCEPTION 'Injected removal audit failure'; END IF; RETURN NEW; END; $$; CREATE TRIGGER fail_removal_audit BEFORE INSERT ON certification_audit_events FOR EACH ROW EXECUTE FUNCTION fail_removal_audit()");
+  await assert.rejects(service.removeCourse(O,A,keys[1]),/unconfirmed/);assert.equal((await pool.query('SELECT count(*)::int AS n FROM certification_course_removals WHERE course_key=$1',[keys[1]])).rows[0].n,0);assert.ok(await service.getCourseAuthorization(A,keys[1]));
+  await pool.query('DROP TRIGGER fail_removal_audit ON certification_audit_events');
+  const completed=await service.completeCourse(O,A,keys[2]);await assert.rejects(service.removeCourse(O,A,keys[2]),/unconfirmed/);assert.equal((await service.completeCourse(O,A,keys[2])).completedAt,completed.completedAt);
+  service.dispose();await service.drain();service=createCertificationCourseRemoval(pool,config,{courseKeys:keys,schema,isReady:()=>true,now});const retry=await service.removeCourse(O,A,keys[0]);assert.equal(retry.reference,first.reference);assert.equal(retry.eligibleAt,first.eligibleAt);assert.equal(await service.getCourseAuthorization(A,keys[0]),null);
+ }finally{service?.dispose();await service?.drain();try{if(created)await pool.query(`DROP SCHEMA "${schema}" CASCADE`);}finally{await pool.end();}}
+});

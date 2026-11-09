@@ -60,3 +60,10 @@ jobs:
           node --check formal-review-saved-interactions.mjs
           node --test test-certification-formal-review-saved-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review-saved.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review-saved.tap"
+      - name: Validate administrator course removal and original retention events
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check certification-course-removal.mjs
+          node --test test-certification-course-removal-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/course-removal.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/course-removal.tap"
