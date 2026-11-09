@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createFormalReviewSavedInteractions} from './formal-review-saved-interactions.mjs';
+const guildId='100000000000000001',applicationId='100000000000000002',botId='100000000000000003',actorId='100000000000000004';
+const workId='11111111-1111-4111-8111-111111111111',reportId='22222222-2222-4222-8222-222222222222';
+function fixture(mode='report'){
+ const state={clock:1000,ready:true,calls:0,output:[],value:{ok:true,reportId,revision:1,body:'Fictional @everyone *report*',expiresAtMs:2000,review:{decision:'changes-requested',feedback:'Explain the fictional result.'}}};
+ const core={enabled:true,async read(ctx,request){state.calls++;assert.deepEqual(ctx,{actorId,guildId});assert.deepEqual(request,{workId,reportId});if(state.hook)await state.hook();return state.value;}};
+ const handler=createFormalReviewSavedInteractions({enabled:true,guildId,applicationId,botId,core,isReady:()=>state.ready,now:()=>state.clock});
+ const i={id:'100000000000000005',customId:'frv:'+mode+':'+workId+':'+reportId,applicationId,guildId,user:{id:actorId},message:{author:{id:botId},flags:{has:n=>n===64}},inGuild:()=>true,isButton:()=>true,async deferReply(p){assert.deepEqual(p,{flags:64});this.deferred=true;this.ephemeral=true;},async editReply(p){state.output.push(p);},async reply(p){state.output.push(p);}};
+ return {state,handler,i};
+}
+function rejected(f){assert.equal(f.state.output.at(-1)?.content,'Saved report unavailable or expired.');assert.deepEqual(f.state.output.at(-1)?.embeds,[]);}
+test('disabled handler does not read providers',async()=>{const h=createFormalReviewSavedInteractions();assert.equal(h.enabled,false);assert.equal(await h.handle({}),false);});
+for(const mode of ['report','feedback'])test('private saved '+mode+' uses authorized core read',async()=>{const f=fixture(mode);try{assert.equal(await f.handler.handle(f.i),true);assert.equal(f.state.calls,1);const p=f.state.output.at(-1);assert.deepEqual(p.allowedMentions,{parse:[]});assert.equal(p.embeds.length,1);assert.equal(p.embeds[0].description.includes('@everyone'),mode==='report');if(mode==='report')assert.ok(p.embeds[0].description.includes('\\@everyone'));assert.ok(p.content.includes(new Date(2000).toISOString()));}finally{f.handler.dispose();await f.handler.drain();}});
+for(const mode of ['denied','expired','revoked','disposed','public-control','wrong-guild','wrong-bot','missing-feedback','oversize'])test('saved read rejects '+mode,async()=>{const f=fixture(mode==='missing-feedback'?'feedback':'report');try{if(mode==='denied')f.state.value={ok:false};if(mode==='expired')f.state.hook=()=>{f.state.clock=2000;};if(mode==='revoked')f.state.hook=()=>{f.state.ready=false;};if(mode==='disposed')f.state.hook=()=>{f.handler.dispose();};if(mode==='public-control')f.i.message.flags.has=()=>false;if(mode==='wrong-guild')f.i.guildId=botId;if(mode==='wrong-bot')f.i.message.author.id=actorId;if(mode==='missing-feedback')f.state.value.review=null;if(mode==='oversize')f.state.value.body='x'.repeat(2001);await f.handler.handle(f.i);if(mode==='disposed')assert.equal(f.state.output.length,0);else rejected(f);if(['public-control','wrong-guild','wrong-bot'].includes(mode))assert.equal(f.state.calls,0);}finally{f.handler.dispose();await f.handler.drain();}});
+test('unrelated controls are not consumed',async()=>{const f=fixture();try{f.i.customId='frv:confirm:'+workId;assert.equal(await f.handler.handle(f.i),false);assert.equal(f.state.calls,0);}finally{f.handler.dispose();await f.handler.drain();}});
