@@ -1,0 +1,9 @@
+# Removal-aware review authorization
+
+When config.courseRemovalEnabled is true, the review course-authorization adapter requires SELECT access to the removal table's learner/course columns and rejects table or column write privileges on that table at initialization. The explicit public-qualified removal query checks the target learner, including for owner reviews, before and after the existing lifecycle/account authorization. A removal, unreadable table, query failure, malformed result, stopped provider or revoked readiness denies the grant. No positive removal clearance is cached. The native lifecycle's existing SELECT facade and account/assignment policy are retained.
+
+False or omitted courseRemovalEnabled preserves the prior profile for backwards compatibility. Consequently the flag must be carried consistently through every deployed access consumer before any removal mutation is enabled. Existing deployments are not changed by this source commit, and a disabled flag must never be treated as removal-aware readiness.
+
+The new tests exercise the actual adapter and its SQL facade with scripted metadata/query rows, including removal during grant retrieval. They are not actual PostgreSQL ACL or concurrent database acceptance for this adapter; the earlier removal-service PostgreSQL suite does not substitute for that composition. Dedicated read-role/database acceptance and full lifecycle/runtime/UI wiring remain release gates. Privilege checks are a bounded admission profile, not an independent complete security audit or a guarantee against privilege changes after initialization.
+
+External permission reads and subsequent operations are not atomic. The core and interaction handlers must retain their repeated authorization checks. This change neither modifies report deadlines nor grants practical authority nor performs erasure, migration, privilege grants, startup wiring, source collection, removal mutations or deployment.
