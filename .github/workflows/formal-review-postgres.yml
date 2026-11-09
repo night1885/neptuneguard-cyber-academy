@@ -67,3 +67,9 @@ jobs:
           node --check certification-course-removal.mjs
           node --test test-certification-course-removal-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/course-removal.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/course-removal.tap"
+      - name: Validate review removal authorization with a restricted reader role
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test-certification-formal-review-removal-reader-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/review-removal-reader.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/review-removal-reader.tap"
