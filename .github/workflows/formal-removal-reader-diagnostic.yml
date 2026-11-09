@@ -1,0 +1,102 @@
+name: Inspect restricted reader acceptance failure
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/formal-removal-reader-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: formal-removal-reader-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+    steps:
+      - name: Inspect fixed failed jobs without executing repository code
+        id: inspect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request, urllib.error, urllib.parse
+          if os.environ['GH_REPOSITORY'] != 'night1885/neptuneguard-cyber-academy':
+              raise SystemExit('Unexpected diagnostic repository')
+          root = 'https://api.github.com/repos/night1885/neptuneguard-cyber-academy/actions/jobs/'
+          limit = 2097152
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect())
+          def fetch(job, logs=False):
+              request = urllib.request.Request(root + str(job) + ('/logs' if logs else ''), headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              })
+              try:
+                  with opener.open(request, timeout=30) as response:
+                      data = response.read(limit + 1)
+              except urllib.error.HTTPError as error:
+                  if not logs or error.code not in (301, 302, 303, 307, 308):
+                      raise
+                  location = error.headers.get('Location', '')
+                  parsed = urllib.parse.urlparse(location)
+                  if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
+                      raise ValueError('Unsafe log redirect')
+                  anonymous = urllib.request.Request(location, headers={'Accept': 'text/plain'})
+                  with urllib.request.urlopen(anonymous, timeout=30) as response:
+                      data = response.read(limit + 1)
+              if len(data) > limit:
+                  raise ValueError('Diagnostic response exceeds bound')
+              return data
+          labels = []
+          filename = 'test-certification-formal-review-removal-reader-postgres.mjs'
+          for version, job in [(16, 129375668550), (18, 129375668178)]:
+              try:
+                  metadata = json.loads(fetch(job))
+                  failed = [s for s in metadata.get('steps', []) if s.get('conclusion') in ('failure', 'cancelled', 'timed_out')]
+                  step = failed[0].get('number', 0) if failed else 0
+                  if not isinstance(step, int) or not 0 <= step <= 100:
+                      step = 0
+                  text = fetch(job, logs=True).decode('utf-8', errors='replace')
+                  text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+                  lines = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
+                  line = int(lines[-1]) if lines else 0
+                  codes = re.findall(r"\bcode:\s*['\"]([A-Z0-9_]{1,40})['\"]", text)
+                  code = codes[-1] if codes else 'unknown'
+                  if not re.fullmatch(r'[0-9A-Z]{5}|ERR_ASSERTION|ERR_TEST_FAILURE|ERR_MODULE_NOT_FOUND', code):
+                      code = 'unknown'
+                  labels.append('pg' + str(version) + '_s' + str(step) + '_L' + str(line) + '_' + code)
+              except urllib.error.HTTPError as error:
+                  labels.append('pg' + str(version) + '_inspection_http_' + str(error.code))
+              except Exception:
+                  labels.append('pg' + str(version) + '_inspection_unavailable')
+          context = '__'.join(labels)
+          if not re.fullmatch(r'[A-Za-z0-9_]{1,180}', context):
+              raise SystemExit('Invalid bounded diagnostic')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + '\n')
+          print(context)
+          PY
+  result:
+    name: restricted-reader-failure-context (${{ needs.inspect.outputs.context || 'inspection_unavailable' }})
+    needs: inspect
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Validate diagnostic transport only, not programme acceptance
+        env:
+          RESULT: ${{ needs.inspect.result }}
+          CONTEXT: ${{ needs.inspect.outputs.context }}
+        run: |
+          test "$RESULT" = success
+          test -n "$CONTEXT"
