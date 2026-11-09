@@ -13,8 +13,8 @@ export function createFormalReviewOwnerInteractions(options={}){
  let stopped=false;const active=new Set(),ids=new Set();
  function context(i){if(i.inGuild?.()!==true||i.applicationId!==applicationId||i.guildId!==guildId||i.user?.id!==ownerId||i.user.bot===true||i.user.system===true||i.channelId!==channelId||i.channel?.id!==channelId||i.channel.guildId!==guildId||i.channel.type!==0||i.message?.author?.id!==botId||i.message.flags?.has?.(64)!==true)fail();return Object.freeze({actorId:ownerId,guildId,channelId});}
  function handle(i){const id=i?.customId;if(typeof id!=='string'||!id.startsWith('frr:'))return Promise.resolve(false);if(stopped||i.deferred||i.replied||!discordId(i.id)||ids.has(i.id)||active.size>=4)return Promise.resolve(true);ids.add(i.id);
-  const task=(async()=>{let c,phase='',token=null,pending=null,acknowledged=false,recorded=false;
-   const guard=()=>{if(stopped||isReady()!==true||(acknowledged&&i.ephemeral!==true))fail();context(i);};
+  const task=(async()=>{let c,phase='',token=null,pending=null,acknowledged=false,recorded=false,inPlace=false;
+   const guard=()=>{if(stopped||isReady()!==true||(acknowledged&&!inPlace&&i.ephemeral!==true))fail();context(i);};
    const send=async p=>{guard();await i.editReply({...p,allowedMentions:{parse:[]}});};
    try{c=context(i);guard();const parts=id.split(':');phase=parts[1];
     const paired=['open','feedback'].includes(phase),choose=['choose','form'].includes(phase);
@@ -27,9 +27,9 @@ export function createFormalReviewOwnerInteractions(options={}){
      await i.showModal({custom_id:'frr:form:'+parts[2]+':'+token,title:parts[2]==='changes-requested'?'Request report changes':'Record report review',components:[field('feedback','Feedback: up to 2,000 Unicode characters',2,4000),field('ack','Type REVIEWED after inspecting the report',1,8)]});return true;
     }
     let feedback,ack;if(phase==='form'){if(i.fields?.fields?.size!==2||!i.fields.fields.has('feedback')||!i.fields.fields.has('ack'))fail();feedback=i.fields.getTextInputValue('feedback');ack=i.fields.getTextInputValue('ack');if(ack!=='REVIEWED'||!boundedReviewText(feedback))fail();}
-    await i.deferReply({flags:64});acknowledged=true;guard();
+    inPlace=paired&&typeof i.deferUpdate==='function';if(inPlace)await i.deferUpdate();else await i.deferReply({flags:64});acknowledged=true;guard();
     if(paired){const request={workId:parts[2],reportId:parts[3]},v=await flow[phase==='open'?'open':'read'](c,request);if(v?.ok!==true||v.reportId!==request.reportId||reviewClock(now())>=reviewClock(v.expiresAtMs))fail();
-     if(phase==='feedback'){if(!v.review)fail();await send(message('Recorded feedback: '+v.review.decision+'. Original report access deadline: '+new Date(v.expiresAtMs).toISOString()+'.',[],[embedded('Recorded feedback (untrusted text)',v.review.feedback)]));}
+     if(phase==='feedback'){if(!v.review)fail();await send(message('Recorded feedback: '+v.review.decision+'. Original report access deadline: '+new Date(v.expiresAtMs).toISOString()+'.',inPlace?[row(button('frr:open:'+request.workId+':'+request.reportId,'Read saved report'))]:[],[embedded('Recorded feedback (untrusted text)',v.review.feedback)]));}
      else{const controls=[];if(v.reviewToken!==null){if(!operationId(v.reviewToken))fail();pending=v.reviewToken;controls.push(row(button('frr:choose:changes-requested:'+v.reviewToken,'Request changes'),button('frr:choose:review-recorded:'+v.reviewToken,'Record review',1),button('frr:cancel:'+v.reviewToken,'Cancel')));}else if(v.review)controls.push(row(button('frr:feedback:'+request.workId+':'+request.reportId,'Read recorded feedback')));
       await send(message('Report revision '+v.revision+'. Access expires '+new Date(v.expiresAtMs).toISOString()+'. '+(v.review?'This revision already has immutable feedback.':'Choose feedback, then explicitly confirm. No grading or certificate is issued.'),controls,[embedded('Report text (untrusted; Markdown escaped)',v.body)]));pending=null;}
     }else if(phase==='form'){const v=await flow.prepare(c,{reviewToken:token,decision:parts[2],feedback,ack});if(v?.ok!==true||v.reviewToken!==token||v.decision!==parts[2]||v.feedback!==feedback||reviewClock(now())>=reviewClock(v.expiresAtMs))fail();pending=token;
