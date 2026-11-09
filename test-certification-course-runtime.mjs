@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { createCourseRuntimeRouter, readCourseRuntimeOptions } from './certification-course-runtime.js';
+import { COURSE_SECTION_CATALOG } from './certification-course-sections.js';
+import { FORMAL_READING_PROGRAMME } from './formal-programme-reading.mjs';
 import { attachCertificationRuntime } from './certification-runtime.js';
 import { createRestorationRouter } from './certification-restoration-router.js';
 import { requiredEnrollmentColumns } from './certification-schema-readiness.js';
@@ -66,7 +68,9 @@ test('catalog is metadata only and entry is appended to private learner panels w
   assert.match(JSON.stringify(catalog.messages.at(-1)), /listing does not grant access/);
   const flatten = items => items.flatMap(item => [item, ...(item.components ? flatten(item.components) : [])]);
   const openControls = flatten(catalog.messages.at(-1).components).filter(item => item.type === 2 && item.custom_id.startsWith('cert:course:open:'));
-  assert.equal(openControls.length, 4);
+  assert.deepEqual(openControls.map(item => item.custom_id), COURSE_SECTION_CATALOG.slice(0, 5).map(course => `cert:course:open:${course.key}`));
+  assert.equal(openControls.filter(item => item.custom_id !== `cert:course:open:${FORMAL_READING_PROGRAMME.key}`).length, 4);
+  assert.ok(openControls.some(item => item.custom_id === `cert:course:open:${FORMAL_READING_PROGRAMME.key}`));
   const denied = interaction('cert:course:catalog:0', false); await route(denied); assert.match(JSON.stringify(denied.messages.at(-1)), /could not be verified/); route.dispose();
 });
 
