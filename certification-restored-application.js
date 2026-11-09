@@ -1,6 +1,6 @@
 import { Events } from 'discord.js';
 import { loadCertificationConfig } from './certification-config.js';
-import { attachCertificationRuntime } from './certification-runtime.js';
+import { attachAdministratorCertificationRuntime as attachCertificationRuntime } from './certification-admin-completion-runtime.js';
 import { createApplicationShutdown } from './certification-application-shutdown.js';
 import { createRestorationRouter } from './certification-restoration-router.js';
 import { attachNativeCommunityRuntime } from './community-learning-startup.mjs';
