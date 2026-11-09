@@ -73,3 +73,10 @@ jobs:
           set -euo pipefail
           node --test test-certification-formal-review-removal-reader-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/review-removal-reader.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/review-removal-reader.tap"
+      - name: Validate owner controls and receipt recovery with restricted PostgreSQL storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check test-certification-formal-review-owner-postgres.mjs
+          node --test test-certification-formal-review-owner-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review-owner.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review-owner.tap"
