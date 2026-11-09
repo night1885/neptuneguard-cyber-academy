@@ -1,5 +1,6 @@
 import { getCourse } from './course-registry.js';
 import { getStudentCourseModule, validPracticeQuiz } from './certification-student-course-content.js';
+import { FORMAL_READING_PROGRAMME, renderFormalReadingPage } from './formal-programme-reading.mjs';
 
 const footer = 'Read-only learning: the application does not save progress or quiz results, or award XP, badges, or certificates.';
 const missing = 'Teaching text for this view is not available in the reviewed data source. Contact the academy admin. No legacy activity handler was opened.';
@@ -16,6 +17,7 @@ function pages(value) {
 }
 
 export function renderStudentCoursePage({ courseKey, cursor, buttonId } = {}) {
+  if (courseKey === FORMAL_READING_PROGRAMME.key) return renderFormalReadingPage({ courseKey, cursor, buttonId });
   const course = getCourse(courseKey);
   const match = typeof cursor === 'string' && /^(overview|module|lesson|lab|hint|quiz|answer):([0-9]{1,4}):([0-9]{1,4})(?::([a-z0-9-]{1,16}))?$/.exec(cursor);
   if (!course || !match || typeof buttonId !== 'function') throw new Error('Registered course and valid renderer cursor required');

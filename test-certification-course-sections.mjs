@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COURSES } from './course-registry.js';
+import { FORMAL_READING_PROGRAMME } from './formal-programme-reading.mjs';
 import { COURSE_SECTION_CATALOG, COURSE_SECTION_KEYS, createCourseSectionAuthorization, createCourseSectionLoginHandler } from './certification-course-sections.js';
 import { createSectionIdentityVerifier } from './certification-section-identity.js';
 
@@ -29,12 +30,13 @@ function interaction(customId, modal = false, studentId = 'NG-fixture') {
     async editReply(payload) { this.messages.push(payload); } };
 }
 
-test('course section mapping uses exact registry keys and title metadata only', () => {
-  assert.deepEqual([...COURSE_SECTION_KEYS], COURSES.map(course => course.key));
+test('course section mapping preserves registry keys and adds explicit formal reading metadata', () => {
+  assert.deepEqual([...COURSE_SECTION_KEYS], [...COURSES.map(course => course.key), FORMAL_READING_PROGRAMME.key]);
   assert.ok(COURSE_SECTION_KEYS.length > 1); assert.ok(COURSE_SECTION_KEYS.includes('linux-fundamentals'));
   assert.ok(!COURSE_SECTION_KEYS.includes('training-readiness'));
   assert.ok(Object.isFrozen(COURSE_SECTION_KEYS) && Object.isFrozen(COURSE_SECTION_CATALOG));
   for (const course of COURSE_SECTION_CATALOG) { assert.deepEqual(Object.keys(course), ['key', 'title']); assert.ok(Object.isFrozen(course)); }
+  assert.ok(!COURSES.some(course => course.key === FORMAL_READING_PROGRAMME.key));
 });
 
 test('course authorization reads the requested course freshly and never falls back to global enrollment', async () => {
