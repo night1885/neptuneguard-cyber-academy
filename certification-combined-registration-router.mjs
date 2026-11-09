@@ -1,4 +1,6 @@
 import { isGeneralRegistrationScope, isGeneralRegistrationActor } from './certification-general-registration.mjs';
+const completionButton = /^cert:admincomplete:(?:open|(?:confirm|cancel):[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12})$/;
+const completionForm = 'cert:admincomplete:form';
 export function createCombinedRegistrationRouter({settings,policy,base,registration,learner,ownerDecisions}={}) {
   if(settings?.combined!==true||settings.enabled!==true||!Array.isArray(settings.studentIds)||
      ['classify','allowsStudent','allowsButton','allowsModal'].some(k=>typeof policy?.[k]!=='function')||
@@ -17,6 +19,8 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
     if(!k||typeof actor!=='string'||!/^[0-9]{17,20}$/.test(actor)||typeof id!=='string'||i.guildId!==s.guildId||i.guild?.id!==s.guildId||(i.message?.flags?.has?.(64)===true&&!ownPrivate(i))||(owner&&!ownerHome&&i.channelId!==s.adminChannelId))return null;
     if(s.generalMembers===true&&!owner&&!isGeneralRegistrationActor(i,s))return null;
     if(ownerHome)return 'base';
+    // Admission delegates authorization to the current-Administrator handler, not to role names or enrollment.
+    if((k==='button'&&completionButton.test(id)&&ownPrivate(i))||(k==='modal'&&id===completionForm))return 'base';
     const classified=policy.classify(i);
     if(id.startsWith('cert:review:'))return owner&&classified==='decision'?'decision':null;
     if(id.startsWith('cert:register:'))return owner&&classified==='registration'?'registration':null;
@@ -31,9 +35,15 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
   const json=v=>typeof v?.toJSON==='function'?v.toJSON():v;
   function adapt(i){
     const actor=i.user.id,owner=actor===s.ownerId;let privateReply=i.ephemeral===true;
-    const allowedButton=id=>typeof id==='string'&&(!owner||i.channelId===s.adminChannelId||(s.generalMembers===true&&/^cert:initial:(?:home|status|help)$/.test(id)))&&(namespace(id)||(owner&&id.startsWith('cert:courselife:'))||policy.allowsButton(actor,id)||(!owner&&/^cert:(?:initial:(?:home|status|help)|learner:(?:home|status))$/.test(id)));
+    const allowedButton=id=>typeof id==='string'&&(!owner||i.channelId===s.adminChannelId||(s.generalMembers===true&&/^cert:initial:(?:home|status|help)$/.test(id)))&&(namespace(id)||completionButton.test(id)||(owner&&id.startsWith('cert:courselife:'))||policy.allowsButton(actor,id)||(!owner&&/^cert:(?:initial:(?:home|status|help)|learner:(?:home|status))$/.test(id)));
     function present(p){
       if(!p||typeof p!=='object'||Array.isArray(p))throw Error('Structured private payload required');
+      // Add the entry before guarded card conversion, which bypasses inner editReply decorators.
+      const rows=p.components||[];
+      const initial=i.isButton?.()===true&&/^cert:initial:(?:home|status|help)$/.test(i.customId||'');
+      const courseConsole=initial&&typeof p.content==='string'&&p.content.includes('Enrollment checks do not grant every course.')&&(p.embeds||[]).some(e=>json(e)?.title==='NeptuneGuard — Initial student console');
+      const hasEntry=rows.some(r=>(json(r)?.components||[]).some(b=>json(b)?.custom_id==='cert:admincomplete:open'));
+      if(courseConsole&&!hasEntry&&rows.length<5)p={...p,components:[...rows,{type:1,components:[{type:2,style:2,custom_id:'cert:admincomplete:open',label:'Admin: review course completion'}]}]};
       return {...p,allowedMentions:{parse:[]},components:(p.components||[]).map((raw,r)=>{
         const row=json(raw);if(row?.type!==1||!Array.isArray(row.components))throw Error('Unsupported row');
         return {...row,components:row.components.map((raw,c)=>{
@@ -46,7 +56,6 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
       })};
     }
     return new Proxy(i,{get(target,key){
-      // Filter legacy controls before trusted card conversion; retain private transport guards.
       if(key===Symbol.for('neptuneguard.academy.course-card-transport'))return async(method,p,convert)=>{
         if(!['reply','editReply','update'].includes(method)||typeof convert!=='function')throw Error('Invalid card transport');
         if(method==='editReply'&&!privateReply&&!ownPrivate(i))throw Error('Private reply required');
@@ -61,7 +70,7 @@ export function createCombinedRegistrationRouter({settings,policy,base,registrat
       if(key==='update')return p=>{if(!ownPrivate(i))throw Error('Own private message required');return target.update(present(p));};
       if(key==='deferReply')return async()=>{const result=await target.deferReply({flags:64});privateReply=true;return result;};
       if(key==='deferUpdate')return()=>{if(!ownPrivate(i))throw Error('Own private message required');privateReply=true;return target.deferUpdate();};
-      if(key==='showModal')return p=>{p=json(p);if(!policy.allowsModal(actor,p?.custom_id)&&!(typeof p?.custom_id==='string'&&(p.custom_id.startsWith('cert:cr:')||/^cert:course:submit:[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(p.custom_id))))throw Error('Modal not admitted');return target.showModal(p);};
+      if(key==='showModal')return p=>{p=json(p);const completion=i.isButton?.()===true&&i.customId==='cert:admincomplete:open'&&ownPrivate(i)&&p?.custom_id===completionForm;if(!completion&&!policy.allowsModal(actor,p?.custom_id)&&!(typeof p?.custom_id==='string'&&(p.custom_id.startsWith('cert:cr:')||/^cert:course:submit:[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(p.custom_id))))throw Error('Modal not admitted');return target.showModal(p);};
       const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
     }});
   }
