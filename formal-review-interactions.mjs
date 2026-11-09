@@ -1,4 +1,5 @@
 import {discordId,operationId,boundedReviewText,reviewClock} from './formal-review-policy.mjs';
+import {createFormalReviewSavedInteractions} from './formal-review-saved-interactions.mjs';
 const fail=()=>{throw Error('Formal interaction unavailable');};
 const escape=x=>x.replace(/[\\`*_~|<>@\[\]()]/g,c=>'\\'+c);
 const button=(id,label,style=2)=>({type:2,custom_id:id,label,style});
@@ -8,8 +9,9 @@ const retry=id=>[row(button('frv:confirm:'+id,'Recheck same submission'))];
 const uncertain='Submission outcome is unconfirmed; a write may already exist. Recheck this same confirmation while it remains valid. Do not start another submission to work around a response failure.';
 export function createFormalReviewInteractions(options={}){
  if(options.enabled!==true)return Object.freeze({enabled:false,handle:async()=>false,dispose(){},drain:async()=>{}});
- const {guildId,botId,applicationId,intake,isReady,now=Date.now}=options;
+ const {guildId,botId,applicationId,intake,isReady,now=Date.now,core}=options;
  if(![guildId,botId,applicationId].every(discordId)||intake?.enabled!==true||!['preview','confirm','cancel'].every(k=>typeof intake[k]==='function')||typeof isReady!=='function'||typeof now!=='function')fail();
+ const saved=createFormalReviewSavedInteractions(core===undefined?{}:{enabled:true,guildId,botId,applicationId,core,isReady,now});
  let stopped=false;const active=new Set(),ids=new Set();
  function context(i){if(i.inGuild?.()!==true||i.applicationId!==applicationId||i.guildId!==guildId||!discordId(i.user?.id)||i.user.bot===true||i.user.system===true||!discordId(i.channelId)||i.channel?.id!==i.channelId||i.channel.guildId!==guildId||i.channel.type!==0||i.message?.author?.id!==botId||i.message.flags?.has?.(64)!==true)fail();return Object.freeze({actorId:i.user.id,guildId,channelId:i.channelId});}
  function handle(i){
@@ -21,7 +23,9 @@ export function createFormalReviewInteractions(options={}){
    const send=async value=>{guard();await i.editReply({...value,allowedMentions:{parse:[]}});};
    const errorReply=async value=>{if(stopped)return;if(acknowledged||i.deferred)await i.editReply({...value,allowedMentions:{parse:[]}});else if(!i.replied)await i.reply({...value,flags:64,allowedMentions:{parse:[]}});};
    try{
-    c=context(i);guard();const match=/^frv:(start|choose|preview|confirm|cancel):([a-f0-9-]{36})$/.exec(customId);if(!match||!operationId(match[2]))fail();phase=match[1];token=match[2];
+    c=context(i);guard();
+    if(/^frv:(report|feedback):/.test(customId)){if(!saved.enabled)fail();return await saved.handle(i);}
+    const match=/^frv:(start|choose|preview|confirm|cancel):([a-f0-9-]{36})$/.exec(customId);if(!match||!operationId(match[2]))fail();phase=match[1];token=match[2];
     if((phase==='preview'?i.isModalSubmit?.()!==true:i.isButton?.()!==true))fail();
     if(phase==='choose'){
      const field=(id,label,min,max,placeholder)=>row({type:4,custom_id:id,label,style:1,min_length:min,max_length:max,required:true,placeholder});
@@ -42,7 +46,9 @@ export function createFormalReviewInteractions(options={}){
     }else{
      const result=await intake.confirm(c,{previewId:token});if(result?.ok!==true){await send(payload(uncertain,retry(token)));return true;}
      if(!operationId(result.reportId)||!Number.isSafeInteger(result.revision)||result.revision<1||reviewClock(now())>=reviewClock(result.expiresAtMs))fail();recorded=true;
-     await send(payload('Report submission recorded. Report ID: '+result.reportId+'. Revision: '+result.revision+'. Access expires '+new Date(result.expiresAtMs).toISOString()+'. This is not grading, practical authorization or certificate issuance.',retry(token)));
+     const controls=retry(token);
+     if(saved.enabled){if(!operationId(result.workId))fail();controls.push(row(button('frv:report:'+result.workId+':'+result.reportId,'Read saved report'),button('frv:feedback:'+result.workId+':'+result.reportId,'Read feedback')));}
+     await send(payload('Report submission recorded. Report ID: '+result.reportId+'. Revision: '+result.revision+'. Access expires '+new Date(result.expiresAtMs).toISOString()+'. This is not grading, practical authorization or certificate issuance.',controls));
     }
    }catch{
     if(pendingPreview&&c)try{await intake.cancel(c,{previewId:pendingPreview});}catch{}
@@ -53,5 +59,5 @@ export function createFormalReviewInteractions(options={}){
   })();
   active.add(task);void task.then(()=>{active.delete(task);ids.delete(i.id);},()=>{active.delete(task);ids.delete(i.id);});return task;
  }
- return Object.freeze({enabled:true,handle,dispose(){stopped=true;},async drain(){await Promise.allSettled([...active]);}});
+ return Object.freeze({enabled:true,handle,dispose(){stopped=true;saved.dispose();},async drain(){await Promise.allSettled([...active]);await saved.drain();}});
 }
