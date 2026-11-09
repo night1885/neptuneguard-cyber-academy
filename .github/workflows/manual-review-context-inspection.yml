@@ -1,0 +1,76 @@
+name: Inspect missing manual-review acceptance context
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/manual-review-context-inspection.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: manual-review-context-inspection-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+    steps:
+      - name: Inspect exact failed run metadata without logs or repository execution
+        id: inspect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          repository = os.environ['GH_REPOSITORY']
+          if repository != 'night1885/neptuneguard-cyber-academy':
+              raise SystemExit('Unexpected diagnostic repository')
+          endpoint = 'https://api.github.com/repos/' + repository + '/actions/runs/42674268167/jobs?per_page=100'
+          request = urllib.request.Request(endpoint, headers={
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+          })
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+          if payload.get('total_count', 0) > 100:
+              raise SystemExit('Diagnostic job inventory exceeds bound')
+          jobs = [job for job in payload.get('jobs', []) if job.get('name') == 'manual-review-migration (PostgreSQL 16)']
+          states = {'success', 'failure', 'cancelled', 'skipped', 'timed_out', 'action_required', 'neutral', 'stale', 'startup_failure'}
+          if len(jobs) != 1:
+              context = 'pg16_parent_missing' if not jobs else 'pg16_parent_ambiguous'
+          else:
+              job = jobs[0]
+              conclusion = job.get('conclusion')
+              if conclusion not in states:
+                  conclusion = 'incomplete'
+              failed = [step for step in job.get('steps', []) if step.get('conclusion') in {'failure', 'cancelled', 'timed_out'}]
+              number = failed[0].get('number', 0) if failed else 0
+              if not isinstance(number, int) or not 0 <= number <= 100:
+                  number = 0
+              context = 'pg16_parent_' + conclusion + '_step_' + str(number)
+          if not re.fullmatch(r'pg16_parent_[a-z_0-9]{1,80}', context):
+              raise SystemExit('Invalid bounded diagnostic')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('context=' + context + '\n')
+          print(context)
+          PY
+  result:
+    name: manual-review-parent-inspection (${{ needs.inspect.outputs.context || 'inspection_unavailable' }})
+    needs: inspect
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require successful metadata inspection only, not acceptance approval
+        env:
+          RESULT: ${{ needs.inspect.result }}
+          CONTEXT: ${{ needs.inspect.outputs.context }}
+        run: |
+          test "$RESULT" = success
+          test -n "$CONTEXT"
