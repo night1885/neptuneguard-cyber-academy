@@ -23,12 +23,12 @@ export function createFormalReviewCourseAuthorization(options={}){
   initializing=Promise.resolve().then(async()=>{try{
    const r=(await bounded(()=>readPool.query(`SELECT current_database() AS database,current_user AS login,current_user=session_user AS direct,
     NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles r WHERE pg_has_role(current_user,r.oid,'MEMBER') AND (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls)) AS restricted,
-    current_schemas(false) AS schemas,
+    current_schemas(false)::text[] AS schemas,
     (SELECT setting::bigint FROM pg_catalog.pg_settings WHERE name='statement_timeout') AS statement_ms,
     NOT has_schema_privilege(current_user,'public','CREATE') AS no_create,
     has_table_privilege(current_user,'public.certification_enrollments','SELECT') AND has_table_privilege(current_user,'public.certification_course_enrollments','SELECT') AS reads,
     NOT has_table_privilege(current_user,'public.certification_enrollments','INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER') AND NOT has_any_column_privilege(current_user,'public.certification_enrollments','INSERT,UPDATE') AND NOT has_table_privilege(current_user,'public.certification_course_enrollments','INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER') AND NOT has_any_column_privilege(current_user,'public.certification_course_enrollments','INSERT,UPDATE') AS no_writes`))).rows[0];alive(false);
-   if(r?.database!==expectedDatabase||r.login!==expectedLogin||['direct','restricted','no_create','reads','no_writes'].some(k=>r[k]!==true)||!['public','pg_catalog,public'].includes(r.schemas?.join(','))||!Number.isSafeInteger(Number(r.statement_ms))||Number(r.statement_ms)<1||Number(r.statement_ms)>5000)fail();
+   if(r?.database!==expectedDatabase||r.login!==expectedLogin||['direct','restricted','no_create','reads','no_writes'].some(k=>r[k]!==true)||!Array.isArray(r.schemas)||!['public','pg_catalog,public'].includes(r.schemas.join(','))||!Number.isSafeInteger(Number(r.statement_ms))||Number(r.statement_ms)<1||Number(r.statement_ms)>5000)fail();
    if(removalChecks){
     const p=(await bounded(()=>readPool.query(`SELECT
      has_column_privilege(current_user,'public.certification_course_removals','discord_user_id','SELECT') AND has_column_privilege(current_user,'public.certification_course_removals','course_key','SELECT') AS removal_read,
