@@ -53,3 +53,10 @@ jobs:
           node --check formal-review-postgres.mjs
           node --test test-certification-formal-review-core.mjs test-certification-formal-review-postgres.mjs test-certification-formal-review-integration.mjs test-certification-formal-review-owner.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review.tap"
+      - name: Validate saved report controls with restricted PostgreSQL storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check formal-review-saved-interactions.mjs
+          node --test test-certification-formal-review-saved-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review-saved.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review-saved.tap"
