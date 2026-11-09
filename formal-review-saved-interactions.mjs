@@ -15,15 +15,18 @@ export function createFormalReviewSavedInteractions(options={}){
     check(i);const actorId=i.user.id,parts=i.customId.split(':');
     if(parts.length!==4||!operationId(parts[2])||!operationId(parts[3]))throw Error(denied);
     const request=Object.freeze({workId:parts[2],reportId:parts[3]});
-    await i.deferReply({flags:64});acknowledged=true;check(i);if(i.ephemeral!==true||i.user.id!==actorId)throw Error(denied);
+    const inPlace=typeof i.deferUpdate==='function';
+    if(inPlace)await i.deferUpdate();else await i.deferReply({flags:64});
+    acknowledged=true;check(i);if((!inPlace&&i.ephemeral!==true)||i.user.id!==actorId)throw Error(denied);
     const value=await core.read(Object.freeze({actorId,guildId}),request);
-    if(value?.ok!==true||value.reportId!==request.reportId||!Number.isSafeInteger(value.revision)||value.revision<1||check(i)>=reviewClock(value.expiresAtMs)||i.ephemeral!==true||i.user.id!==actorId)throw Error(denied);
+    if(value?.ok!==true||value.reportId!==request.reportId||!Number.isSafeInteger(value.revision)||value.revision<1||check(i)>=reviewClock(value.expiresAtMs)||(!inPlace&&i.ephemeral!==true)||i.user.id!==actorId)throw Error(denied);
     const feedback=parts[1]==='feedback';
     if(feedback&&!['changes-requested','review-recorded'].includes(value.review?.decision))throw Error(denied);
     const text=feedback?value.review.feedback:value.body;if(!boundedReviewText(text))throw Error(denied);
     const description=escape(text);if(description.length>4096)throw Error(denied);
+    const components=inPlace?[{type:1,components:[{type:2,custom_id:'frv:report:'+request.workId+':'+request.reportId,label:'Read saved report',style:2},{type:2,custom_id:'frv:feedback:'+request.workId+':'+request.reportId,label:'Read feedback',style:2}]}]:[];
     if(check(i)>=value.expiresAtMs)throw Error(denied);
-    await i.editReply({content:(feedback?'Recorded feedback: '+value.review.decision:'Saved report revision '+value.revision)+'. Original access deadline: '+new Date(value.expiresAtMs).toISOString()+'. Access expiry is not deletion.',components:[],embeds:[{title:feedback?'Recorded feedback (untrusted text)':'Saved report (untrusted text)',description}],allowedMentions:{parse:[]}});
+    await i.editReply({content:(feedback?'Recorded feedback: '+value.review.decision:'Saved report revision '+value.revision)+'. Original access deadline: '+new Date(value.expiresAtMs).toISOString()+'. Access expiry is not deletion.',components,embeds:[{title:feedback?'Recorded feedback (untrusted text)':'Saved report (untrusted text)',description}],allowedMentions:{parse:[]}});
    }catch{if(!stopped)try{const payload={content:denied,components:[],embeds:[],allowedMentions:{parse:[]}};if(acknowledged||i.deferred)await i.editReply(payload);else if(!i.replied)await i.reply({...payload,flags:64});}catch{}}
    return true;
   });active.add(task);void task.then(()=>{active.delete(task);ids.delete(i.id);},()=>{active.delete(task);ids.delete(i.id);});return task;
