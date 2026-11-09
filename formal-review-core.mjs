@@ -57,7 +57,7 @@ export function createFormalReviewCore(config={},ports={}){
    const r={workId:w.id,operationId:request.operationId,digest,reportId:saved?.reportId,revision:saved.revision,expiresAtMs:saved.expiresAtMs};
    const projected=receipt(r,w,request.operationId,digest);await tx.saveOperation(scope,r);await authorize(ctx,w,reviewer);return projected;
   });
-  await authorize(ctx,selected,reviewer);if(action==='preview'&&now()>=result.expiresAtMs)fail();return result;
+  await authorize(ctx,selected,reviewer);if(now()>=reviewClock(result.expiresAtMs))fail();return result;
  }
  const safe=(fields,action)=>async(ctx,request)=>{try{if(!exactFields(request,fields))fail();return await run(ctx,request,action);}catch{return Object.freeze({ok:false});}};
  return Object.freeze({enabled:true,preview:safe(['workId','sourceMessageId'],'preview'),submit:safe(['workId','operationId','expectedRevision','sourceMessageId','sourceDigest'],'submit'),review:safe(['workId','operationId','expectedRevision','reportId','decision','feedback'],'review'),read:safe(['workId','reportId'],'read'),dispose(){disposed=true;}});
