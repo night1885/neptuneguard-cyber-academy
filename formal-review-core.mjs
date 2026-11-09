@@ -4,7 +4,7 @@ const fail=()=>{throw Error('Formal review unavailable');};
 const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const contentDigest=x=>createHash('sha256').update(x,'utf8').digest('hex');
 export function createFormalReviewCore(config={},ports={}){
- if(config.enabled!==true)return Object.freeze({enabled:false,submit:async()=>({ok:false}),review:async()=>({ok:false}),read:async()=>({ok:false}),dispose(){}});
+ if(config.enabled!==true)return Object.freeze({enabled:false,preview:async()=>({ok:false}),submit:async()=>({ok:false}),review:async()=>({ok:false}),read:async()=>({ok:false}),dispose(){}});
  const {guildId,ownerId,courseKey,exerciseKeys}=config;
  if(!discordId(guildId)||!discordId(ownerId)||courseKey!=='ethical-hacking-reading'||!Array.isArray(exerciseKeys)||!exerciseKeys.length||exerciseKeys.length>100||new Set(exerciseKeys).size!==exerciseKeys.length||!exerciseKeys.every(x=>typeof x==='string'&&/^EH-[A-Z]+-[A-Z0-9-]{2,40}$/.test(x)))fail();
  for(const name of ['transaction','authorizeCourse','authorizeExercise','authorizeReviewer','readSource','now','isReady'])if(typeof ports[name]!=='function')fail();
@@ -21,10 +21,20 @@ export function createFormalReviewCore(config={},ports={}){
  }
  function receipt(r,w,op,digest){if(!r||r.workId!==w.id||r.operationId!==op||r.digest!==digest||!Number.isSafeInteger(r.revision)||r.revision<1||!operationId(r.reportId)||now()>=reviewClock(r.expiresAtMs))fail();return Object.freeze({ok:true,workId:w.id,reportId:r.reportId,revision:r.revision,expiresAtMs:r.expiresAtMs});}
  function report(r,w){if(!r||!operationId(r.id)||!Number.isSafeInteger(r.revision)||r.revision<1||r.workId!==w.id||!boundedReviewText(r.body)||r.bodyDigest!==contentDigest(r.body)||!Number.isSafeInteger(r.submittedAtMs)||r.expiresAtMs!==r.submittedAtMs+REVIEW_POLICY.reportMs||r.submittedAtMs>now()||now()>=reviewClock(r.expiresAtMs))fail();}
+ async function source(scope,w,id,digest){
+  if(!['working','changes-requested'].includes(w.state)||!discordId(id))fail();
+  const s=await ports.readSource(scope,id),stamp=now();
+  if(!s||s.messageId!==id||s.guildId!==guildId||s.channelId!==w.channelId||s.authorId!==w.learnerId||s.privateVerified!==true||s.bot!==false||s.forwarded!==false||s.attachmentCount!==0||!boundedReviewText(s.body)||(digest!==undefined&&contentDigest(s.body)!==digest)||!Number.isSafeInteger(s.createdAtMs)||s.createdAtMs<0||s.createdAtMs>stamp||stamp>=reviewClock(s.createdAtMs)+REVIEW_POLICY.draftMs)fail();
+  return {s,stamp};
+ }
  async function run(ctx,request,action){
   context(ctx);if(!operationId(request?.workId))fail();const reviewer=action==='review'||(action==='read'&&ctx.actorId===ownerId);let selected;
   const result=await ports.transaction(async tx=>{
    const w=await tx.lockWork(request.workId);selected=w;const scope=await authorize(ctx,w,reviewer);
+   if(action==='preview'){
+    const {s}=await source(scope,w,request.sourceMessageId);await authorize(ctx,w);if(now()>=Math.min(w.expiresAtMs,s.createdAtMs+REVIEW_POLICY.draftMs))fail();
+    return Object.freeze({ok:true,workId:w.id,sourceChannelId:w.channelId,sourceMessageId:s.messageId,expectedRevision:w.revision,sourceDigest:contentDigest(s.body),body:s.body,expiresAtMs:Math.min(w.expiresAtMs,s.createdAtMs+REVIEW_POLICY.draftMs)});
+   }
    if(action==='read'){
     if(!operationId(request.reportId))fail();const r=await tx.readReport(w.id,request.reportId);report(r,w);if(r.id!==request.reportId)fail();
     const v=await tx.readReview(w.id,r.id);if(v!==null&&(v?.reportId!==r.id||v.expectedRevision!==r.revision||v.expiresAtMs!==r.expiresAtMs||!['changes-requested','review-recorded'].includes(v.decision)||!boundedReviewText(v.feedback)))fail();
@@ -36,8 +46,7 @@ export function createFormalReviewCore(config={},ports={}){
    if(w.revision!==request.expectedRevision)fail();let saved,expectedExpiry;
    if(action==='submit'){
     if(!['working','changes-requested'].includes(w.state)||!discordId(request.sourceMessageId)||typeof request.sourceDigest!=='string'||!/^[a-f0-9]{64}$/.test(request.sourceDigest))fail();
-    const s=await ports.readSource(scope,request.sourceMessageId),stamp=now();
-    if(!s||s.messageId!==request.sourceMessageId||s.guildId!==guildId||s.channelId!==w.channelId||s.authorId!==w.learnerId||s.privateVerified!==true||s.bot!==false||s.forwarded!==false||s.attachmentCount!==0||!boundedReviewText(s.body)||contentDigest(s.body)!==request.sourceDigest||!Number.isSafeInteger(s.createdAtMs)||s.createdAtMs<0||s.createdAtMs>stamp||stamp>=reviewClock(s.createdAtMs)+REVIEW_POLICY.draftMs)fail();
+    const {s,stamp}=await source(scope,w,request.sourceMessageId,request.sourceDigest);
     expectedExpiry=stamp+REVIEW_POLICY.reportMs;await authorize(ctx,w);saved=await tx.insertSubmission(scope,{operationId:request.operationId,expectedRevision:w.revision,body:s.body,bodyDigest:contentDigest(s.body),sourceMessageId:s.messageId,sourceChannelId:s.channelId,sourceCreatedAtMs:s.createdAtMs,submittedAtMs:stamp,expiresAtMs:expectedExpiry});
    }else{
     if(w.state!=='submitted'||!operationId(request.reportId)||!['changes-requested','review-recorded'].includes(request.decision)||!boundedReviewText(request.feedback))fail();
@@ -48,8 +57,8 @@ export function createFormalReviewCore(config={},ports={}){
    const r={workId:w.id,operationId:request.operationId,digest,reportId:saved?.reportId,revision:saved.revision,expiresAtMs:saved.expiresAtMs};
    const projected=receipt(r,w,request.operationId,digest);await tx.saveOperation(scope,r);await authorize(ctx,w,reviewer);return projected;
   });
-  await authorize(ctx,selected,reviewer);return result;
+  await authorize(ctx,selected,reviewer);if(action==='preview'&&now()>=result.expiresAtMs)fail();return result;
  }
  const safe=(fields,action)=>async(ctx,request)=>{try{if(!exactFields(request,fields))fail();return await run(ctx,request,action);}catch{return Object.freeze({ok:false});}};
- return Object.freeze({enabled:true,submit:safe(['workId','operationId','expectedRevision','sourceMessageId','sourceDigest'],'submit'),review:safe(['workId','operationId','expectedRevision','reportId','decision','feedback'],'review'),read:safe(['workId','reportId'],'read'),dispose(){disposed=true;}});
+ return Object.freeze({enabled:true,preview:safe(['workId','sourceMessageId'],'preview'),submit:safe(['workId','operationId','expectedRevision','sourceMessageId','sourceDigest'],'submit'),review:safe(['workId','operationId','expectedRevision','reportId','decision','feedback'],'review'),read:safe(['workId','reportId'],'read'),dispose(){disposed=true;}});
 }
