@@ -38,9 +38,14 @@ jobs:
             function lines(file) { const escaped=file.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const found=[...text.matchAll(new RegExp(escaped+':([0-9]{1,5})(?::[0-9]{1,5})?','g'))].map(m=>Number(m[1]));return [...new Set(found)].sort((a,b)=>a-b).slice(0,4).join('_')||'none'; }
             const codes=[...text.matchAll(/\bcode:\s*['"]([A-Z0-9_]{1,40})['"]/g)].map(m=>m[1]);
             const code=codes.find(c=>/^[0-9A-Z]{5}$/.test(c))||codes.find(c=>['ERR_ASSERTION','ERR_TEST_FAILURE','ERR_MODULE_NOT_FOUND'].includes(c))||'unknown';
+            const failures=['testCodeFailure','uncaughtException','unhandledRejection','testTimeoutFailure','cancelledByParent','subtestsFailed','testAborted','hookFailed'];
+            const types=[...text.matchAll(/\bfailureType:\s*['"]([A-Za-z]{1,40})['"]/g)].map(m=>m[1]);
+            const failure=types.find(t=>failures.includes(t))||'unclassified';
+            const symptoms=[['administrator_termination',['terminating connection due to administrator command']],['connection_refused',['ECONNREFUSED']],['connection_lost',['Connection terminated unexpectedly']],['connection_timeout',['timeout exceeded when trying to connect','Connection terminated due to connection timeout']],['statement_timeout',['canceling statement due to statement timeout']],['lock_timeout',['canceling statement due to lock timeout']],['event_loop_pending',['Promise resolution is still pending but the event loop has already resolved']],['readiness',['Manual-review readiness failed']],['assertion',['ERR_ASSERTION']]];
+            const symptom=symptoms.find(([,markers])=>markers.some(m=>text.includes(m)))?.[0]||'unclassified';
             const step=job.steps.find(s=>s.conclusion==='failure')?.number;
-            const result=`current_pg18_s${Number.isInteger(step)&&step>=0&&step<=100?step:0}_m${lines('test-certification-manual-review-postgres.mjs')}_n${lines('test-certification-manual-review-native-postgres.mjs')}_${code}`;
-            if(!/^[A-Za-z0-9_]{1,180}$/.test(result))throw Error('Invalid diagnostic output');
+            const result=`current_pg18_s${Number.isInteger(step)&&step>=0&&step<=100?step:0}_m${lines('test-certification-manual-review-postgres.mjs')}_n${lines('test-certification-manual-review-native-postgres.mjs')}_${code}_${failure}_${symptom}`;
+            if(!/^[A-Za-z0-9_]{1,240}$/.test(result))throw Error('Invalid diagnostic output');
             core.setOutput('context',result);
           github-token: ${{ github.token }}
         env:
