@@ -116,8 +116,13 @@ async function isolated(operation, { enabled = true, migration = true, approved 
 async function selectCourses(f, keys) { return f.send(`cert:courselife:assign:${student}`, { kind: 'select', values: keys }); }
 async function assign(f, keys = [first, second]) { const preview = await selectCourses(f, keys); return f.send(control(preview, 'cert:courselife:confirm:')); }
 async function complete(f, course) { const preview = await f.send(`cert:courselife:complete:${student}:${course}`); return f.send(control(preview, 'cert:courselife:confirm:')); }
-async function enter(f, course, options = {}) { const opening = await f.send(`cert:course:open:${course}`, { actor: student });
-  assert.ok(opening.modal); return f.send(opening.modal.custom_id, { actor: student, kind: 'modal', ...options }); }
+async function enter(f, course, { actor = student } = {}) {
+  const before = { enrollment: await enrollment(f), courses: await courses(f), actions: await actions(f) };
+  const opening = await f.send(`cert:course:open:${course}`, { actor });
+  assert.equal(opening.modal, undefined, 'Button-only course entry must not request a student-ID modal');
+  assert.deepEqual({ enrollment: await enrollment(f), courses: await courses(f), actions: await actions(f) }, before, 'Opening or denying a course must not change learner records');
+  return opening;
+}
 async function suspend(f) { const opening = await f.send(`cert:access:suspend:${student}`); assert.ok(opening.modal);
   const preview = await f.send(opening.modal.custom_id, { kind: 'modal' }); return f.send(control(preview, 'cert:access:confirm:')); }
 async function failAudit(f) { await f.admin.query(`CREATE OR REPLACE FUNCTION fail_combined_course_audit() RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -172,10 +177,17 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
     for (const table of ['certification_enrollments', 'certification_course_enrollments', 'certification_audit_events']) await assert.rejects(f.worker.query(`DELETE FROM ${table}`), error => error.code === '42501');
   }));
 
-  await t.test('approved enrollment without assignments and a wrong ID do not grant course teaching access', async () => isolated(async f => {
+  await t.test('button-only entry requires the current account and a separate active course assignment', async () => isolated(async f => {
     await waitFor(() => f.runtime.ready);
-    assert.match(courseMessageText(await enter(f, first)), /could not be verified/); assert.deepEqual(await courses(f), []);
-    await assign(f, [first]); assert.match(courseMessageText(await enter(f, first, { studentId: 'NG-wrong-id' })), /could not be verified/);
+    assert.match(courseMessageText(await enter(f, first)), /unavailable/); assert.deepEqual(await courses(f), []);
+    await assign(f, [first]);
+    assert.match(courseMessageText(await enter(f, second)), /unavailable/);
+    assert.match(courseMessageText(await enter(f, first, { actor: stranger })), /unavailable/);
+    const entered = await enter(f, first); assertCourseTeachingView(entered);
+    assert.ok(!courseMessageText(entered).includes(f.approval.studentId));
+    const page = control(entered, 'cert:course:page:');
+    assert.match(courseMessageText(await f.send(page, { actor: stranger })), /unavailable/);
+    assertCourseTeachingView(await f.send(page, { actor: student }));
     assert.equal(await countAction(f, 'course_completed'), 0);
   }));
 
@@ -203,7 +215,7 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
     assert.equal((await enrollment(f)).student_id, f.approval.studentId);
   }));
 
-  await t.test('account isolation, Verified-role withdrawal, ID challenges and expiry protect sessions and confirmations', async () => isolated(async f => {
+  await t.test('account isolation, Verified-role withdrawal and expiry protect sessions and confirmations', async () => isolated(async f => {
     await waitFor(() => f.runtime.ready);
     const expires = await selectCourses(f, [first]), id = control(expires, 'cert:courselife:confirm:'); f.advance(300000);
     assert.match(courseMessageText(await f.send(id)), /expired/); assert.deepEqual(await courses(f), []);
