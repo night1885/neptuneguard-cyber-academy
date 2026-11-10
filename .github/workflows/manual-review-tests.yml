@@ -10,6 +10,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/manual-review-tests.yml'
+      - 'scripts/manual_review_failure_context.py'
+      - 'test-support/test_manual_review_failure_context.py'
   workflow_dispatch:
 
 permissions:
@@ -63,12 +65,16 @@ jobs:
       - name: Check manual-review source and test syntax
         run: |
           for file in certification-manual-review*.mjs test-certification-manual-review*.mjs; do node --check "$file" || exit 1; done
+      - name: Test bounded failure classification
+        run: python3 test-support/test_manual_review_failure_context.py
       - name: Run actual acceptance tests and capture bounded failure context
         id: actual
         shell: bash
         run: |
           python3 - <<'PY'
           import os, re, subprocess, sys, tempfile
+          sys.path.insert(0, 'scripts')
+          from manual_review_failure_context import classify
           context, status = 'pg16_ready', 0
           for stage, filename in [('migration', 'test-certification-manual-review-postgres.mjs'), ('native', 'test-certification-manual-review-native-postgres.mjs')]:
               with tempfile.TemporaryFile() as output:
@@ -78,18 +84,12 @@ jobs:
                           continue
                       output.seek(0)
                       text = output.read(262144).decode('utf-8', errors='replace')
-                      lines = re.findall(re.escape(filename) + r':([0-9]{1,5})(?::[0-9]{1,5})?', text)
-                      line = int(lines[-1]) if lines else 0
-                      codes = re.findall(r"\bcode:\s*['\"]([A-Z0-9_]{1,40})['\"]", text)
-                      code = codes[0] if codes else 'unknown'
-                      if not re.fullmatch(r'[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE', code):
-                          code = 'unknown'
-                      context = f'pg16_{stage}_L{line}_{code}'
+                      context = classify(stage, filename, text)
                   except subprocess.TimeoutExpired:
                       context = f'pg16_{stage}_timeout'
                   status = 1
                   break
-          assert re.fullmatch(r'pg16_(ready|(migration|native)_(timeout|L[0-9]{1,5}_(unknown|[0-9A-Z]{5}|ERR_ASSERTION|ERR_MODULE_NOT_FOUND|ERR_TEST_FAILURE)))', context)
+          assert re.fullmatch(r'pg16_[A-Za-z0-9_]{1,180}', context)
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
               output.write('context=' + context + chr(10))
           print(context)
