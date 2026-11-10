@@ -75,6 +75,14 @@ export async function handleConsoleStudent(interaction, pool, config, guildId) {
         ...(canReview ? [button(`cert:review:open:${studentId}`, 'Review responses and decide')] : [])));
     }
     components.push(row(button(`cert:student-audit:${studentId}:0`, 'Student audit timeline'), button('cert:dir:search', 'Search / filter students'), button(`cert:labview:student:${studentId}:all:0`, 'This learner\'s labs'), button(id, 'Refresh student')));
+    if (config.formalReviewPrivateEntryEnabled === true && readiness.authorized === true && record.status === 'approved' && record.discord_user_id === studentId && typeof record.student_id === 'string' && record.student_id.trim() && record.student_id.length <= 100 && components.length < 5) try {
+      const entry = config.formalReviewPrivateEntry;
+      if (entry?.enabled === true && typeof entry.reviewer === 'function') {
+        const rows = entry.reviewer(interaction, Object.freeze({ learnerId: studentId, studentId: record.student_id }));
+        const item = rows?.[0]?.components?.[0];
+        if (Array.isArray(rows) && rows.length === 1 && rows[0]?.type === 1 && Array.isArray(rows[0].components) && rows[0].components.length === 1 && item?.type === 2 && item.style === 2 && item.custom_id === 'frr:list:' + studentId + ':0' && item.label === 'Saved learner reports') components.push(new ActionRowBuilder(rows[0]));
+      }
+    } catch {}
   } else {
     const page = Number(timeline[2]);
     const result = await pool.query('SELECT event_id, actor_discord_user_id, action, created_at FROM certification_audit_events WHERE subject_discord_user_id=$1 ORDER BY created_at DESC, event_id DESC LIMIT 6 OFFSET $2', [studentId, page * 5]);

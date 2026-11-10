@@ -1,0 +1,9 @@
+# Opt-in reviewer report entry from the selected student record
+
+This source-only extension adds a Saved learner reports locator to the existing owner-only student-record detail view. It reuses the existing current-enrollment readiness result and permanent student ID; adds no SQL query, grant, identifier scheme or mutation; and never truncates existing controls to make room. Missing capacity, ineligible/mismatched records or provider failures leave the original inspection intact.
+
+The existing formalReviewPrivateEntryEnabled programmatic flag must be literal true. The server-owned helper additionally requires an explicit reviewerChannelId, current readiness, the configured owner/application/guild/bot, normal guild-text context, a matching selected learner, a human actor, an acknowledged explicitly ephemeral response and matching recorded origin user when present. Self/bot targets are denied. Only frozen learnerId/studentId proof is passed, not acknowledgment answers. The new button contains no permanent ID.
+
+The frr:list:<learnerId>:0 locator grants no report, exercise, practical or certificate authority. Existing discovery/core checks remain mandatory on every subsequent action. Learner entry behavior is retained when reviewer channel configuration is omitted. No startup option/provider, environment parser, listener or publication is configured by this commit.
+
+Local helper execution: 24 passed, zero failed; eleven actual-console/SDK cases were skipped because the installed project SDK is unavailable locally. The modified console passed syntax checking against baseline Git blob d76cc80e1dace40ee0785662ada76e6240ecc1bb. Full committed-head CI, installed-SDK execution, real owner-record-to-report PostgreSQL acceptance and native Discord validation remain required. Startup/provisioning, real resource/authority verification, consent, erasure and release gates remain open.
