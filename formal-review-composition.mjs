@@ -7,6 +7,7 @@ import {createFormalReviewDiscovery} from './formal-review-discovery.mjs';
 import {createFormalReviewOwnerFlow} from './formal-review-owner-flow.mjs';
 import {createFormalReviewOwnerInteractions} from './formal-review-owner-interactions.mjs';
 import {createFormalReviewOwnerBrowser} from './formal-review-owner-browser.mjs';
+import {createFormalReviewAdministratorEntry} from './formal-review-administrator-entry.mjs';
 import {createFormalReviewRuntimeBridge} from './formal-review-runtime-bridge.mjs';
 import {createFormalReviewReceiptRecovery} from './formal-review-receipt-recovery.mjs';
 import {createFormalReviewRecoveryInteractions} from './formal-review-recovery-interactions.mjs';
@@ -37,7 +38,8 @@ export function createFormalReviewComposition(options={}){
   const reviewerHandler=add(createFormalReviewOwnerInteractions({enabled:true,guildId,ownerId,channelId:reviewerChannelId,applicationId,botId,flow,isReady:ready,now,...policy}));
   const reviewerControls=recoveryEnabled?add(createFormalReviewRecoveryInteractions({...recoveryOptions,mode:'reviewer',delegate:reviewerHandler})):reviewerHandler;
   const reviewerDiscovery=add(createFormalReviewDiscovery({enabled:true,guildId,ownerId,readPool:metadataPool,core,isReady:ready,now,...policy}));
-  const reviewer=add(createFormalReviewOwnerBrowser({enabled:true,guildId,ownerId,channelId:reviewerChannelId,applicationId,botId,reviewer:reviewerControls,discovery:reviewerDiscovery,isReady:ready,now,...policy}));
+  const reviewerBrowser=add(createFormalReviewOwnerBrowser({enabled:true,guildId,ownerId,channelId:reviewerChannelId,applicationId,botId,reviewer:reviewerControls,discovery:reviewerDiscovery,isReady:ready,now,...policy}));
+  const reviewer=reviewerMode==='current-administrator'?add(createFormalReviewAdministratorEntry({enabled:true,guildId,channelId:reviewerChannelId,applicationId,botId,delegate:reviewerBrowser,verifyAdministrator,isReady:ready,now})):reviewerBrowser;
   function checkInitialization(){if(stopped||isReady()!==true)fail();}
   async function initializeResources(){up=false;checkInitialization();if(await verifyResources(Object.freeze({guildId,ownerId,reviewerChannelId,applicationId,botId,...(reviewerMode==='current-administrator'?{reviewerMode}:{}),...(recoveryEnabled?{recoveryEnabled:true}:{})}))!==true)fail();checkInitialization();if((await store.initialize())?.ready!==true||store.ready!==true)fail();checkInitialization();if((await courseAuthorization.initialize())?.ready!==true||courseAuthorization.ready!==true)fail();checkInitialization();up=true;if(!ready()){up=false;fail();}return true;}
   function stopResources(){if(stopped)return;stopped=true;up=false;let failed=false;for(const x of [source,core,intake,flow,recovery,courseAuthorization,store])try{x.dispose();}catch{failed=true;}if(failed)fail();}
