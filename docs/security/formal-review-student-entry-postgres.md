@@ -1,0 +1,9 @@
+# Student home to saved reports: PostgreSQL acceptance candidate
+
+This test-only change adds a sequential PostgreSQL 16/18 step requiring zero skips for both panel-entry unit/SDK tests and the new database journey. Local JavaScript syntax and workflow YAML checks passed; no local PostgreSQL or installed-SDK journey pass is claimed. Exact committed-head CI must establish acceptance.
+
+The loopback GitHub Actions fixture requires formal_review_test under formal_review_admin, disabled certification and empty production token/database environment values. It creates one unique database and three restricted logins separating persistence, enrollment/course reads and report metadata. Migrations, fictional enrollment approval and course assignment occur only there. The existing approval-issued student ID is reused in work bindings and Student home; cleanup drops only fixture-owned database/roles.
+
+Actual enrollment services, Student home/entry rendering, report composition/discovery, core/store and saved-report/feedback handlers are composed. Assertions cover default-off navigation, fresh ephemeral acknowledgement, empty browsing without collection, preview/submission and owner feedback, home-to-report/feedback navigation, enrollment revocation, course completion, expiry, component recreation, unchanged records/deadlines/IDs, reader ACLs and borrowed-pool survival. Entry visibility is explicitly not report or practical authority.
+
+Native interactions, selected source and exercise/reviewer/resource verification remain scripted; SDK serialization is not live Discord acceptance. Injected-clock restoration on a new composition is not trusted clock recovery or a process restart. Owner panel entry, draft/channel provisioning, reviewed startup, native acceptance, consent/exact-attempt recovery, erasure and release gates remain open. No live Student home option is enabled.
