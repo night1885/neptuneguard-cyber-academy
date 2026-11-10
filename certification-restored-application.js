@@ -7,7 +7,7 @@ import { attachNativeCommunityRuntime } from './community-learning-startup.mjs';
 
 export function createRestoredCertificationApplication({ client, guildId, env = process.env, signals = process,
   exit = code => process.exit(code), log = message => console.error(message), timeoutMs = 15000, attachRuntime = attachCertificationRuntime,
-  attachCommunity = attachNativeCommunityRuntime } = {}) {
+  attachCommunity = attachNativeCommunityRuntime, attachReview } = {}) {
   const id = value => typeof value === 'string' && /^\d{17,20}$/.test(value);
   if (!id(guildId) || !id(env?.ACADEMY_OWNER_ID) || !id(env?.ACADEMY_ADMIN_CHANNEL_ID) || env.CERTIFICATION_ENABLED !== 'true') {
     throw new Error('Explicit restoration guild, admin, admin channel and certification enablement required');
@@ -18,13 +18,14 @@ export function createRestoredCertificationApplication({ client, guildId, env = 
   if (['on', 'off', 'once', 'isReady', 'login', 'destroy'].some(name => typeof client?.[name] !== 'function') || client.isReady()) {
     throw new Error('A fresh restoration Discord client is required');
   }
-  if ([exit, log, attachRuntime, attachCommunity].some(callback => typeof callback !== 'function')) throw new Error('Invalid restoration callbacks');
-  const active = new Set(); let runtime, community, runtimeClosing, started = false, stopping = false, failed = false;
+  if ([exit, log, attachRuntime, attachCommunity].some(callback => typeof callback !== 'function') ||
+      (attachReview !== undefined && typeof attachReview !== 'function')) throw new Error('Invalid restoration callbacks');
+  const active = new Set(); let runtime, community, review, runtimeClosing, started = false, stopping = false, failed = false;
   const report = message => { try { log(message); } catch {} };
   function detachRuntime() {
     if (!runtimeClosing) {
       const tasks = [];
-      for (const handler of [community, runtime]) {
+      for (const handler of [review, community, runtime]) {
         try { if (handler) tasks.push(Promise.resolve(handler.detach())); }
         catch (error) { tasks.push(Promise.reject(error)); }
       }
@@ -48,10 +49,27 @@ export function createRestoredCertificationApplication({ client, guildId, env = 
     community = Object.freeze({ enabled: false, ready: false, detach: async () => {} });
     report('Community learning configuration failed; certification startup will continue.');
   }
+  if (attachReview !== undefined) {
+    try {
+      const candidate = attachReview(client, guildId, environment, Object.freeze({
+        isCertificationReady: () => !stopping && runtime.ready === true
+      }));
+      if (candidate && typeof candidate.then === 'function') {
+        void Promise.resolve(candidate).then(value => value?.detach?.()).catch(() => report('Review construction cleanup requires attention.'));
+        throw new Error('Synchronous review lifecycle factory required');
+      }
+      review = candidate;
+      if (review?.enabled !== true || typeof review.detach !== 'function') throw new Error('Enabled review lifecycle required');
+    } catch (error) {
+      stopping = true; void detachRuntime();
+      throw error;
+    }
+  }
   return Object.freeze({
     get enabled() { return runtime.enabled === true; },
     get ready() { return !stopping && runtime.ready === true; },
     get communityReady() { return !stopping && community.ready === true; },
+    get reviewReady() { return !stopping && runtime.ready === true && review?.ready === true; },
     get stopping() { return stopping; },
     shutdown: shutdown.shutdown,
     async start(token) {

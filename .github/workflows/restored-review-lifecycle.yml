@@ -1,0 +1,26 @@
+name: Restored review lifecycle regression
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restored-review-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - shell: bash
+        run: |
+          set -euo pipefail
+          node --check certification-restored-application.js
+          node --test test-certification-restored-review-lifecycle.mjs 2>&1 | tee "$RUNNER_TEMP/review-lifecycle.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/review-lifecycle.tap"
