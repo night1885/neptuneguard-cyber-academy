@@ -1,0 +1,53 @@
+name: Inspect fixed privacy regression
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/review-privacy-failure.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+    steps:
+      - uses: actions/github-script@v7
+        id: inspect
+        env:
+          GH_READ_TOKEN: ${{ github.token }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            if(context.repo.owner!=='night1885'||context.repo.repo!=='neptuneguard-cyber-academy')throw Error('Unexpected repository');
+            const id=129993533312,{data:job}=await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:id});
+            if(job.id!==id||job.run_id!==42862918434||job.name!=='administrator-privacy'||job.conclusion!=='failure')throw Error('Unexpected diagnostic target');
+            const signal=AbortSignal.timeout(30000);
+            let r=await fetch(`https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/actions/jobs/${id}/logs`,{headers:{Authorization:`Bearer ${process.env.GH_READ_TOKEN}`,Accept:'application/vnd.github+json'},redirect:'manual',signal});
+            if([301,302,303,307,308].includes(r.status)){const u=new URL(r.headers.get('location'));if(u.protocol!=='https:'||u.username||u.password||!['.blob.core.windows.net','.githubusercontent.com'].some(s=>u.hostname.endsWith(s)))throw Error('Unexpected log redirect');await r.body?.cancel();r=await fetch(u,{redirect:'error',signal});}
+            if(!r.ok||!r.body)throw Error('Log retrieval unavailable');
+            const reader=r.body.getReader(),chunks=[];let length=0;
+            try{for(;;){const p=await reader.read();if(p.done)break;length+=p.value.byteLength;if(length>2097152)throw Error('Log bound exceeded');chunks.push(Buffer.from(p.value));}}finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+            const text=Buffer.concat(chunks).toString('utf8');
+            const allowed=[['role_drift','fresh snapshots and authority reject role-drift'],['reviewer_loss','fresh snapshots and authority reject reviewer-loss'],['admin_roles','approved mode permits existing Administrator roles without changing them'],['learner_source','learner evidence remains learner-only under Administrator privacy mode'],['ordinary_actor','ordinary actor denied before metadata fetch'],['public','Administrator privacy still rejects public'],['extra_member','Administrator privacy still rejects extra-member'],['everyone_admin','Administrator privacy still rejects everyone-admin'],['legacy','legacy owner-only mode continues rejecting Administrator-role profile']];
+            const failed=[...text.matchAll(/not ok [0-9]+ - ([^\r\n]+)/g)].map(m=>m[1].trim());
+            const names=failed.map(name=>allowed.find(([,title])=>name===title)?.[0]||'other').slice(0,6).join('_')||'none';
+            const loc=file=>[...new Set([...text.matchAll(new RegExp(file.replaceAll('.','\\.')+':([0-9]{1,5})','g'))].map(m=>m[1]))].slice(0,6).join('_')||'none';
+            const code=text.includes('ERR_ASSERTION')?'assertion':text.includes('SyntaxError')?'syntax':text.includes('ERR_TEST_FAILURE')?'test_failure':'unknown';
+            const result=`privacy_${names}_old${loc('test-certification-formal-review-discord-source.mjs')}_new${loc('test-certification-formal-review-administrator-privacy.mjs')}_${code}`;
+            if(!/^[A-Za-z0-9_]{1,240}$/.test(result))throw Error('Invalid bounded diagnostic');core.setOutput('context',result);
+  result:
+    name: fixed-privacy-regression (${{ needs.inspect.outputs.context || 'inspection_unavailable' }})
+    needs: inspect
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - env:
+          RESULT: ${{ needs.inspect.result }}
+          CONTEXT: ${{ needs.inspect.outputs.context }}
+        run: |
+          test "$RESULT" = success
+          test -n "$CONTEXT"
