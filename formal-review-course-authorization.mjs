@@ -10,7 +10,9 @@ const fields=['actorId','guildId','learnerId','studentId','courseKey','exerciseK
 const loadLifecycle=async(pool,config,options)=>{const {createCertificationCourseLifecycle}=await import('./certification-course-lifecycle.js');return createCertificationCourseLifecycle(pool,config,options);};
 export function createFormalReviewCourseAuthorization(options={}){
  if(options.enabled!==true)return Object.freeze({enabled:false,initialize:async()=>({ready:false}),authorizeCourse:async()=>null,dispose(){},drain:async()=>{}});
- const {guildId,ownerId,readPool,config,expectedDatabase,expectedLogin,isReady,createLifecycle=loadLifecycle,providerTimeoutMs=1000}=options;
+ const {guildId,ownerId,readPool,config,expectedDatabase,expectedLogin,isReady,createLifecycle=loadLifecycle,providerTimeoutMs=1000,reviewerMode='owner',authorizeReviewer}=options;
+ if(!['owner','current-administrator'].includes(reviewerMode)||(reviewerMode==='current-administrator'&&typeof authorizeReviewer!=='function'))fail();
+ const administratorReview=reviewerMode==='current-administrator';
  if(!discordId(guildId)||!discordId(ownerId)||typeof readPool?.query!=='function'||!ident(expectedDatabase)||!ident(expectedLogin)||typeof isReady!=='function'||typeof createLifecycle!=='function'||!Number.isSafeInteger(providerTimeoutMs)||providerTimeoutMs<20||providerTimeoutMs>2000||config?.enabled!==true||config.ownerId!==ownerId||typeof config.activeAgreementVersion!=='string'||!config.activeAgreementVersion.trim()||!/^[a-f0-9]{64}$/.test(config.activeAgreementSha256??'')||typeof config.comprehensionCheck?.version!=='string'||!config.comprehensionCheck.version.trim()||(config.courseRemovalEnabled!==undefined&&typeof config.courseRemovalEnabled!=='boolean'))fail();
  const removalChecks=config.courseRemovalEnabled===true;
  const readFacade=Object.freeze({query(sql,args){if(normalize(sql)!==nativeQuery||!Array.isArray(args)||args.length!==2||!discordId(args[0])||args[1]!==courseKey)fail();return readPool.query(queryText,args);}});
@@ -39,12 +41,13 @@ export function createFormalReviewCourseAuthorization(options={}){
   }catch{ready=false;fail();}finally{initializing=null;}});return initializing;
  }
  async function removalClear(learnerId){if(!removalChecks)return true;const result=await bounded(()=>readPool.query(removalQuery,[learnerId,courseKey]));alive();return Array.isArray(result?.rows)&&result.rows.length===1&&result.rows[0]?.clear===true;}
+ async function reviewerClear(scope){if(scope.actorId===scope.learnerId)return true;if(!administratorReview)return scope.actorId===ownerId;const verified=await bounded(()=>authorizeReviewer(scope));alive();return verified===true;}
  async function authorizeCourse(scope){try{
-  alive();if(!exactFields(scope,fields)||scope.guildId!==guildId||scope.courseKey!==courseKey||!discordId(scope.learnerId)||scope.learnerId===ownerId||![scope.learnerId,ownerId].includes(scope.actorId)||!discordId(scope.sourceChannelId)||!operationId(scope.workId)||typeof scope.studentId!=='string'||!scope.studentId.trim()||scope.studentId.length>100||typeof scope.exerciseKey!=='string'||!/^EH-[A-Z]+-[A-Z0-9-]{2,40}$/.test(scope.exerciseKey))fail();
-  const learnerId=scope.learnerId,studentId=scope.studentId;
-  if(!await removalClear(learnerId))return null;
+  alive();if(!exactFields(scope,fields)||scope.guildId!==guildId||scope.courseKey!==courseKey||!discordId(scope.learnerId)||(!administratorReview&&scope.learnerId===ownerId)||!discordId(scope.actorId)||!discordId(scope.sourceChannelId)||!operationId(scope.workId)||typeof scope.studentId!=='string'||!scope.studentId.trim()||scope.studentId.length>100||typeof scope.exerciseKey!=='string'||!/^EH-[A-Z]+-[A-Z0-9-]{2,40}$/.test(scope.exerciseKey))fail();
+  const selected=Object.freeze({...scope}),learnerId=selected.learnerId,studentId=selected.studentId;
+  if(!await reviewerClear(selected)||!await removalClear(learnerId))return null;
   const r=await bounded(()=>lifecycle.getCourseAuthorization(learnerId,courseKey));alive();
-  if(r?.student_id!==studentId||r.course_key!==courseKey||!await removalClear(learnerId))return null;alive();return Object.freeze({studentId,courseKey});
+  if(r?.student_id!==studentId||r.course_key!==courseKey||!await removalClear(learnerId)||!await reviewerClear(selected))return null;alive();return Object.freeze({studentId,courseKey});
  }catch{return null;}}
  return Object.freeze({enabled:true,get ready(){return ready&&!stopped;},initialize,authorizeCourse,dispose(){stopped=true;ready=false;},async drain(){await Promise.allSettled([...pending,...(initializing?[initializing]:[])]);}});
 }
