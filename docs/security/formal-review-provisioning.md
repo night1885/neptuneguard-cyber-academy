@@ -1,0 +1,7 @@
+# Database provisioning candidate
+
+This source creates work and its exact assignment binding in one PostgreSQL transaction. Enrollment is locked before the course row, matching the inspected lifecycle-service lock order. Current account acknowledgment, manifest, permanent student ID, approval, closure, course state and explicit removal evidence are checked. Stable work IDs permit matching bound retries without extending deadlines; unbound historical rows are not backfilled.
+
+The caller must supply authenticated interaction identity and reviewed current-Administrator, exercise, private-channel and durable-consent providers. This commit does not implement those live integrations, consent storage, Discord channel creation or reconciliation. Simulated true authority/consent providers in tests are not acceptable production substitutes. Database rollback cannot undo a separately created Discord resource, and a connection loss at commit requires inspection of the same stable work/channel IDs.
+
+Disposable fixture grants include UPDATE(updated_at) on enrollment and UPDATE(completed_at) on course solely to permit row locking; these are real privileges and require separate production review. No production grants are installed here. Tests cover real fictional enrollment/assignment, stable retry, denial, atomic rollback, completion and restricted content/status privileges. Concurrent lifecycle acceptance and full runtime composition remain required. No deployment or production-readiness claim is made.
