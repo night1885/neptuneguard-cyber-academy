@@ -1,0 +1,27 @@
+name: Administrator receipt recovery regression
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  administrator-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - shell: bash
+        run: |
+          set -euo pipefail
+          node --check formal-review-receipt-recovery.mjs
+          node --check formal-review-recovery-interactions.mjs
+          node --test test-certification-formal-review-receipt-recovery.mjs test-certification-formal-review-recovery-interactions.mjs test-certification-formal-review-administrator-recovery.mjs 2>&1 | tee "$RUNNER_TEMP/admin-recovery.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/admin-recovery.tap"
