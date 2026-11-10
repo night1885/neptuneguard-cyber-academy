@@ -54,7 +54,7 @@ export function createCourseRuntimeRouter(pool, config, guildId, { verifiedRoleI
         if (page + 1 < count) navigationButtons.push(button(`cert:course:catalog:${page + 1}`, 'Next courses'));
         components.push(row(navigationButtons));
         await respond(interaction, { embeds: [{ title: 'Academy course catalog', color: 0x3498db,
-          description: `Page ${page + 1}/${count}. Catalog listing does not grant access. Entry requires your permanent ID and a separate active assignment for the selected course. No saved progress or automatic completion. ${courses.map(course => course.title).join(' • ')}`.slice(0, 3500) }], components });
+          description: `Page ${page + 1}/${count}. Catalog listing does not grant access. Entry uses your Discord account and requires a separate active assignment for the selected course; no student-ID form is required here. No saved progress or automatic completion. ${courses.map(course => course.title).join(' • ')}`.slice(0, 3500) }], components });
       } catch { await respond(interaction, { content: 'Course catalog could not be verified. Retry later or check server verification.' }); }
       return true;
     }
@@ -78,7 +78,7 @@ export function createCourseRuntimeRouter(pool, config, guildId, { verifiedRoleI
     initializing = (async () => {
       if (typeof base.initialize === 'function') await base.initialize();
       if (disposed) throw new Error('Course startup stopped');
-      const candidate = await createNavigation(pool, config, guildId, { verifiedRoleId, now });
+      const candidate = await createNavigation(pool, config, guildId, { verifiedRoleId, now, buttonOnlyEntry: true });
       if (disposed) { candidate?.dispose?.(); throw new Error('Course startup stopped'); }
       if (typeof candidate?.handle !== 'function' || typeof candidate.dispose !== 'function') throw new Error('Ready protected course navigation required');
       navigation = candidate;
