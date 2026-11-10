@@ -1,0 +1,27 @@
+name: Button-only read-only course entry
+on:
+  push:
+    branches: ['fix/button-only-read-only-course-entry']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - shell: bash
+        run: |
+          set -euo pipefail
+          node --check certification-course-navigation.js
+          node --test test-certification-button-only-course-entry.mjs test-certification-course-navigation.mjs test-certification-student-course-renderer.mjs 2>&1 | tee "$RUNNER_TEMP/button-entry.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/button-entry.tap"
