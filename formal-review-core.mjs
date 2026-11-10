@@ -5,7 +5,9 @@ const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const contentDigest=x=>createHash('sha256').update(x,'utf8').digest('hex');
 export function createFormalReviewCore(config={},ports={}){
  if(config.enabled!==true)return Object.freeze({enabled:false,preview:async()=>({ok:false}),submit:async()=>({ok:false}),review:async()=>({ok:false}),read:async()=>({ok:false}),dispose(){}});
- const {guildId,ownerId,courseKey,exerciseKeys}=config;
+ const {guildId,ownerId,courseKey,exerciseKeys,reviewerMode='owner'}=config;
+ if(!['owner','current-administrator'].includes(reviewerMode))fail();
+ const administratorReview=reviewerMode==='current-administrator';
  if(!discordId(guildId)||!discordId(ownerId)||courseKey!=='ethical-hacking-reading'||!Array.isArray(exerciseKeys)||!exerciseKeys.length||exerciseKeys.length>100||new Set(exerciseKeys).size!==exerciseKeys.length||!exerciseKeys.every(x=>typeof x==='string'&&/^EH-[A-Z]+-[A-Z0-9-]{2,40}$/.test(x)))fail();
  for(const name of ['transaction','authorizeCourse','authorizeExercise','authorizeReviewer','readSource','now','isReady'])if(typeof ports[name]!=='function')fail();
  const exercises=new Set(exerciseKeys);let disposed=false,lastNow=-1;
@@ -13,7 +15,7 @@ export function createFormalReviewCore(config={},ports={}){
  function context(ctx){if(!exactFields(ctx,['actorId','guildId'])||!discordId(ctx.actorId)||ctx.guildId!==guildId||disposed)fail();}
  async function authorize(ctx,w,reviewer=false){
   context(ctx);if(!w||!operationId(w.id)||w.guildId!==guildId||w.courseKey!==courseKey||!discordId(w.learnerId)||!discordId(w.channelId)||!exercises.has(w.exerciseKey)||typeof w.studentId!=='string'||!w.studentId.trim()||!Number.isSafeInteger(w.revision)||w.revision<0||!['working','submitted','changes-requested','review-recorded'].includes(w.state)||now()>=reviewClock(w.expiresAtMs))fail();
-  if(reviewer?(ctx.actorId!==ownerId||w.learnerId===ownerId):ctx.actorId!==w.learnerId)fail();
+  if(reviewer?(ctx.actorId===w.learnerId||(!administratorReview&&(ctx.actorId!==ownerId||w.learnerId===ownerId))):ctx.actorId!==w.learnerId)fail();
   const scope=Object.freeze({actorId:ctx.actorId,guildId,learnerId:w.learnerId,studentId:w.studentId,courseKey,exerciseKey:w.exerciseKey,workId:w.id,sourceChannelId:w.channelId});
   const course=await ports.authorizeCourse(scope);
   if(course?.studentId!==w.studentId||course?.courseKey!==courseKey||await ports.authorizeExercise(scope)!==true||(reviewer&&await ports.authorizeReviewer(scope)!==true)||disposed||now()>=w.expiresAtMs)fail();
@@ -28,9 +30,9 @@ export function createFormalReviewCore(config={},ports={}){
   return {s,stamp};
  }
  async function run(ctx,request,action){
-  context(ctx);if(!operationId(request?.workId))fail();const reviewer=action==='review'||(action==='read'&&ctx.actorId===ownerId);let selected;
+  context(ctx);if(!operationId(request?.workId))fail();let reviewer=action==='review',selected;
   const result=await ports.transaction(async tx=>{
-   const w=await tx.lockWork(request.workId);selected=w;const scope=await authorize(ctx,w,reviewer);
+   const w=await tx.lockWork(request.workId);selected=w;if(action==='read')reviewer=ctx.actorId!==w?.learnerId;const scope=await authorize(ctx,w,reviewer);
    if(action==='preview'){
     const {s}=await source(scope,w,request.sourceMessageId);await authorize(ctx,w);if(now()>=Math.min(w.expiresAtMs,s.createdAtMs+REVIEW_POLICY.draftMs))fail();
     return Object.freeze({ok:true,workId:w.id,sourceChannelId:w.channelId,sourceMessageId:s.messageId,expectedRevision:w.revision,sourceDigest:contentDigest(s.body),body:s.body,expiresAtMs:Math.min(w.expiresAtMs,s.createdAtMs+REVIEW_POLICY.draftMs)});
