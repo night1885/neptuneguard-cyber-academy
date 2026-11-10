@@ -1,0 +1,55 @@
+name: Assignment binding schema acceptance
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: assignment-binding-schema-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  assignment-binding-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: formal_review_admin
+          POSTGRES_PASSWORD: disposable_binding_fixture_only
+          POSTGRES_DB: formal_review_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U formal_review_admin -d formal_review_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FORMAL_REVIEW_TEST_DATABASE_URL: postgresql://formal_review_admin:disposable_binding_fixture_only@127.0.0.1:5432/formal_review_test
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require unskipped structural schema acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FORMAL_REVIEW_TEST_DATABASE_URL"
+          node --check test-certification-formal-review-assignment-bindings-postgres.mjs
+          node --test test-certification-formal-review-assignment-bindings-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/binding-schema.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/binding-schema.tap"
