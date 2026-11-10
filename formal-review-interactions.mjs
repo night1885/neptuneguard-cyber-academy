@@ -18,8 +18,8 @@ export function createFormalReviewInteractions(options={}){
   const customId=i?.customId;if(typeof customId!=='string'||!customId.startsWith('frv:'))return Promise.resolve(false);
   if(stopped||i.deferred||i.replied||!discordId(i.id)||ids.has(i.id)||active.size>=4)return Promise.resolve(true);
   ids.add(i.id);
-  const task=(async()=>{let acknowledged=false,pendingPreview=null,phase='',token=null,recorded=false,c;
-   const guard=()=>{if(stopped||isReady()!==true)fail();const fresh=context(i);if(c&&(fresh.actorId!==c.actorId||fresh.channelId!==c.channelId))fail();};
+  const task=(async()=>{let acknowledged=false,pendingPreview=null,phase='',token=null,recorded=false,inPlace=false,c;
+   const guard=()=>{if(stopped||isReady()!==true||(acknowledged&&!inPlace&&i.ephemeral!==true))fail();const fresh=context(i);if(c&&(fresh.actorId!==c.actorId||fresh.channelId!==c.channelId))fail();};
    const send=async value=>{guard();await i.editReply({...value,allowedMentions:{parse:[]}});};
    const errorReply=async value=>{if(stopped)return;if(acknowledged||i.deferred)await i.editReply({...value,allowedMentions:{parse:[]}});else if(!i.replied)await i.reply({...value,flags:64,allowedMentions:{parse:[]}});};
    try{
@@ -36,7 +36,7 @@ export function createFormalReviewInteractions(options={}){
      if(typeof i.isFromMessage==='function'&&i.isFromMessage()!==true)fail();
      if(i.fields?.fields?.size!==2||!i.fields.fields.has('source_message_id')||!i.fields.fields.has('consent'))fail();messageId=i.fields.getTextInputValue('source_message_id');if(!discordId(messageId)||i.fields.getTextInputValue('consent')!=='PREVIEW')fail();
     }
-    const inPlace=typeof i.deferUpdate==='function'&&(phase!=='preview'||i.isFromMessage?.()===true);
+    inPlace=typeof i.deferUpdate==='function'&&(phase!=='preview'||i.isFromMessage?.()===true);
     if(inPlace)await i.deferUpdate();else await i.deferReply({flags:64});acknowledged=true;guard();
     if(phase==='start'){
      await send(payload('Select one of your plain-text messages in this private work channel. Preview retrieves it but does not submit it. Confirm stores the exact report for reviewer access for 24 hours; access expiry is not deletion. Do not include personal or sensitive data. Review is not grading, practical authorization or certificate issuance.',[row(button('frv:choose:'+token,'Select message for preview',1))]));
