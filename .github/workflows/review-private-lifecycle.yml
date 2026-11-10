@@ -1,0 +1,26 @@
+name: Private authorization lifecycle acceptance
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - shell: bash
+        run: |
+          set -euo pipefail
+          node --test test-certification-formal-review-private-lifecycle.mjs test-certification-formal-review-private-course-authorization.mjs test-certification-formal-review-private-composition.mjs 2>&1 | tee "$RUNNER_TEMP/private-lifecycle.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/private-lifecycle.tap"
+          grep -Eq '^# tests [1-9][0-9]*$' "$RUNNER_TEMP/private-lifecycle.tap"

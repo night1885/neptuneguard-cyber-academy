@@ -9,7 +9,7 @@ export function createFormalReviewPrivateCourseAuthorization(options={}){
  const ready=()=>{try{return !stopped&&up&&course.ready===true&&isReady()===true;}catch{return false;}};
  async function initialize(){
   if(stopped)fail();if(up&&course.ready===true)return Object.freeze({ready:true});if(initializing)return initializing;
-  initializing=Promise.resolve().then(async()=>{try{if((await course.initialize())?.ready!==true||course.ready!==true||stopped)fail();up=true;return Object.freeze({ready:true});}catch{up=false;fail();}finally{initializing=null;}});return initializing;
+  initializing=Promise.resolve().then(async()=>{try{if(stopped)fail();if((await course.initialize())?.ready!==true||course.ready!==true||stopped)fail();up=true;return Object.freeze({ready:true});}catch{up=false;fail();}finally{initializing=null;}});return initializing;
  }
  function authorizeCourse(scope){
   if(!ready()||active.size>=4)return Promise.resolve(null);
@@ -24,5 +24,5 @@ export function createFormalReviewPrivateCourseAuthorization(options={}){
   }catch{return null;}})();
   active.add(task);void task.then(()=>active.delete(task),()=>active.delete(task));return task;
  }
- return Object.freeze({enabled:true,get ready(){return !stopped&&up&&course.ready===true;},initialize,authorizeCourse,dispose(){stopped=true;up=false;course.dispose();},async drain(){const results=await Promise.allSettled([...active,...(initializing?[initializing]:[])]);await course.drain();if(results.some(r=>r.status==='rejected'))fail();}});
+ return Object.freeze({enabled:true,get ready(){return !stopped&&up&&course.ready===true;},initialize,authorizeCourse,dispose(){if(stopped)return;stopped=true;up=false;course.dispose();},async drain(){const results=await Promise.allSettled([...active,...(initializing?[initializing]:[])]);await course.drain();if(results.some(r=>r.status==='rejected'))fail();}});
 }
