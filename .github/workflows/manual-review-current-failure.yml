@@ -1,0 +1,60 @@
+name: Inspect current manual review failure
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/manual-review-current-failure.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      context: ${{ steps.inspect.outputs.context }}
+    steps:
+      - uses: actions/github-script@v7
+        id: inspect
+        with:
+          script: |
+            if (context.repo.owner !== 'night1885' || context.repo.repo !== 'neptuneguard-cyber-academy') throw Error('Unexpected repository');
+            const jobId = 129906585850, runId = 42838373186;
+            const {data: job} = await github.rest.actions.getJobForWorkflowRun({...context.repo, job_id: jobId});
+            if (job.id !== jobId || job.run_id !== runId || job.name !== 'manual-review-migration (PostgreSQL 18)' || job.conclusion !== 'failure') throw Error('Unexpected diagnostic target');
+            const endpoint = `https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/actions/jobs/${jobId}/logs`;
+            const signal = AbortSignal.timeout(30000);
+            let response = await fetch(endpoint, {headers:{Authorization:`Bearer ${process.env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json'},redirect:'manual',signal});
+            if ([301,302,303,307,308].includes(response.status)) {
+              const destination = new URL(response.headers.get('location'));
+              if (destination.protocol !== 'https:' || destination.username || destination.password || !['.blob.core.windows.net','.githubusercontent.com'].some(suffix => destination.hostname.endsWith(suffix))) throw Error('Unexpected log redirect');
+              await response.body?.cancel();
+              response = await fetch(destination, {redirect:'error',signal});
+            }
+            if (!response.ok || !response.body) throw Error('Log retrieval unavailable');
+            const reader = response.body.getReader(), parts=[]; let size=0;
+            try { for (;;) { const part=await reader.read(); if(part.done)break;size+=part.value.byteLength;if(size>2097152)throw Error('Log bound exceeded');parts.push(Buffer.from(part.value)); } } finally { await reader.cancel().catch(()=>{});reader.releaseLock(); }
+            const text=Buffer.concat(parts).toString('utf8').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'');
+            function lines(file) { const escaped=file.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const found=[...text.matchAll(new RegExp(escaped+':([0-9]{1,5})(?::[0-9]{1,5})?','g'))].map(m=>Number(m[1]));return [...new Set(found)].sort((a,b)=>a-b).slice(0,4).join('_')||'none'; }
+            const codes=[...text.matchAll(/\bcode:\s*['"]([A-Z0-9_]{1,40})['"]/g)].map(m=>m[1]);
+            const code=codes.find(c=>/^[0-9A-Z]{5}$/.test(c))||codes.find(c=>['ERR_ASSERTION','ERR_TEST_FAILURE','ERR_MODULE_NOT_FOUND'].includes(c))||'unknown';
+            const step=job.steps.find(s=>s.conclusion==='failure')?.number;
+            const result=`current_pg18_s${Number.isInteger(step)&&step>=0&&step<=100?step:0}_m${lines('test-certification-manual-review-postgres.mjs')}_n${lines('test-certification-manual-review-native-postgres.mjs')}_${code}`;
+            if(!/^[A-Za-z0-9_]{1,180}$/.test(result))throw Error('Invalid diagnostic output');
+            core.setOutput('context',result);
+          github-token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+  result:
+    name: current-manual-review-failure (${{ needs.inspect.outputs.context || 'inspection_unavailable' }})
+    needs: inspect
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - env:
+          RESULT: ${{ needs.inspect.result }}
+          CONTEXT: ${{ needs.inspect.outputs.context }}
+        run: |
+          test "$RESULT" = success
+          test -n "$CONTEXT"
