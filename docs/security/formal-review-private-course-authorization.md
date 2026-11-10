@@ -1,0 +1,9 @@
+# Private-channel course authorization adapter
+
+The default-off adapter wraps the existing course authorizer. For each valid scope it verifies source-channel privacy, checks current course authority, then verifies privacy again. The existing core repeats course authorization for preview, submission, saved reads, review, retry and post-transaction checks. A failed, throwing or non-true privacy response denies access. No source message is fetched by this adapter.
+
+Integration must explicitly construct an Administrator-and-learner Discord source with its current Administrator verifier, construct the course-authority provider, wrap it with createFormalReviewPrivateCourseAuthorization, and pass the wrapper as courseAuthorization to createFormalReviewComposition alongside the same source. The wrapper owns initialization, disposal and drain of the underlying course authorizer only. Composition remains responsible for disposing and draining the source separately. Do not initialize or dispose the underlying course provider through a second owner.
+
+The adapter accepts at most four concurrent authorization operations. Its trusted providers must retain their own bounded transport and database timeouts; a non-settling provider is not made cancelable by this wrapper. There is no privacy cache. Metadata and authority checks are not an atomic lock on Discord permissions; changes after the final check remain a release consideration. Post-commit authorization failure does not imply that an already committed operation was rolled back.
+
+Tests exercise actual core saved reads and review denial with scripted authority and privacy ports. They do not establish live Discord acceptance or PostgreSQL rollback behavior. This commit adds an integration adapter, not production startup wiring or durable consent. It changes no live channels, roles, permissions, database schema, deployment flags or settings.
