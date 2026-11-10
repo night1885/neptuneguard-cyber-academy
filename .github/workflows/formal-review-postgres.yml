@@ -101,11 +101,11 @@ jobs:
           node --check test-certification-formal-review-receipt-recovery-postgres.mjs
           node --test test-certification-formal-review-receipt-recovery-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/receipt-process-recovery.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/receipt-process-recovery.tap"
-      - name: Validate private Student home to saved formal reports
+      - name: Validate private learner and reviewer panel report entries
         shell: bash
         run: |
           set -euo pipefail
           node --check formal-review-panel-entry.mjs
           node --check test-certification-formal-review-student-entry-postgres.mjs
-          node --test test-certification-formal-review-panel-entry.mjs test-certification-formal-review-student-entry-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/student-report-entry.tap"
+          node --test test-certification-formal-review-panel-entry.mjs test-certification-formal-review-owner-panel-entry.mjs test-certification-formal-review-student-entry-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/student-report-entry.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/student-report-entry.tap"
