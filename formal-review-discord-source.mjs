@@ -4,7 +4,7 @@ const VIEW=1n<<10n,HISTORY=1n<<16n,SEND=1n<<11n,ADMIN=8n;
 const bits=x=>{if(typeof x!=='string'||!/^(0|[1-9][0-9]{0,19})$/.test(x))fail();return BigInt(x);};
 const scopeFields=['actorId','guildId','learnerId','studentId','courseKey','exerciseKey','workId','sourceChannelId'];
 export function createFormalDiscordSource(options={}){
- if(options.enabled!==true)return Object.freeze({enabled:false,readSource:async()=>null,dispose(){},drain:async()=>{}});
+ if(options.enabled!==true)return Object.freeze({enabled:false,readSource:async()=>null,verifyPrivateChannel:async()=>false,dispose(){},drain:async()=>{}});
  const {guildId,ownerId,botId,token,isReady,now=Date.now,fetchImpl=globalThis.fetch,providerTimeoutMs=1000}=options;
  if(![guildId,ownerId,botId].every(discordId)||new Set([guildId,ownerId,botId]).size!==3||typeof token!=='string'||!/^[A-Za-z0-9._-]{20,256}$/.test(token)||typeof isReady!=='function'||typeof now!=='function'||typeof fetchImpl!=='function'||!Number.isSafeInteger(providerTimeoutMs)||providerTimeoutMs<20||providerTimeoutMs>2000)fail();
  let stopped=false;const active=new Set(),requests=new Set(),controllers=new Set(),deadlines=new WeakMap();
@@ -57,5 +57,16 @@ export function createFormalDiscordSource(options={}){
    return await Promise.race([task,timeout]);
   }catch{c?.abort();return null;}finally{clearTimeout(timer);}
  }
- return Object.freeze({enabled:true,readSource,dispose(){stopped=true;for(const c of controllers)c.abort();},async drain(){await Promise.allSettled([...active,...requests]);}});
+ async function verifyPrivateChannel(scope){
+  let c,timer;
+  try{
+   if(!exactFields(scope,scopeFields)||scope.guildId!==guildId||!discordId(scope.learnerId)||![scope.learnerId,ownerId].includes(scope.actorId)||[ownerId,botId].includes(scope.learnerId)||typeof scope.studentId!=='string'||!scope.studentId.trim()||scope.studentId.length>100||scope.courseKey!=='ethical-hacking-reading'||typeof scope.exerciseKey!=='string'||!/^EH-[A-Z]+-[A-Z0-9-]{2,40}$/.test(scope.exerciseKey)||!operationId(scope.workId)||!discordId(scope.sourceChannelId)||active.size>=4)fail();
+   const s=Object.freeze({...scope});c=new AbortController();deadlines.set(c,performance.now()+providerTimeoutMs);check(c);controllers.add(c);
+   const task=(async()=>{const before=await snapshot(s,c);if(before!==await snapshot(s,c))fail();check(c);return true;})();
+   active.add(task);const cleanup=()=>{active.delete(task);controllers.delete(c);c.abort();};void task.then(cleanup,cleanup);
+   const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{c.abort();reject(Error('Formal source unavailable'));},providerTimeoutMs);});
+   return await Promise.race([task,timeout]);
+  }catch{c?.abort();return false;}finally{clearTimeout(timer);}
+ }
+ return Object.freeze({enabled:true,readSource,verifyPrivateChannel,dispose(){stopped=true;for(const c of controllers)c.abort();},async drain(){await Promise.allSettled([...active,...requests]);}});
 }
