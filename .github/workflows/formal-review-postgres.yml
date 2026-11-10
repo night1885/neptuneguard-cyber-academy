@@ -93,3 +93,11 @@ jobs:
           set -euo pipefail
           node --test test-certification-retention-review-boundary.mjs 2>&1 | tee "$RUNNER_TEMP/retention-review-boundary.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/retention-review-boundary.tap"
+      - name: Validate persisted receipts after killed writer processes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check test-support/formal-review-recovery-child.mjs
+          node --check test-certification-formal-review-receipt-recovery-postgres.mjs
+          node --test test-certification-formal-review-receipt-recovery-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/receipt-process-recovery.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/receipt-process-recovery.tap"
