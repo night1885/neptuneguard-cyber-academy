@@ -33,9 +33,11 @@ export function createFormalReviewInteractions(options={}){
     }
     let messageId;
     if(phase==='preview'){
+     if(typeof i.isFromMessage==='function'&&i.isFromMessage()!==true)fail();
      if(i.fields?.fields?.size!==2||!i.fields.fields.has('source_message_id')||!i.fields.fields.has('consent'))fail();messageId=i.fields.getTextInputValue('source_message_id');if(!discordId(messageId)||i.fields.getTextInputValue('consent')!=='PREVIEW')fail();
     }
-    await i.deferReply({flags:64});acknowledged=true;guard();
+    const inPlace=typeof i.deferUpdate==='function'&&(phase!=='preview'||i.isFromMessage?.()===true);
+    if(inPlace)await i.deferUpdate();else await i.deferReply({flags:64});acknowledged=true;guard();
     if(phase==='start'){
      await send(payload('Select one of your plain-text messages in this private work channel. Preview retrieves it but does not submit it. Confirm stores the exact report for reviewer access for 24 hours; access expiry is not deletion. Do not include personal or sensitive data. Review is not grading, practical authorization or certificate issuance.',[row(button('frv:choose:'+token,'Select message for preview',1))]));
     }else if(phase==='preview'){
