@@ -1,0 +1,49 @@
+name: Administrator review PostgreSQL acceptance
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  admin-review-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: formal_review_admin
+          POSTGRES_PASSWORD: disposable_admin_review_only
+          POSTGRES_DB: formal_review_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U formal_review_admin -d formal_review_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FORMAL_REVIEW_TEST_DATABASE_URL: postgresql://formal_review_admin:disposable_admin_review_only@127.0.0.1:5432/formal_review_test
+      CERTIFICATION_ENABLED: 'false'
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      DISCORD_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - shell: bash
+        run: |
+          set -euo pipefail
+          node --check formal-review-postgres.mjs
+          node --test test-certification-formal-review-admin-store-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/admin-store.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/admin-store.tap"
