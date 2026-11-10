@@ -25,7 +25,8 @@ export function createSharedEnrollmentRetentionExecutor(pool,config={}, {reviewP
           (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls)) AS restricted`)).rows[0];
       if(who?.database!==expectedDatabase||who.role!==executorRole||who.session_role!==executorRole||who.origin!==true||who.restricted!==true)throw new Error();
       const relations=(await query(`SELECT c.relname,c.relkind,c.relrowsecurity,c.relforcerowsecurity,pg_has_role(current_user,c.relowner,'MEMBER') AS owner_member
-        FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=ANY($2::text[])`,[schema,names])).rows;
+        FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=ANY($2::text[])
+        AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace review_namespace WHERE review_namespace.nspname='formal_review')`,[schema,names])).rows;
       if(relations.length!==4||names.some(n=>!relations.some(r=>r.relname===n&&r.relkind==='r'&&r.relrowsecurity===false&&r.relforcerowsecurity===false&&r.owner_member===false)))throw new Error();
       stage='privileges';
       const access=(await query(`SELECT
@@ -78,13 +79,15 @@ export function createSharedEnrollmentRetentionExecutor(pool,config={}, {reviewP
         typeof decision.reference!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(decision.reference)||!date(decision.reviewedAt)||!date(decision.expiresAt)||
         decision.reviewedAt>checkedAt||decision.expiresAt<=checkedAt||decision.expiresAt-decision.reviewedAt>300000||evidence().snapshotSha256!==expectedSnapshotSha256)throw new Error();
       stage='course_deletion';
-      const children=await query(`DELETE FROM ${q[1]} WHERE discord_user_id=$1 AND status='completed' AND course_key=ANY($2::text[]) RETURNING course_key`,[subjectId,snapshot.courseKeys]);
+      const children=await query(`DELETE FROM ${q[1]} WHERE discord_user_id=$1 AND status='completed' AND course_key=ANY($2::text[])
+        AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace review_namespace WHERE review_namespace.nspname='formal_review') RETURNING course_key`,[subjectId,snapshot.courseKeys]);
       const keys=new Set(children.rows.map(r=>r.course_key));
       if(children.rowCount!==snapshot.courseCount||children.rows.length!==snapshot.courseCount||keys.size!==snapshot.courseCount||snapshot.courseKeys.some(k=>!keys.has(k)))throw new Error();
       stage='parent_deletion';const e=parents[0];
       const parent=await query(`DELETE FROM ${q[0]} WHERE discord_user_id=$1 AND status=$2 AND student_id=$3 AND approved_by=$4 AND approved_at=$5::timestamptz
         AND application_closed_at IS NULL AND application_closed_by IS NULL AND application_closed_as IS NULL
-        AND NOT EXISTS(SELECT 1 FROM ${q[1]} WHERE discord_user_id=$1) AND NOT EXISTS(SELECT 1 FROM ${q[2]} WHERE discord_user_id=$1) RETURNING discord_user_id`,[subjectId,e.status,e.student_id,e.approved_by,e.approved_at_utc]);
+        AND NOT EXISTS(SELECT 1 FROM ${q[1]} WHERE discord_user_id=$1) AND NOT EXISTS(SELECT 1 FROM ${q[2]} WHERE discord_user_id=$1)
+        AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace review_namespace WHERE review_namespace.nspname='formal_review') RETURNING discord_user_id`,[subjectId,e.status,e.student_id,e.approved_by,e.approved_at_utc]);
       if(parent.rowCount!==1||parent.rows.length!==1||parent.rows[0].discord_user_id!==subjectId)throw new Error();
       stage='commit';await query('COMMIT');return Object.freeze({outcome:'deleted',deletedEnrollments:1,deletedCourses:snapshot.courseCount,preservationReference:decision.reference});
     }catch{try{await db.query('ROLLBACK');}catch{discard=true;}throw new Error(`Shared retention failed at ${stage}; review current state before retrying`);}

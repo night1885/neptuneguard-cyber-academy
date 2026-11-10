@@ -87,3 +87,9 @@ jobs:
           node --check formal-review-composition.mjs
           node --test test-certification-formal-review-composition-postgres.mjs 2>&1 | tee "$RUNNER_TEMP/formal-review-composition.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/formal-review-composition.tap"
+      - name: Reject legacy parent cleanup when review schema is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test-certification-retention-review-boundary.mjs 2>&1 | tee "$RUNNER_TEMP/retention-review-boundary.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/retention-review-boundary.tap"
