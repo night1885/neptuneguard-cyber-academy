@@ -33,11 +33,20 @@ export async function handleCertificationLearner(interaction, config, guildId, s
     await respond({ content: 'An approved certification enrollment with a permanent student ID is required. Pending, suspended, revoked, or denied enrollment does not grant access.' }); return true;
   }
   if (id === 'cert:learner:home') {
+    let reviewRows = [];
+    if (config.formalReviewPrivateEntryEnabled === true) try {
+      const entry = config.formalReviewPrivateEntry;
+      if (entry?.enabled === true && typeof entry.learner === 'function') {
+        const rows = entry.learner(interaction, Object.freeze({ studentId: authorization.student_id }));
+        const item = rows?.[0]?.components?.[0];
+        if (Array.isArray(rows) && rows.length === 1 && rows[0]?.type === 1 && Array.isArray(rows[0].components) && rows[0].components.length === 1 && item?.type === 2 && item.style === 2 && item.custom_id === 'frv:list:' + interaction.user.id + ':0' && item.label === 'Saved formal reports') reviewRows = rows;
+      }
+    } catch {}
     await respond({ embeds: [{ title: 'NeptuneGuard — Student home', color: 0x3498db, description: 'Your private student panel. Use the buttons below to navigate in this message.', fields: [
       { name: 'Student ID', value: safe(authorization.student_id) },
       { name: 'Available learning', value: 'Training readiness — introductory guidance only. Comprehensive curriculum development is pending.' },
       { name: 'Labs and certificates', value: 'Lab requests, hosted sessions, and certificate issuance are not available from this panel. Course access is not lab authorization.' }
-    ], footer: { text: 'Private student panel • No access changes' } }], components: [navigation()] }); return true;
+    ], footer: { text: 'Private student panel • No access changes' } }], components: [navigation(), ...reviewRows] }); return true;
   }
   if (id === 'cert:learner:status') {
     await respond({ embeds: [{ title: 'My course access', color: 0x2ecc71, description: 'Your course authorization was checked for this interaction.', fields: [
