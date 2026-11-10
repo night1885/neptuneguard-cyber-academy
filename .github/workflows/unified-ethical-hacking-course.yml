@@ -27,5 +27,12 @@ jobs:
         run: |
           set -euo pipefail
           node --check formal-programme-reading.mjs
-          node --test test-certification-programme-reading.mjs test-certification-programme-journey.mjs test-certification-button-only-runtime.mjs test-certification-student-course-renderer.mjs test-certification-combined-course-cards.mjs 2>&1 | tee "$RUNNER_TEMP/unified-course.tap"
+          node --test --test-reporter=tap test-certification-programme-reading.mjs test-certification-programme-journey.mjs test-certification-button-only-runtime.mjs test-certification-student-course-renderer.mjs test-certification-combined-course-cards.mjs 2>&1 | tee "$RUNNER_TEMP/unified-course.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/unified-course.tap"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: unified-course-node-${{ matrix.node }}
+          path: ${{ runner.temp }}/unified-course.tap
+          if-no-files-found: warn
+          retention-days: 7
