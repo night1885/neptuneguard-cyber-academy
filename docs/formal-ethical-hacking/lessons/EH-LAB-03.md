@@ -42,3 +42,56 @@ For snapshot recovery, create a harmless text marker in your guest home director
 
 ## Submission
 Provide a topology, configuration inventory, bounded connectivity observations, fault/recovery record and limitations. Never fabricate successful output. Do not proceed to the service exercise until both guests and the exact scope are confirmed. Report unresolved discrepancies rather than adding NAT, bridging or forwarding as a workaround.
+
+## Teaching expansion: reason about the boundary before testing connectivity
+
+This section supplements the existing procedure; it does not expand its permission. Use only the two clean, student-owned guests and the exact approved exercise. The fictional cases below are reasoning exercises, not records of a completed practical.
+
+### A network is a set of permitted paths
+
+Think of the internal network as a virtual switch connecting selected guest network cards. Matching internal-network names place those cards on the same virtual network. A matching IP prefix is not enough: two machines can both display addresses in 192.0.2.0/24 while their adapters connect to different internal networks.
+
+Separate three questions. Attachment asks which virtual network receives each adapter. Addressing asks which addresses and prefixes the guest has assigned. Routing asks where the guest would send traffic for a destination. An answer at one layer cannot replace the others. The ordinary host application network path is excluded by the intended internal-network mode, but this is not a guarantee against a compromised host or hypervisor. The host still controls the virtual machines.
+
+For this exercise, draw the host as the machine containing the hypervisor, not as an authorized participant on NG-FOUNDATION. Place NG-Learner and NG-Peer inside that boundary. Mark the physical LAN and internet outside the permitted exercise paths. Record integration channels separately: a shared folder is a data path even when it does not appear in the guest routing table.
+
+A direct route to the local exercise subnet is different from a default route. The local route describes how the guest reaches addresses on that subnet through its interface. A default route is a fallback for destinations without a more specific match. This exercise does not require that fallback or DNS. The absence of a default route alone does not establish the absence of all unwanted paths; inspect the hypervisor configuration, all enabled adapters, relevant IPv4/IPv6 routes and integration channels together.
+
+### Worked diagnosis — FICTIONAL
+
+Both guests display their intended addresses. NG-Learner is attached to NG-FOUNDATION; NG-Peer is attached to NG-FOUNDATION-FAULT. The bounded ping does not receive replies.
+
+The observations support a specific configuration discrepancy: the adapters are on differently named internal networks. The matching address prefix does not join those networks. The next permitted action is the documented powered-off correction of the peer's network name, followed by rechecking temporary addresses and repeating only the bounded check. Adding NAT would change the boundary rather than fix the intended experiment.
+
+After the correction, suppose ping succeeds. Record that ICMP exchange between those two addresses was observed at that point. Do not rewrite the conclusion as “all ports work” or “the environment is completely isolated.” Neither claim follows from that check.
+
+### Readiness record for the existing practical
+
+Before changing state, prepare a short table with guest role, intended adapter, actual internal-network name, actual address/prefix, relevant route observations and unresolved discrepancies. Use the commands already provided above; this is not an instruction to discover additional machines. Mark an observation missing when you have not collected it. Do not populate the table with expected output.
+
+At each stage use prediction, action, observation and interpretation. Predict what the approved change should affect. Make only that change. Record the actual result. Explain whether the result supports the prediction, and identify what remains unknown. If a result differs from the prediction, preserve it rather than repeating changes until the worksheet looks correct.
+
+### Troubleshooting without widening scope
+
+| Observation | Plausible explanation | Next bounded action |
+|---|---|---|
+| Address disappeared after reboot | The temporary configuration was not retained | Re-identify the guest interface and reapply only the documented address after checking for conflicting state |
+| Both addresses look right but ping fails | Adapter attachment, link state or filtering may differ | Compare both adapter inventories and relevant guest state; do not assume the firewall is the cause |
+| A default route unexpectedly appears | Another adapter or network-management configuration may exist | Stop the practical and identify the source before proceeding |
+| Peer responds during the deliberately mismatched-network case | The intended fault may not have been applied, or another path may exist | Stop, verify guest identity and every adapter; do not declare the boundary sound |
+| Marker remains after rollback | Snapshot selection, marker location or included storage may differ from the assumption | Record the discrepancy and compare the actual snapshot configuration without repeatedly restoring blindly |
+
+### Recovery is a testable claim
+
+A snapshot name is a label, not evidence of its contents. Before the harmless marker exercise, write down which guest, baseline and guest-local location you intend to test. Keep the minimal observations needed for review outside the state you are intentionally rolling back, using only approved evidence handling. Otherwise rollback can erase the record of the experiment itself.
+
+After restoration, check the marker and relevant configuration rather than treating a successful restore dialog as proof. Guest rollback does not necessarily undo powered-off hypervisor settings or changes outside the captured guest storage. Report those boundaries explicitly. A narrow marker test does not establish recoverability from every failure.
+
+### Review questions with explanations
+
+1. Both guests use /24 addresses but different internal-network names. Why might they fail to communicate? The addresses describe a logical subnet, while the adapter names select different virtual network attachments. Correct attachment is still needed.
+2. Ping fails. Can you claim internet isolation? No. Failure may reflect several causes and says nothing by itself about other adapters or integration paths.
+3. A snapshot restore succeeds but the expected marker remains. Should you delete it and report success? No. That destroys the observation. Report the mismatch and investigate the restore assumptions.
+4. Your lab only works after enabling a second NAT adapter. Is the exercise complete? No. Reachability obtained by changing the boundary does not satisfy the specified topology. Stop and report the blocker.
+
+Technical basis: Oracle VirtualBox internal-network documentation. Menu labels and platform-specific behavior still require checking against the installed supported version.
