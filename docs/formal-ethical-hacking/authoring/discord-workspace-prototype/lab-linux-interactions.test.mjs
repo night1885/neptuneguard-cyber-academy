@@ -15,7 +15,7 @@ function data(){
 }
 function harness(t){
   const d=data(),model=createReadingCatalogueRenderer(d),chunks=compileLessonReadings(d);
-  assert.deepEqual([model.readingLessonCount,model.readingPageCount,model.pageCount],[11,83,122]);
+  assert.deepEqual([model.readingLessonCount,model.readingPageCount,model.pageCount],[11,99,138]);
   const state={grant:true,role:true,n:0};
   const control=createReadingReviewWorkspace({enabled:true,...d,guildId:G,entryChannelId:C,verifiedRoleId:R,readMember:async()=>({id:A,guild:{id:G},roles:{cache:{has:r=>state.role&&r===R}}}),readCourseGrant:async()=>state.grant?{student_id:'SYNTHETIC',course_key:K}:null,clock:()=>0,makeToken:()=>(++state.n).toString(16).padStart(32,'0')});
   t.after(()=>control.dispose());

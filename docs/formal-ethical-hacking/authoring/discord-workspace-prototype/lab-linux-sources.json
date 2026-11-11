@@ -3,7 +3,7 @@
   "status": "draft-source-review",
   "runtimeIntegration": false,
   "publishable": false,
-  "sourceCommit": "10d73c195567d4254fbf8a60747e08d1e0ff94d1",
+  "sourceCommit": "797e7069144ef27e96e1cb64684a82ddb72f8043",
   "entries": [
     {"id":"EH-LAB-00","path":"lessons/EH-LAB-00.md","gitBlob":"5fdf61169a3d8c3fc8504c470e57e54b9cc011b7","sha256":"018ce70c7fad2de0c0655deeabb2385d5ae4a8d27fcff556b65310bb340cd02d"},
     {"id":"EH-LAB-01","path":"lessons/EH-LAB-01.md","gitBlob":"e324c3717fe0822f2e0ca4679df8a61318ecf424","sha256":"ae13647375927c068ccbaa200f5e19349e6d253b7da515d04ad5ac29e0fbb0ac"},
@@ -11,9 +11,9 @@
     {"id":"EH-LAB-03","path":"lessons/EH-LAB-03.md","gitBlob":"ad0752871f8805215de34ca176899be27fe81e4c","sha256":"c3b20c477cd3d3e93e1cb5d8487958b50f85d1ba9d26a1e032a20e45cb82f8dd"},
     {"id":"EH-LAB-04","path":"lessons/EH-LAB-04.md","gitBlob":"351d533f53b78f2d2d8b9e0ea64094f8388013a1","sha256":"6e14ca1c834007b043deaa84ad19d221b4fd4b5971fb29a3a2a286e012132018"},
     {"id":"EH-LAB-05","path":"lessons/EH-LAB-05.md","gitBlob":"571227a2ded209ed8260b7b62dfed3ec6cdfe48b","sha256":"e633a1e8fdad2e4b5423279d61487a511785b3c67bbfba4d2e9c91807b34b816"},
-    {"id":"EH-LINUX-01","path":"lessons/EH-LINUX-01.md","gitBlob":"5403440343bd94763f184c4eadf261aaff5223e8","sha256":"6535f839ae45c2754d83b26c7866ffb7cdfc5d819176fa7f578f92de2d9bb218"},
-    {"id":"EH-LINUX-02","path":"lessons/EH-LINUX-02.md","gitBlob":"8a8b04d6e6b31298987c860d28db10c2b7ff1564","sha256":"4491ff880fa9a88e331f729b687c45f76096158ecbab6c10617828b62fd917b5"},
-    {"id":"EH-LINUX-03","path":"lessons/EH-LINUX-03.md","gitBlob":"3e12f1aaa29d8415adaec09603e6cce7c6bb8724","sha256":"ec502dacd09b8eb8cdbaf9fb4437ebc4d9f2441246771357d5e392f09164697d"},
+    {"id":"EH-LINUX-01","path":"lessons/EH-LINUX-01.md","gitBlob":"7552250931be4d970b62395197d3d0fa319775bd","sha256":"e03ed06f6dc6e088a90fd03e92ae33926ef6c40bf50874ce7e70b0bad6848505"},
+    {"id":"EH-LINUX-02","path":"lessons/EH-LINUX-02.md","gitBlob":"22062ea568713319bac5fd3a96ed4abc7f100c7d","sha256":"8295f351a1859902bcc98119515f883263af913bcfdf4b28b349088bafbf5450"},
+    {"id":"EH-LINUX-03","path":"lessons/EH-LINUX-03.md","gitBlob":"604fa0ede14b1ad3b27a30f0b60897cb1822db76","sha256":"aec1e1fa062970a42601c52b895ff3deb5c6f14cda28ff90f022bbe7c84734b3"},
     {"id":"EH-LINUX-04","path":"lessons/EH-LINUX-04.md","gitBlob":"f0605728c8c35aa19f0b01b14234ef88885495b8","sha256":"9a4dd8fda6b86ab4a0ff5a7bac9e139e204009bc51d2195a5c4da396a7ad3e34"},
     {"id":"EH-LINUX-05","path":"lessons/EH-LINUX-05.md","gitBlob":"2f4a6408a8458648cf56269c053bd3e2ddd1b351","sha256":"0e6f7d7518f7f9edd276cd6b5a092be6fe6eea2b383d1c598353c014c1a0b568"}
   ]
