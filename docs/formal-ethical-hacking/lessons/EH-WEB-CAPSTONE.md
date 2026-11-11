@@ -37,3 +37,71 @@ https://www.rfc-editor.org/rfc/rfc9110.html
 https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies
 https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie
 https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+## Expanded teaching: combine controls without combining their guarantees
+
+This supplement explains the existing paper capstone. Use the original fictional portal, policy and design claims A-F only. No proposed check is permission to execute a request, inspect an account or change a system. A completed analysis creates no grade, course access or award.
+
+### Start from the decision, not the control label
+
+The scenario concerns a subject performing an action on a resource in a particular context. Before discussing cookies, hidden buttons or identifiers, identify the protected operation and the fictional policy that governs it. Otherwise a report can sound technically sophisticated while never answering whether the operation should be allowed.
+
+Reuse the policy in EH-WEB-03 exactly. Do not replace it with your preferred real-world portal behavior or assume that every instructor has every course assignment. Keep public descriptions, student drafts, submitted records and instructor review actions distinct. Ownership and lifecycle state are not interchangeable attributes.
+
+A matrix row should identify the subject, action, resource, ownership/course context, state, applicable rule, decision and missing facts. The capstone asks for reasoning about the supplied policy, not a redesigned access-management system. If the scenario does not establish a needed fact, preserve that gap.
+
+### Separate a claim from its supporting material
+
+For each A-F statement, write what was actually supplied, the inference under discussion, what the described control could contribute and what remains unestablished. These statements are design claims, not authenticated runtime observations or captured HTTP exchanges.
+
+A useful evidence label says “the fictional claim states” or “the policy requires.” An inappropriate label says “the server returned” when no request ran. Avoid turning a developer's assertion into a measurement merely by placing it in an evidence table.
+
+Some design concerns can be identified from the stated limitation of a control. That does not establish an executed exploit, the number of affected records or an incident. Describe the concern at its actual evidence level and leave severity unassigned when the exercise supplies no justified basis for it.
+
+### Work a control interaction — FICTIONAL
+
+Consider A and F together. Hiding the Grade button can guide the interface, but it does not establish a check at the protected operation. F describes checks only at initial page load. The important question is whether later protected operations validate their own current subject, action, resource and context.
+
+A paper reviewer can identify that page-load-only checking is insufficient to establish per-operation enforcement. They cannot truthfully report that a student assigned a grade, because no grading request or result is supplied. The report must preserve both the design concern and the absence of execution evidence.
+
+The proposed future evidence category is a scoped demonstration of enforcement at the relevant operation under explicit test identities and policy. This is a description for review, not an instruction to create accounts, discover routes or try the academy's Grade control.
+
+### Do not turn complementary controls into substitutes
+
+B's cookie flags address different aspects of cookie handling. They do not establish token unpredictability, server-side session expiry, logout invalidation or the right to read a particular submission. The original claim is hypothetical; it does not prove that a browser accepted or transmitted a cookie.
+
+D's random-looking identifiers do not establish actual randomness or authorization. Even a genuinely difficult-to-guess identifier would not replace checking the requester against the resource. Avoid claiming that a protected object was accessed merely because the naming design is incomplete.
+
+E describes client-side cookie removal but leaves server acceptance unspecified. The justified conclusion is that server-side invalidation has not been established by the supplied description. It is not a supplied fact that the old identifier remains valid. Keep that distinction from the separate case pack that explicitly provides such a fictional server fact.
+
+### Read HTTP conclusions at the right level
+
+C says that every successful HTTP response proves permission. That inference conflates a protocol result with a policy decision. Earlier fictional evidence already shows why status, body and authoritative context require separate interpretation.
+
+A successful transfer could contain a denial message, allowed content or prohibited content, depending on the supplied record. In this capstone C supplies no actual response body or permission-decision record. Do not borrow an unrelated example's body and present it as observed here.
+
+The same care applies to denial statuses. A status label alone is not a complete proof of protection if protected content is present elsewhere in the supplied response. Conversely, a status alone does not prove a disclosure. Explain what the actual scenario provides rather than filling gaps with a convenient transcript.
+
+### Make a paper verification plan reviewable
+
+For each unresolved concern, name the property to verify, necessary authorization, explicit test subject/resource context, minimal evidence category and stop condition. Keep it conditional: a future test would need a reviewed fixture and approved scope before any execution.
+
+Do not specify additional hosts, guessed object identifiers, real credentials or a series of retries. If the property requires facts absent from the scenario, state the clarification needed first. A plan that cannot distinguish permitted data from protected data is not ready for execution.
+
+Avoid a generic instruction to “test everything.” For example, server logout invalidation needs lifecycle evidence; a hidden-control concern needs enforcement evidence; a cookie declaration needs browser-context evidence if acceptance is being assessed. Each question needs its own observations rather than one universal screenshot.
+
+### Write a conclusion that retains uncertainty
+
+Organize the short report around the applicable policy, the most important supplied design limitations, the evidence not supplied and the conditional verification needs. Use clear distinctions: policy-derived decision, stated design concern, unresolved implementation question and unperformed test.
+
+Do not treat an unresolved question as an excuse to weaken the policy or authorize more access. Equally, do not describe every missing fact as a confirmed failure. The exercise rewards a coherent explanation of what follows from the supplied facts, not a dramatic story.
+
+### Formative questions with explained answers
+
+1. Does A prove either successful unauthorized grading or secure grading? No. It describes interface presentation without a supplied operation result.
+2. Does E prove the old session is still accepted? No. Server-side behavior is expressly unspecified in this capstone.
+3. Can B's flags establish object ownership checks? No. Cookie handling and resource permission are different controls.
+4. Can a paper verification proposal be executed immediately? No. It remains conditional on separate reviewed authorization and setup.
+5. Should the report invent a transcript to demonstrate C's mistake? No. Explain the inference error using the actual supplied claim and clearly labelled teaching examples.
+
+Technical basis: OWASP Authorization Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html , and the existing HTTP and cookie lessons. No new fixture, browser/session behavior, access-control operation or complete learner workflow was executed for this supplement.

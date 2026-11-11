@@ -60,3 +60,71 @@ https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Patterns_Cheat_Shee
 https://devguide.owasp.org/en/04-design/02-web-app-checklist/07-access-controls/
 
 See OFFLINE-AUTHORIZATION-VALIDATION.md for the limited local execution record.
+
+## Expanded teaching: repair the rule, not the test result
+
+This supplement stays inside the original disposable local authorization exercise. The published starter remains deliberately defective. Only the existing lesson's permitted local copies and optional reviewed workshop are in scope; no production import, account, database or HTTP operation is introduced.
+
+### Map the policy into separate conditions
+
+The function returns a Boolean for supplied in-memory records. It does not authenticate those records or retrieve a submission. Treat Subject and Submission as trusted teaching inputs, not as evidence of a real identity or resource owner.
+
+Read the early denial first: an absent subject or a state outside the known draft/submitted set is rejected. Next read the instructor branch, which requires the read action and the assigned course. Finally read the student branch, which requires a listed student action, course membership and draft state.
+
+Compare that last branch with the written student policy. It does not yet establish that the resource's owner matches the subject. A condition can be individually sensible while the conjunction is incomplete. This is why checking only for a student role and an enrolled course leaves the ownership boundary unresolved.
+
+### Trace the missing distinction — static prediction
+
+The existing ALICE and BOB teaching records have the same role and course but different subject identifiers. DRAFT belongs to ALICE's identifier. In the unmodified student branch, the checked role, action, course and state can therefore be identical for owner and nonowner.
+
+This predicts why the starter may permit BOB's read and edit when the test policy expects denial. It is a source-reading prediction, not your guest execution result. Run only the original bounded local procedure and keep the real output separate from this explanation.
+
+A correct repair makes the student decision depend on the ownership relationship as well as the existing allowed action, enrollment and draft conditions. Compare the subject's identifier with the resource's owner attribute; do not hard-code the displayed ALICE or BOB labels into the decision.
+
+### Preserve legitimate work while closing the gap
+
+Returning False for everything eliminates this one unwanted allow but also rejects the legitimate owner and assigned-instructor examples. That is not policy compliance. Returning True preserves legitimate work while discarding denial boundaries. Both shortcuts avoid the actual reasoning task.
+
+An ownership comparison must not accidentally become a global requirement for the instructor branch. The fixture permits assigned instructors to read submissions they do not own. Likewise, adding ownership does not waive the student's draft-only rule or grant edit/delete actions to instructors.
+
+Keep the repair narrow enough to explain in terms of the written policy. A minimal diff helps the reviewer connect a changed condition to its intended effect. Small size is not proof of correctness, but a large unrelated rewrite makes causal explanation and regression review harder.
+
+### Predict before rerunning the unchanged expectations
+
+Use the existing test names to connect each observation to a policy boundary. The original suite contains one method with twelve subtest examples, not twelve independent methods. A failed subtest can identify a specific scenario while the summary still reports one test method.
+
+Do not change expected values to agree with the defective function. The purpose of the test is to compare implementation with policy, not redefine policy around observed output. If the written rule itself seems ambiguous, record that question rather than silently changing the exercise.
+
+The linked optional workshop adds its own reviewed checks and counterexample activity. This supplement neither replaces it nor introduces a new mutation experiment. Preserve the original requirement to design the additional policy-derived cases yourself; optional visible examples do not cancel that work.
+
+### Interpret failures before changing logic
+
+An assertion failure means the test compared an actual result with an expectation and they did not agree. A failed import, missing Python interpreter or syntax/indentation problem can prevent the intended decision from being tested at all. These are different blockers.
+
+If an edit creates a syntax error, restore a valid local teaching copy and inspect the change within the approved procedure. Do not install packages, run a repository-wide installer or change the guest network to solve a problem that is actually in the local file.
+
+When a test appears unexpectedly green, inspect whether the named suite actually ran and whether expectations were preserved. A successful command that ran no relevant cases does not establish the intended repair. Record real counts honestly if your added cases change them.
+
+### Design cases from the boundaries, not the names
+
+Ask which policy dimension changes: ownership, action, course, lifecycle state or subject role. Hold the other relevant facts steady when explaining why a particular distinction matters. A same-course nonowner is important because a course-only check cannot distinguish that record from the permitted owner example.
+
+The required instructor-edit, instructor-submitted-read and owner-submitted-read cases probe different boundaries. Their expected decisions follow from this lesson's deliberately narrow policy, not an assumption that an instructor can do everything or that every owner can read every state.
+
+Tests with renamed fictional identities can expose dependence on a particular demonstration label, but passing them does not prove the implementation never hard-codes anything. Explain both what the case challenges and what remains outside its coverage.
+
+### Separate decision testing from enforcement testing
+
+A Boolean True is not a real file or database read. A Boolean False does not prove that a web handler checked it before releasing data. The model has no HTTP handler, authenticated session or data-access layer, so those enforcement claims cannot follow from its passing suite.
+
+The useful learning result is narrower: the reviewed local function agrees with the tested policy examples after the stated change. Preserve that boundary when describing the repair in a report. Do not report that another learner's data was retrieved or that an academy vulnerability was exploited.
+
+### Formative questions with explained answers
+
+1. Why do owner and nonowner predictions coincide in the starter? The student branch lacks the ownership condition while the other relevant fields can match.
+2. Why is deny-all not an adequate repair? It breaks explicitly permitted owner and instructor work.
+3. Why not require ownership for every role? Assigned instructors have a different permitted read rule under this fixture's policy.
+4. Does an import error reproduce the ownership defect? No. It does not establish that the intended decision was evaluated.
+5. What does a passing suite leave unproven? Authentication, HTTP enforcement, database isolation, untested inputs and complete policy coverage.
+
+Technical basis: Python unittest documentation, https://docs.python.org/3/library/unittest.html , and the original fixture policy. This supplement adds no command, changes no fixture or test expectation, and claims no new learner execution, supported-platform reproduction or assessor calibration.
