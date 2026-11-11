@@ -51,3 +51,63 @@ https://docs.python.org/3/library/html.html
 https://docs.python.org/3/library/html.parser.html
 
 See OFFLINE-HTML-VALIDATION.md for the local author-check record.
+
+## Expanded teaching: encode once, at the boundary where text becomes HTML
+
+This supplement stays inside the original disposable fixture. It adds no browser, server, network request, script execution or active payload. Predictions below come from reading the starter source and are not your execution results.
+
+### Follow one value from source to parser
+
+The starter function returns a fixed opening paragraph tag, then the supplied text, then a fixed closing tag. Draw three boxes: the original text, the assembled HTML source and the parser's observed events. The invariant is that the parser sees exactly one paragraph element and that the text it reports equals the original input.
+
+The function has no step that distinguishes characters meant as text from characters HTML treats as syntax. Python's html.escape converts the ampersand, less-than and greater-than characters, and by default also the double and single quote characters, into character references. For element content the first three matter most; the quote conversion is harmless there and becomes relevant when a value sits in a quoted attribute.
+
+### Why entity-like text is a separate boundary
+
+An input that already looks like a character reference is still just text to the caller who supplied it. If it is passed through unchanged, an HTML parser may interpret it as a reference and report a different character than the original. The visible failure then changes the literal text rather than the element structure.
+
+Encoding the ampersand first and then the rest produces source that parses back to the original sequence of characters. This is why decoding input before output can undo the boundary: the caller's text becomes parser input again. Apply encoding once, at the point of output, and not as a hidden transformation earlier in the data path. Encoding twice would display the reference text literally, which is a different defect: legitimate data is changed.
+
+### Classify each failure by what it changed
+
+For every failing test, ask two questions. Did the parsed structure change, for example an unexpected element appearing between the paragraph tags? Did the reported text differ from the input while the structure stayed the same? Record both answers separately. A structure change and a text change need different explanations even though one encoding step can repair both.
+
+An import error, a missing interpreter or a syntax mistake in an edit means the intended decision was never evaluated. Do not describe such a result as reproduction of the defect. If an edit leaves the suite unexpectedly green, confirm that the named suite ran and that the expectations were not altered.
+
+### Why a blacklist loses the invariant
+
+Deleting angle brackets or removing selected tag names changes the data. A legitimate note that contains a comparison written with those characters would be silently altered, and the test that expects the original text would fail for a different reason. The repair must preserve the value, not guess which values are dangerous.
+
+Encoding and sanitization answer different questions. Encoding displays any text exactly as text. Sanitization is for the case where users are allowed to author a reviewed subset of markup, and it requires a maintained sanitizer and ongoing patching. This fixture implements neither a sanitizer nor a rich-text feature. OWASP's guidance is to prefer text-only sinks and context-specific encoding, and to use sanitization only when authored HTML is genuinely required.
+
+### What this tiny fix does not cover
+
+The repair is correct for text placed between ordinary element tags. It does not make the same function safe for a JavaScript string, a style block, a URL or an attribute whose meaning is code. Each is a different parsing context, and OWASP describes separate handling for each. A value moved into one of those contexts creates a new boundary that needs its own review.
+
+Framework auto-escaping reduces mistakes by encoding by default, but raw-HTML APIs and explicit trusted-markup wrappers can bypass it. The fixture has no framework, so its green result says nothing about an application's other output paths.
+
+### Read the claim levels
+
+The unexpected element in the starter is evidence that the model let text become structure. It is not evidence that script ran, that a session was exposed or that a production page was compromised. A cross-site scripting claim needs an execution context and observed behavior. Keep the report at the level the evidence supports.
+
+The parser observer is a teaching device. It records start tags, end tags and text; it is not a browser document model and does not reproduce every error-recovery rule. A passing observer test supports the invariant for the tested inputs only.
+
+### Independent cases, reasoned in advance
+
+Before running your own added cases, write the expected parsed text. For an input containing both literal ampersands and angle brackets, the repaired output should report the same characters in the same order. For an input that is already entity-like text, the repaired output should report the reference characters literally, not the character they would denote. If your prediction and the result differ, explain which assumption was wrong rather than changing the expectation.
+
+Keep every example inert and local. Do not add event handlers, script elements or external resources.
+
+### Bounded human-led AI review
+
+First write your own source-to-output diagram. If an approved assistant is available, provide only the tiny synthetic function and a description of the tests. Ask it to name which characters are structure, which are text and what the repair leaves unaddressed. Reject any answer that proposes active payloads, browser experiments or a blacklist. Manual review serves the same purpose. Do not supply real pages, logs or user content.
+
+### Formative questions with explained answers
+
+1. Does an unexpected paragraph-internal element prove script execution? No. It shows a structure change in the model.
+2. Why not strip angle brackets? It destroys legitimate data and does not express the invariant.
+3. Why can decoding before output reintroduce the problem? The decoded text becomes parser input again.
+4. Is html.escape a universal encoder? No. It fits element text; other contexts need their own handling.
+5. Does a green observer test prove the application is safe? No. It supports only the tested inputs at this boundary.
+
+Technical basis: Python html documentation, https://docs.python.org/3/library/html.html , and the OWASP Cross Site Scripting Prevention Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html . No new test run, browser behavior or learner-platform reproduction is claimed.
