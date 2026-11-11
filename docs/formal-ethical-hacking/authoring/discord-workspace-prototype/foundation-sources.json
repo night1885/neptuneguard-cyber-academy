@@ -3,7 +3,7 @@
   "status": "draft-source-review",
   "runtimeIntegration": false,
   "publishable": false,
-  "sourceCommit": "797e7069144ef27e96e1cb64684a82ddb72f8043",
+  "sourceCommit": "e011fe61b7a9480b2d18c5d9a896e8feab23bfb7",
   "entries": [
     {"id":"EH-LAB-00","path":"lessons/EH-LAB-00.md","gitBlob":"5fdf61169a3d8c3fc8504c470e57e54b9cc011b7","sha256":"018ce70c7fad2de0c0655deeabb2385d5ae4a8d27fcff556b65310bb340cd02d"},
     {"id":"EH-LAB-01","path":"lessons/EH-LAB-01.md","gitBlob":"e324c3717fe0822f2e0ca4679df8a61318ecf424","sha256":"ae13647375927c068ccbaa200f5e19349e6d253b7da515d04ad5ac29e0fbb0ac"},
@@ -16,7 +16,7 @@
     {"id":"EH-LINUX-03","path":"lessons/EH-LINUX-03.md","gitBlob":"604fa0ede14b1ad3b27a30f0b60897cb1822db76","sha256":"aec1e1fa062970a42601c52b895ff3deb5c6f14cda28ff90f022bbe7c84734b3"},
     {"id":"EH-LINUX-04","path":"lessons/EH-LINUX-04.md","gitBlob":"f0605728c8c35aa19f0b01b14234ef88885495b8","sha256":"9a4dd8fda6b86ab4a0ff5a7bac9e139e204009bc51d2195a5c4da396a7ad3e34"},
     {"id":"EH-LINUX-05","path":"lessons/EH-LINUX-05.md","gitBlob":"2f4a6408a8458648cf56269c053bd3e2ddd1b351","sha256":"0e6f7d7518f7f9edd276cd6b5a092be6fe6eea2b383d1c598353c014c1a0b568"},
-    {"id":"EH-NET-01","path":"lessons/EH-NET-01.md","gitBlob":"e6683a93bd99a5e3ac2f4807274ca14c072b20da","sha256":"f1add08409b34089b099dc77dd9ab4f7c813ac949e77e7ba100844ed4d60ebf9"},
-    {"id":"EH-NET-02","path":"lessons/EH-NET-02.md","gitBlob":"f0b7358e67a5347fd5d93a44f89e4ed47849aee4","sha256":"e9aa16a7399a71f22d2de20b59dfc114836ce6f02c2d527e6c767400efb05f1f"}
+    {"id":"EH-NET-01","path":"lessons/EH-NET-01.md","gitBlob":"13b169770d44d74ba39ef02903a14d5de3cef26d","sha256":"19df12fe49b6178816ca4479a181df1979f32ceb02fb5a9f5a594aa44c67d994"},
+    {"id":"EH-NET-02","path":"lessons/EH-NET-02.md","gitBlob":"5cfb1c43b0f59c9964f8d78c18976d8ac1f2fdcb","sha256":"9f236224ce00b4c0a6ae94049c9d7ef8e94e94f1a82b12f434dc66170a0096e6"}
   ]
 }
