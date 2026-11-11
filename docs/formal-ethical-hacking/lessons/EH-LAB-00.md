@@ -69,3 +69,67 @@ EH-LAB-01 requires installation permission, an actual reviewed supported route a
 The deployed owner-only Discord inspector supports draft review; it is not the finished learner workspace or evidence-submission service. Intended learner navigation remains private and button-driven without slash-command or modal navigation. Commands taught within authorized lessons are subject matter, not interface navigation.
 
 Publication remains blocked on actual policy/support, privacy/retention, supported route reproduction, licensing/provisioning, assessment calibration, accessibility and reviewed learner authorization/delivery. Draft publication metadata remains unchanged. This file authorizes no activation, learner decision, spending or production change.
+
+## Expanded teaching: authorization and readiness reasoning
+
+The sections below are original formative self-study material. Fictional cases and resource figures are teaching examples, not execution evidence, course minimums or testing permission. Answer explanations are not assessor-only marking or calibration material.
+
+### Why professional testing starts with a decision, not a tool
+
+An installed tool answers “Can this computer attempt an operation?” Authorization answers “May this person perform this operation against this system under these conditions?” These questions are independent. A learner can possess a scanner without permission to scan, and an authorized tester can lack a compatible workstation. Neither problem is solved by ignoring the other.
+
+Rules of engagement define the activities and constraints before testing. A useful scope statement connects the actor, identified asset, allowed action, time window, evidence handling and stop procedure. A target address alone is not a complete scope statement. A login account is not permission to test every service that account can reach.
+
+Use a five-part reasoning habit throughout the course:
+
+1. Observation: what did I actually see, and on which machine?
+2. Meaning: what narrow conclusion follows?
+3. Limitation: what does this observation not establish?
+4. Decision: continue within scope, clarify, or stop and escalate?
+5. Next permitted action: what can I do without expanding authority?
+
+This makes uncertainty visible instead of disguising it as confidence.
+
+### Worked case: the helpful substitution
+
+Fictional brief: a named learner may inspect only the home page of an identified clean practice peer, using GET / or HEAD / during a specified exercise window. Scanning, credential testing and external targets are excluded. The peer fails to start. A search engine suggests a public demonstration website.
+
+Prediction: is using the demonstration website an acceptable recovery step?
+
+Reasoning: the objective is to learn request interpretation, but the allowed target remains the identified peer. Similar educational purpose does not transfer permission. The failed startup is a setup problem, not a scope amendment. The learner should record the minimal startup problem and request the approved recovery path. No request to the public substitute is part of this exercise.
+
+Counterfactual: an explicit revised brief from the responsible authority could name a replacement and its exact limits. That would be new authorization; a search result or another learner's suggestion is not.
+
+### Worked capacity exercise: estimates are not measurements
+
+Fictional inventory: a host has 16 GiB installed memory. During normal work, the learner observes about 9 GiB available. A proposed plan assigns 4 GiB to each of two simultaneous guests.
+
+The two guest assignments total 8 GiB. The observation leaves roughly 1 GiB relative to that proposed allocation before considering additional host/hypervisor overhead and changing workloads. This is not proof the plan is usable: available memory varies, the observation method matters, and allocating guest memory does not measure the resulting performance. The correct conclusion is “a proposed allocation requiring validation,” not “a supported minimum.” Do not use these fictional values as a purchasing recommendation.
+
+Storage needs a separate budget. A virtual disk's configured maximum is not its present footprint. Growth, snapshots, installation media and backups can consume additional space. Record the intended volume and genuinely observed free space without listing unrelated files. A memory estimate cannot establish storage sufficiency.
+
+### Formative exercises and explained answers
+
+A. A card opens and shows the lesson. What does that prove?
+Answer: it shows that this reading interaction succeeded. It does not establish installation approval, ownership of a target, isolation or permission to run practical tasks.
+
+B. A machine displays “64-bit operating system.” Is that enough to select an x86_64 guest image?
+Answer: no. The architecture must be established; a generic bitness label does not distinguish the relevant instruction-set families. Record the unresolved architecture rather than guessing.
+
+C. A screenshot proves the installed-memory amount but includes a serial number and personal filenames. What is the better evidence?
+Answer: a minimal transcription of relevant values or appropriately redacted evidence through the already approved private process. More captured information is not automatically better evidence.
+
+D. Unexpected sensitive data appears during an otherwise permitted activity. Should the learner investigate it to make a stronger report?
+Answer: not unless that investigation is authorized. Stop the affected activity and follow the actual incident process, retaining only necessary observations. Curiosity does not enlarge scope.
+
+### Write a useful blocker
+
+Weak: “The lab doesn't work.”
+Better fictional example: “On the approved host, the identified peer did not start. No external replacement was used. I recorded the non-sensitive error category. The next needed decision is the approved recovery route.”
+
+A blocker should let someone resolve the missing decision without receiving credentials, a full diagnostic bundle or a fabricated success claim.
+
+### Additional reading
+
+NIST, Rules of Engagement: https://csrc.nist.gov/glossary/term/Rules_of_Engagement
+NIST SP 800-115: https://csrc.nist.gov/pubs/sp/800/115/final
