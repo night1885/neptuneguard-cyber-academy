@@ -47,3 +47,59 @@ Use synthetic values only and the approved private evidence workflow. Formal gra
 
 Source: https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
 See FIELD-POLICY-VALIDATION.md for local author checks.
+
+## Expanded teaching: decide what may change before deciding what does change
+
+This supplement uses only the existing in-memory dictionary fixture. It adds no endpoint, database, schema experiment or new fixture code. The predictions come from reading the starter and are not your execution results.
+
+### Read the starter as a copy followed by a merge
+
+The starter makes a copy of the current record and then applies every supplied key and value to that copy. Two facts follow. The original dictionary is not modified, because the work happens on a copy. But the merge accepts any key, so a caller can replace a protected value or add a field that did not exist.
+
+Copying protects the source from mutation; it does not decide which fields are the caller's to change. Those are separate properties, and the fixture's tests check both. A repair that only improves copying would leave the protected-field problem untouched.
+
+### Turn the policy into a precise rule
+
+Write the editable set explicitly: title and body. Then restate each policy sentence as a testable condition. Every supplied key must belong to the set. A forbidden key is rejected even when its proposed value equals the current value, because the rule is about which fields a caller may address, not about whether the value changes. An empty update is allowed and returns a separate dictionary. A request mixing allowed and forbidden keys is rejected as a whole, with the original left unchanged.
+
+These are the fixture's rules, not a universal API contract. OWASP describes the underlying idea: restrict bindable fields with dedicated input objects or explicit allow-lists, and treat a block-list as fragile because a new or overlooked sensitive field remains writable.
+
+### Why an allow-list differs from a block-list in practice
+
+Consider a record that later gains an internal field. Under a block-list that names owner_id, state and grade, the new field is writable until someone remembers to add it. Under an allow-list of title and body, the new field is rejected by default. The difference is the default outcome for the unknown case, which is the case that matters over time.
+
+The same reasoning explains why silently discarding forbidden keys contradicts this exercise. Discarding turns a rejected request into a partially applied one and hides the attempt. The fixture's policy chooses whole-request rejection with a clear error, so your repair should do exactly that. A different application might choose another contract, but it must be specified and tested, not guessed.
+
+### Predict the visible behavior
+
+Before running, classify the supplied tests. A title-only change should succeed and leave the original untouched. A body-only change likewise. An empty change should return an equal, separate dictionary. A request naming a protected field should raise ValueError, including when the value matches the current one. A request that adds an unknown field should be rejected. A mixed request should be rejected and leave the original unchanged.
+
+Explain why the mixed-request outcome is described as atomic in this model: no partial result escapes. That statement concerns this in-memory operation. It says nothing about database transactions, concurrent updates or rollback in a real system.
+
+### Separate four different questions
+
+A real update involves several independent checks, and this fixture exercises only one. Is the field name allowed? Is the value acceptable in type, length and content? Is this caller authorized to change this particular record? Is the change persisted correctly? A correct allow-list answers the first question only.
+
+Hold the second and third questions apart explicitly. A request that changes only title can still be unauthorized if it targets another learner's record, which is the lesson EH-WEB-04 taught. OWASP notes that field restrictions do not replace authorization for the requested object and operation. Do not combine this mapper with the earlier policy fixture and describe the result as a secure API.
+
+### Mind the limits of the copy
+
+The fixture's values are scalars, so a shallow copy is enough. If a value were a nested mutable object, the copy would share it with the original and a later change could alter both. That situation is outside the exercise, but it is a good reminder that independence of copies depends on the data. Flat, well-formed dictionaries are an explicit assumption here.
+
+### Independent cases, reasoned first
+
+For the title-only case, state the expected returned dictionary and that the source stays equal to its starting value. For the mixed case, state the exception and that the source is unchanged. Then answer on paper why a correctly allow-listed update to another student's record would still be wrong, and which control would stop it.
+
+### Bounded human-led AI review
+
+Write your own list of editable fields first. If an approved assistant is available, provide only the tiny synthetic function and the field policy, and ask it to identify the default behavior for an unknown key and what the repair leaves unaddressed. Reject suggestions to add a schema you did not specify, to drop keys silently or to attach the function to a service. Manual review satisfies the same objective, and no real records should be supplied.
+
+### Formative questions with explained answers
+
+1. Does copying the dictionary solve mass assignment? No. It protects the source but accepts every key.
+2. Why reject a forbidden key whose value is unchanged? The rule governs which fields may be addressed.
+3. Why is an allow-list safer than a block-list? Unknown fields are denied by default.
+4. Does the allow-list authorize the update? No. Object-level authorization is separate.
+5. What does atomic mean here? No partial result escapes this in-memory operation, and nothing more.
+
+Technical basis: OWASP Mass Assignment Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html . No new test run, API behavior, learner-platform reproduction or assessor calibration is claimed by this supplement.
