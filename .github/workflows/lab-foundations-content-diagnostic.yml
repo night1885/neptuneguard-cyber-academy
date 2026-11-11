@@ -1,0 +1,124 @@
+name: Lab foundations content diagnostic
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/lab-foundations-content-diagnostic.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    if: github.head_ref == 'content/ethical-hacking-lab-foundations'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lab00: ${{ steps.metrics.outputs.lab00 }}
+      lab01: ${{ steps.metrics.outputs.lab01 }}
+      lab02: ${{ steps.metrics.outputs.lab02 }}
+      totals: ${{ steps.metrics.outputs.totals }}
+      failure20: ${{ steps.logs.outputs.failure20 }}
+      failure22: ${{ steps.logs.outputs.failure22 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Measure exact lesson bytes and unchanged source prefixes
+        id: metrics
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { execFileSync } from 'node:child_process';
+          import { splitReviewSource } from './docs/formal-ethical-hacking/authoring/discord-workspace-prototype/source-readings.mjs';
+          const root = 'docs/formal-ethical-hacking/';
+          const base = '119581eb3e38157111cde55bf446bb758712048c';
+          const out = (key, value) => appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          let deltaBytes = 0, deltaPages = 0;
+          for (const suffix of ['00', '01', '02']) {
+            const id = `EH-LAB-${suffix}`, path = root + `lessons/${id}.md`;
+            const bytes = readFileSync(path);
+            const original = execFileSync('git', ['show', `${base}:${path}`]);
+            if (!bytes.subarray(0, original.length).equals(original)) throw new Error(`${id}: original prefix changed`);
+            const text = bytes.toString('utf8'), pages = splitReviewSource(text);
+            if (pages.map(page => page.raw).join('') !== text) throw new Error(`${id}: incomplete text`);
+            const oldPages = splitReviewSource(original.toString('utf8')).length;
+            deltaBytes += bytes.length - original.length;
+            deltaPages += pages.length - oldPages;
+            const blob = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+            const sha256 = createHash('sha256').update(bytes).digest('hex');
+            const summary = `${id} bytes=${bytes.length} pages=${pages.length} blob=${blob} sha256=${sha256} prefix=unchanged`;
+            console.log(summary); out(`lab${suffix}`, summary);
+          }
+          const totals = `deltaBytes=${deltaBytes} deltaPages=${deltaPages} threePages=${21 + deltaPages} threeViews=${68 + deltaPages} labBytes=${58398 + deltaBytes} labPages=${51 + deltaPages} labViews=${90 + deltaPages} foundationBytes=${66140 + deltaBytes} foundationPages=${58 + deltaPages} foundationViews=${95 + deltaPages}`;
+          console.log(totals); out('totals', totals);
+          NODE
+      - name: Retrieve bounded existing validation failure details
+        id: logs
+        if: ${{ !cancelled() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const clean = value => String(value).replace(/\x1b\[[0-9;]*m/g, '').replace(/postgres(?:ql)?:\/\/\S+/gi, '[redacted-db-url]').replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ' ');
+            for (const [key, id] of [['failure20', 130333004881], ['failure22', 130333004484]]) {
+              try {
+                const job = (await github.rest.actions.getJobForWorkflowRun({...context.repo, job_id: id})).data;
+                const step = (job.steps || []).find(item => item.conclusion === 'failure')?.name || job.conclusion;
+                const response = await github.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {...context.repo, job_id: id});
+                const text = typeof response.data === 'string' ? response.data : Buffer.isBuffer(response.data) ? response.data.toString('utf8') : '';
+                const hits = text.split(/\r?\n/).filter(line => /not ok [0-9]+|Source identity mismatch|AssertionError|Source line exceeds|error:|Error:|Expected values|actual:|expected:/.test(line) && !/token|password|secret|DATABASE_URL|connectionString/i.test(line)).slice(0, 8).map(line => clean(line).replace(/^\d{4}-\d\d-\d\dT\S+\s*/, '').slice(0, 220));
+                for (const hit of hits) core.info(hit);
+                core.setOutput(key, clean(`${step}: ${hits.slice(0, 2).join(' | ') || 'no matching log lines'}`).slice(0, 220));
+              } catch (error) {
+                core.setOutput(key, 'Failure details unavailable; inspect workflow logs');
+                core.warning('Could not retrieve the bounded validation summary');
+              }
+            }
+  lab00-context:
+    needs: inspect
+    if: ${{ always() }}
+    name: '${{ needs.inspect.outputs.lab00 || "LAB00 metrics unavailable" }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Informational source metrics; not a passing course test.'
+  lab01-context:
+    needs: inspect
+    if: ${{ always() }}
+    name: '${{ needs.inspect.outputs.lab01 || "LAB01 metrics unavailable" }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Informational source metrics; not a passing course test.'
+  lab02-context:
+    needs: inspect
+    if: ${{ always() }}
+    name: '${{ needs.inspect.outputs.lab02 || "LAB02 metrics unavailable" }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Informational source metrics; not a passing course test.'
+  totals-context:
+    needs: inspect
+    if: ${{ always() }}
+    name: '${{ needs.inspect.outputs.totals || "Totals unavailable" }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Informational pagination deltas; existing validation failures remain failures.'
+  validation20-context:
+    needs: inspect
+    if: ${{ always() }}
+    name: 'Validation20: ${{ needs.inspect.outputs.failure20 || "Summary unavailable" }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Existing validation failure summary; not a test rerun.'
+  validation22-context:
+    needs: inspect
+    if: ${{ always() }}
+    name: 'Validation22: ${{ needs.inspect.outputs.failure22 || "Summary unavailable" }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Existing validation failure summary; not a test rerun.'
