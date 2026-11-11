@@ -15,7 +15,7 @@ export function createReadingCatalogueRenderer({ courseId, catalogue, labels, ma
       readingPages += chunks.length;
     } else cursors.set(total++, Object.freeze({ lesson, index: 0, chunk: null, count: 1 }));
   });
-  if (total > 128) throw new Error('Reading catalogue exceeds bounded navigation');
+  if (total > 160) throw new Error('Reading catalogue exceeds bounded navigation');
   return Object.freeze({ pageCount: total, readingLessonCount: Object.keys(readings).length, readingPageCount: readingPages, render(request) {
     if (!request || Object.keys(request).sort().join(',') !== 'courseId,page' || request.courseId !== courseId ||
         !Number.isInteger(request.page) || request.page < 0 || request.page >= total) throw new Error('Reading unavailable');
