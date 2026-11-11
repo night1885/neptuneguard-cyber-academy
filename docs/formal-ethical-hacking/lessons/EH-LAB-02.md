@@ -109,3 +109,75 @@ https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/Security.html
 https://ubuntu.com/tutorials/how-to-verify-ubuntu
 
 No ISO download, signing-key authentication, GnuPG/hash invocation, host installation, guest boot, isolation check or snapshot restore was executed while authoring. These are instructions awaiting exact-route reproduction, not fabricated evidence.
+
+## Expanded teaching: trust, isolation and baseline interpretation
+
+The sections below are original formative self-study material. Fictional cases are not execution evidence or practical permission. Answer explanations are not assessor-only marking or calibration material.
+
+### Understand the trust chain before running the commands
+
+The ISO is the file to be installed. The checksum file records expected digests. The detached signature authenticates the checksum file under a signing key. The signing-key identity must itself be established through the approved verification route. These are related checks, not interchangeable names for one check. Ubuntu's verification guide separates signature verification from comparing the ISO checksum.
+
+The reasoning chain is:
+
+established publisher key identity -> valid signature over the exact checksum file -> exact image entry in that file -> full digest match for the downloaded image.
+
+If a link is missing, write the missing link. Do not replace it with a plausible-looking success word. A checksum match can demonstrate consistency with a supplied list while leaving the list's origin unresolved.
+
+### Worked comparison: three different failures
+
+Case A: the image digest matches a checksum copied from an unverified discussion post. Conclusion: consistency with that posted value, not an established publisher-authenticity decision.
+
+Case B: the signature validates under a key whose identity has not been independently established. Conclusion: the signature/key relationship is evidence, but attribution to the intended publisher remains unresolved.
+
+Case C: key identity and signature verification are established, but the exact image's complete digest differs. Conclusion: the selected bytes do not match the authenticated entry; do not boot the image. Use the approved acquisition recovery procedure.
+
+None of these cases is repaired by copying sample output from documentation. The Ubuntu page includes historical example filenames and keys; these examples must not be reported as this learner's current results.
+
+### Isolation is a configuration and evidence question
+
+The existing route calls for every guest adapter to be disabled during offline installation, with unnecessary integrations disabled. “No website opened” is weaker evidence: a website can fail because of DNS, routing, server availability or another problem. Failure of one attempted connection does not inventory every path.
+
+Oracle documents NAT as the default networking mode and describes its network access; it is not equivalent to disabled networking. Shared clipboard and shared folders are additional data paths that must be considered separately from adapters.
+
+Fictional pre-boot review: adapter 1 is disabled, but adapter 2 is still configured for NAT. The VM does not match the offline plan. Do not boot and then use a failed ping as a substitute for the required settings review. Follow the approved powered-off configuration procedure and inspect all slots again.
+
+This lesson does not introduce an active network-isolation test or authorize external probes. Later two-VM work remains in its existing place in the sequence.
+
+### Interpret a baseline without overstating it
+
+For each existing observation command, record the machine/context, output, immediate process status, meaning and limitation. A successful `uname -m` invocation in the guest concerns the guest kernel architecture, not proof of the physical host's identity. A successful `python3 --version` invocation demonstrates a reported version in that context, not compatibility with every later exercise.
+
+Fictional diagnostic sequence: a tool is missing, but a subsequent printing command succeeds. Reporting only the final status would conceal the earlier failure. Keep the observation and its immediately captured status together, as the original lesson demonstrates. Missing tooling is a provisioning issue, not automatic permission to reconnect the guest.
+
+### Snapshot existence versus recovery capability
+
+A baseline snapshot provides a point to return toward, subject to the virtualization system's storage and state dependencies. It is not a separately stored backup simply because it appears as another item in the interface. NIST explains that storage-efficient snapshots may depend on their source data and become unusable when it is unavailable.
+
+Scenario: the VM and its snapshots reside on the same failed physical volume. Can the learner assume the snapshot survives? No. The existence of the snapshot did not establish independent recovery from that failure.
+
+Scenario: a snapshot restores successfully after a later software update. Is the guest necessarily current? No. Returning to earlier state can also return earlier software/configuration. Record what was restored and re-evaluate the relevant baseline through the approved process. This supplement does not move the controlled restoration exercise out of its later lesson.
+
+### Formative exercises and explained answers
+
+A. The installer asks for an unexpected online account. What next?
+Answer: stop and resolve the approved offline/provisioning route. Do not quietly enable NAT to complete a different installation path.
+
+B. Signature verification succeeds, but the ISO filename is for a different architecture. May it be installed?
+Answer: authenticity does not establish compatibility. Resolve the exact image/host/guest route first.
+
+C. All adapters are disabled, but a personal host folder is shared. Is the intended boundary satisfied?
+Answer: no. The intended baseline also excludes unnecessary host integrations. Network configuration alone does not review the host-file path.
+
+D. What is an honest end-of-lesson statement?
+Answer: describe the genuinely performed acquisition checks, powered-off settings, local boot observations and baseline creation; list unresolved points. Do not claim a tested restore, a second VM or permission for practical testing.
+
+### Human judgment and AI-assisted review
+
+Optional paper-only exercise: ask an assistant to identify assumptions in a fictional setup plan containing no real addresses, personal data, credentials or host reports. Compare its answer against the exact brief and publisher documentation. The assistant is a source of hypotheses, not an authority to approve installation, change architecture or expand scope. A useful response names missing evidence; an unsafe response invents compatibility or suggests disabling controls to make the plan work. No command execution, real-system upload or external testing is part of this exercise.
+
+### Additional reading
+
+Canonical, How to verify your Ubuntu download: https://ubuntu.com/tutorials/how-to-verify-ubuntu . Historical examples are not a current approved route.
+Oracle VirtualBox 7.2 Security Guide: https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/Security.html
+NIST SP 800-209, Security Guidelines for Storage Infrastructure: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-209.pdf

@@ -81,3 +81,61 @@ https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/installation.html
 https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/Security.html
 
 Documentation was inspected; actual installations, measured allocations, original screenshots, licensing/support decisions and recovery remain unperformed. No platform certification or command execution is claimed.
+
+## Expanded teaching: installation reasoning and diagnosis
+
+The sections below are original formative self-study material. Fictional cases are not execution evidence or installation permission. Answer explanations are not assessor-only marking or calibration material.
+
+### A layered mental model
+
+Think of the setup as layers: physical hardware; host operating system; hypervisor application and its required host components; guest definition; guest operating system; exercise tools. A success at one layer does not certify the layers above it.
+
+Opening the manager demonstrates that the application opened in that context. It does not prove that a guest can start, that its architecture is supported, that a second guest fits, or that its networking matches the exercise. The existing lesson deliberately ends before guest construction so these claims stay separate.
+
+Oracle distinguishes installation privileges from normal execution: installation needs appropriate system authority, while VirtualBox binaries should ordinarily run as a regular user. An installation prompt is not a reason to run the manager permanently with elevated privileges.
+
+### Component choices are boundary choices
+
+Optional features are not just convenience checkboxes. Oracle documents separate host API bindings and host drivers for features such as USB and additional networking modes. A requirement for Python inside the Linux guest is not automatically a requirement for Python API bindings on the host.
+
+For each proposed component, answer: what lesson requires it; on which side of the boundary does it run; what access does it create; and what approved route covers its installation? If those answers are missing, do not add it merely to imitate a video.
+
+### Worked case: “Enable everything so nothing breaks”
+
+A fictional learner selects every installer component because a tutorial says it prevents later problems. The current approved route names only a narrower component set.
+
+Prediction: does a more complete installation necessarily produce a better lab?
+
+Explanation: not necessarily. Additional components may create additional host integrations and maintenance obligations without serving the current objective. Follow the reviewed component list. If a later task genuinely requires another component, make that requirement explicit rather than silently changing the baseline.
+
+This is not an instruction to uninstall arbitrary components or rewrite the host configuration. Record differences and use the authorized support route.
+
+### Troubleshooting by layer
+
+| Symptom | Narrow supported conclusion | Not established | Next safe step |
+|---|---|---|---|
+| Installer identity differs from the expected publisher | The acquisition/identity check is unresolved | That bypassing the warning is safe | Stop and verify through the approved source |
+| Manager opens | GUI application started | Guest drivers, compatibility or isolation | Record the endpoint; continue only through the reviewed next lesson |
+| Linux manager opens but a required module reports failure | GUI startup and module readiness differ | That arbitrary root repair commands are justified | Record minimal error and use reviewed package/signing support |
+| Host connectivity changes during installation | A host networking change may be relevant | Which driver or adapter caused it | Follow actual support/recovery instructions; avoid random changes |
+| Installer and guest image architectures differ | The proposed route needs review | That emulation is supported | Stop and obtain an explicit compatible route |
+
+### Formative exercises and explained answers
+
+A. Why not add shared folders now to make file transfer easier?
+Answer: they introduce a host-to-guest data path. Convenience does not establish a requirement or permission. Oracle notes that shared folders expose host files to the guest and potentially remote users connected to it.
+
+B. Does an installed Extension Pack prove Guest Additions are installed?
+Answer: no. They are distinct components, as the existing lesson explains. Record the exact component and location rather than using “extras installed” as evidence.
+
+C. What makes an installation result reproducible?
+Answer: recording the exact host/architecture, installer version and source, verification outcome, selected components and actual endpoint. Reproducibility still requires another real execution; a detailed record alone is not a hardware test.
+
+### A professional handoff
+
+Write three short statements: “Observed,” “Still unproved,” and “Next reviewed step.” Keep each tied to the layer it concerns. Example: “Observed: manager opened as a normal user. Still unproved: guest boot and isolation. Next reviewed step: construct the approved powered-off guest definition.” Do not report the whole lab as ready at the end of an installation-only lesson.
+
+### Additional reading
+
+Oracle VirtualBox 7.2 Security Guide: https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/Security.html
+Oracle VirtualBox 7.2 Installation: https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/installation.html
