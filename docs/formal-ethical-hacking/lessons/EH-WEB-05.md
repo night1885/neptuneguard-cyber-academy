@@ -52,3 +52,73 @@ https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sh
 Python's sqlite3 module documentation: https://docs.python.org/3/library/sqlite3.html
 
 See OFFLINE-SQL-VALIDATION.md for the limited author execution record.
+
+## Expanded teaching: keep the SQL grammar fixed while values change
+
+This supplement uses only the existing in-memory SQLite fixture and supplied teaching inputs. It adds no payload, database target, schema experiment, network activity or write operation. The local repair remains in the originally permitted find_notes function; the repository starter and test expectations stay unchanged.
+
+### Follow the actual data-to-code path
+
+The fixture's make_database helper connects to SQLite memory, creates the tiny notes table and inserts fixed synthetic rows. Its insert already uses placeholders. Therefore one safe operation in a file does not establish that every other query in that file is safe.
+
+The intentionally unsafe find_notes builds a SELECT by joining SQL text, the owner argument and more SQL text. SQLite receives that assembled text as the statement to parse. The boundary problem occurs before the returned rows are inspected: input intended as a value has been incorporated into the language's structure.
+
+Do not generalize the lesson into a claim that all string operations are unsafe. The specific problem is using untrusted value text to construct executable SQL grammar. The repair changes how the database API receives code and values, not whether Python ever handles strings.
+
+### Compare the supplied normal and edge cases
+
+The normal exact-owner test asks for one known synthetic owner and expects that owner's row. The unknown and empty-owner tests expect no matches. These normal outcomes are important: a repair that returns an empty list for every input would appear safe against extra-row disclosure while breaking legitimate retrieval.
+
+The apostrophe case uses the existing fictional owner O'Neil. That punctuation is part of a legitimate stored value. Rejecting every apostrophe is not an equivalent repair because it would remove the behavior the policy expects to preserve.
+
+The supplied logic-like test is different. In the intentionally concatenated query it can alter the WHERE meaning instead of remaining only an owner value. In the repaired lookup it should be treated as exactly that input string, for which the fixture contains no matching owner. Do not invent additional inputs or try it against another database.
+
+These are predicted outcomes grounded in the reviewed source and tests, not a transcript of your run. Preserve the actual baseline error or failed assertion when using the original local commands.
+
+### Read the difference between an error and a wrong result
+
+The quote test can produce a SQL syntax error in the starter, while the logic-like case can execute and return more rows than expected. A thrown error and an assertion about an incorrect row list are distinct observations. Neither is a login event, an external data disclosure or a remote exploit in this exercise.
+
+Python's unittest reports non-assertion exceptions as errors and failed expectations as failures. Both can make the suite unsuccessful, but they tell different stories about how far execution progressed. Preserve the names and categories rather than flattening them into “the command failed.”
+
+A failure before the intended query runs, such as a missing import, is a setup blocker rather than reproduction of either query-construction behavior. Explain which stage the evidence actually reaches before editing SQL logic.
+
+### Explain parameter binding precisely
+
+The intended repair keeps the statement structure fixed, places the unquoted value placeholder at the owner-value position and passes the value separately through the execute API. Do not place the placeholder inside SQL string quotes: then it is text in a literal rather than the value-binding position intended by the exercise.
+
+The parameter container also matters. In Python a one-item tuple requires its trailing comma; parentheses around one value alone do not create that tuple. A bare string is not the intended one-value parameter tuple. If a binding-count error occurs, inspect the parameter argument instead of reverting to interpolation.
+
+An f-string or concatenated value inserted before execute is still part of assembled SQL text. Using a database API does not automatically make that construction parameterized. The important distinction is whether the owner is supplied separately as a bound value.
+
+### Preserve exact-value behavior
+
+The repaired function should still return the known owner's expected row and no rows for the supplied unknown value. It should handle the apostrophe as data and keep the logic-like value from changing the statement's intended structure.
+
+Do not manually strip punctuation or transform every unfamiliar owner into a known identity merely to make selected expectations pass. Such changes alter the lookup semantics instead of demonstrating the intended code/data separation. Keep the visible expectations and explain any additional permitted safe edge case in terms of exact matching.
+
+No persistent storage, commits to a real database or network service is involved. Test setup creates the synthetic in-memory records, and the existing cleanup closes its connection. Do not change the connection target to a file or application database as a convenience.
+
+### Understand the boundary placeholders do not cover
+
+Value binding is not a general substitution system for SQL grammar. Table names, column names and sort directions are structural choices, not owner values. The original lesson explains fixed application-owned choices where such selection is needed; this fixture requires no dynamic identifiers.
+
+A query can also be correctly parameterized yet expose data to the wrong caller if the application lacks authorization. This function accepts an owner argument without authenticating the requester. Exact matching of another existing synthetic owner would be a lookup behavior, not proof that a caller is permitted to receive that owner's records.
+
+Keep the authorization question from EH-WEB-04 separate from query construction. Neither exercise turns its teaching function into production enforcement, and this supplement does not combine or deploy them into an application.
+
+### Bounded human-led AI review
+
+First explain the intended fixed-statement/separate-value repair yourself. If an approved assistant is available, provide only the tiny reviewed synthetic function and a fictional description of the tests. Ask it to identify which text is SQL structure, which argument is data and what the proposed change leaves unproven.
+
+Reject any answer that suggests new payloads, external targets, changing expectations, dynamic schema experiments or production import. Review its explanation against the actual source and preserve your own reasoning. Manual review satisfies the same learning purpose; real query logs, credentials and database exports must not be supplied.
+
+### Formative questions with explained answers
+
+1. Why does the safe insert not establish a safe lookup? They are separate query-construction paths in the same fixture.
+2. Why preserve the apostrophe owner's behavior? Punctuation can be legitimate data, and the test requires correct exact-value matching.
+3. Why is returning no rows for everything inadequate? It breaks the permitted known-owner retrieval rather than fixing the query boundary.
+4. Does binding the owner validate the caller's authority? No. Query structure and resource authorization are separate questions.
+5. Does a binding-count error justify interpolation? No. Correct the separate parameter argument within the original repair scope.
+
+Technical basis: OWASP SQL Injection Prevention Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html , and Python sqlite3 documentation, https://docs.python.org/3/library/sqlite3.html . No new fixture execution, database operation, learner-platform reproduction or assessor calibration is claimed for this supplement.
