@@ -31,3 +31,75 @@ Submit a labelled model or equivalent table, asset list, trust-boundary explanat
 Formal scoring, accessibility review and student calibration remain pending. No threat-model exercise establishes complete security, grants access or changes the actual academy architecture.
 
 Source: https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html
+
+## Expanded teaching: map where authority changes before listing threats
+
+Use the existing fictional Cedar Learning Portal scenario only. It is not NeptuneGuard's architecture or a proposed deployment. This supplement adds no account, target, implementation or live inspection and does not authorize testing any system.
+
+### Start with a model contract
+
+Write the model's scope in one sentence: the stated browser, application, relational store, file store, background export worker and collector, with the flows described by S01-S10. Then list the explicit unknowns rather than filling them with familiar products.
+
+The brief supplies no authentication mechanism, queue transport, worker identity, retention period or upload parser. A box that says unknown is more useful than an invented service because it tells a reviewer exactly which decision remains unresolved. No cloud provider, federation vendor or network interface should appear as a supplied fact.
+
+### Distinguish components from assets
+
+A process handles data, a store retains it and an actor initiates permitted interactions under stated capabilities. An asset is the property the design must protect: draft confidentiality, feedback integrity, accountable records or availability for legitimate use.
+
+A diagram can show a file store without explaining which asset its permissions protect. Add that relationship in words. Conversely, an asset list without flows does not show where a control must operate. The model should connect assets to the components and interactions that can affect them.
+
+### Number flows so the reasoning is reviewable
+
+For each directed flow, record its sender, recipient, data category, purpose, governing authority and scenario label. A browser request and its response are different directions. A background job and later artifact retrieval are different operations, not one arrow labelled export.
+
+Distinguish the application-to-relational-store access, the application/worker relationships with file storage, the job handoff and the event flows to the collector. The exact transport for a job is unspecified. Do not draw a named queue protocol merely because it is common in other architectures.
+
+An accessible table can express all of this without a graphic. What matters is that a reviewer can follow the same authority and data transitions, not which drawing tool produced it.
+
+### Locate trust boundaries by assumptions, not geography
+
+A boundary marks a change in what a receiver is entitled to trust. Browser-supplied resource identifiers are data to validate; they are not authority to disclose a record. S03 requires the application to decide access before persistent-record use, but that requirement is not implementation evidence.
+
+The application-to-worker handoff creates questions about identity, permitted records and the validity of the job's scope. Two components on one machine can still have different authority. A network line alone does not establish the boundary, and an internal label does not eliminate it.
+
+### Worked export flow — FICTIONAL
+
+S06 says the worker receives jobs, reads authorized record sets and writes an export artifact. S07 makes the application responsible for deciding who may retrieve it. A conditional threat is that a caller could obtain another subject's export if retrieval treated knowledge of an artifact ID as authority.
+
+The asset is export confidentiality. The relevant flow is retrieval through the application, and the missing-control hypothesis is resource authorization. This is not a supplied vulnerability, an observed request or permission to guess identifiers. S07 is a design requirement whose implementation remains unverified.
+
+Now consider C01, which proposes retries after a course assignment changes. A job valid when created may face changed authority when retried. The model must ask when authorization is evaluated, whose identity the worker uses, what records the job names and which evidence would connect creation, retry and retrieval. C01 does not supply the correct implementation.
+
+### Keep stated controls and evidence apart
+
+S09 says HTTPS is intended on browser-to-application transport, but supplies no validation record or deployed endpoint. The model can label that design intention while keeping certificate verification unknown. It cannot conclude that every link or stored copy is protected.
+
+Similarly, a process box labelled authorization does not establish that error paths, exports and background work use the right decision. Mark the intended decision points and the evidence categories needed to review them, without inventing a running service.
+
+### Write conditional threats that identify a decision
+
+Use actor capability, asset, flow, failed control and consequence. A generic phrase such as information disclosure does not tell the owner where to intervene. A conditional statement about the browser request becoming trusted ownership context does.
+
+For collector flows, ask whether untrusted fields could undermine useful accountability if source context or safe recording failed. Do not invent a particular logging exploit or claim the collector stores secrets. S08 explicitly requires useful investigation context without document contents or session credentials; it does not prove enforcement.
+
+Threat categories can prompt coverage, but they are not a requirement to manufacture every type of threat on every component. Explain why the conditional concern follows from this brief and which assumption would remove or change it.
+
+### Review completeness and change sensitivity
+
+Trace each sensitive asset through its flows and ask where the relevant decision occurs. Include denied operations, background paths and the distinction between creating an artifact and retrieving it. Review the assumption register for facts the diagram quietly depends on.
+
+A change such as C01 requires revisiting the model because authority can vary across time and components. Threat modelling is maintained alongside design change, not completed permanently by drawing a neat overview. The next lesson develops testable claims; this one does not execute them.
+
+### Human-led AI critique
+
+Build your model and threat statements first. If an approved assistant is available, supply only S01-S10, C01 and your fictional table. Ask it to identify invented components, unlabelled assumptions and threats without a named flow or asset. Reject any suggestion to inspect NeptuneGuard or discover an endpoint. Manual comparison with the scenario is equally valid.
+
+### Formative questions with explained answers
+
+1. Does a trust boundary require a network hop? No. It concerns authority and assumptions, including within one machine.
+2. Does an intended HTTPS label prove certificate verification? No. S09 supplies a design intention, not that evidence.
+3. Why separate export creation from retrieval? They are different operations with different authorization decisions.
+4. Is a plausible threat an observed vulnerability? No. It remains conditional until relevant implementation evidence exists.
+5. Why does C01 require review? Retrying after changed assignment raises timing and worker-authority questions.
+
+Technical basis: OWASP Threat Modeling Cheat Sheet, https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html . This is a fictional design exercise; no platform architecture change, threat validation or learner execution is claimed.
