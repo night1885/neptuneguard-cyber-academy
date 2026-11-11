@@ -1,0 +1,38 @@
+name: Unified Ethical Hacking course
+on:
+  push:
+    branches: ['fix/unified-ethical-hacking-course']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  course-content:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '26.13.0']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ matrix.node }}'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - shell: bash
+        run: |
+          set -euo pipefail
+          node --check formal-programme-reading.mjs
+          node --test --test-reporter=tap test-certification-programme-reading.mjs test-certification-programme-journey.mjs test-certification-button-only-runtime.mjs test-certification-student-course-renderer.mjs test-certification-combined-course-cards.mjs 2>&1 | tee "$RUNNER_TEMP/unified-course.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/unified-course.tap"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: unified-course-node-${{ matrix.node }}
+          path: ${{ runner.temp }}/unified-course.tap
+          if-no-files-found: warn
+          retention-days: 7
