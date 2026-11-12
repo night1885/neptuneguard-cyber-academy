@@ -13,7 +13,7 @@ export function createWorkspace({ enabled = false, guildId, entryChannelId, cour
   if (enabled !== true) return { handle: async () => false, dispose() {} };
   if (typeof allowCards !== 'boolean' || ![guildId, entryChannelId].every(value => /^[0-9]{17,20}$/.test(value ?? '')) ||
       typeof courseId !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(courseId) ||
-      !Number.isInteger(pages) || pages < 1 || pages > 160 ||
+      !Number.isInteger(pages) || pages < 1 || pages > 192 ||
       !Number.isInteger(ttlMs) || ttlMs < 1000 || ttlMs > 840000 ||
       !Number.isInteger(maxSessions) || maxSessions < 1 || maxSessions > 256 ||
       !Number.isInteger(dependencyTimeoutMs) || dependencyTimeoutMs < 100 || dependencyTimeoutMs > 5000 ||

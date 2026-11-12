@@ -34,3 +34,42 @@ Explain which earlier fixture could teach a related concept and why passing that
 Submit the traceability worksheet and a short rationale. Review scope, identity/resource setup, preservation of legitimate behavior, minimal evidence, explicit unknowns and outcome interpretation. Numeric grading and assessor examples remain pending. No actual application, test automation, deployment or formal permission is created.
 
 Source: https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html
+
+
+## Extended teaching: make the claim testable before choosing a tool
+
+This is additional paper-based teaching, not permission to execute a test. Keep the fictional application, invented identities and synthetic records separate from the academy and from earlier executable fixtures.
+
+A threat statement describes something that could go wrong. A test objective asks one answerable question about the proposed protection. “Someone could read another student's draft” is a threat; “Does the read decision reject an enrolled non-owner while preserving the owner's access?” is a test objective. The second statement identifies a decision boundary and includes legitimate behavior. It does not assume that enrollment establishes ownership.
+
+Write the claim before the procedure. For example: “For synthetic draft D1, owner A is permitted to read; enrolled non-owner B is denied; no draft content is disclosed to B.” A useful paper test must state how ownership and enrollment are established in its hypothetical setup. If the setup merely labels A as owner without specifying a trusted source for that fact, mark that setup detail unresolved. A convincing-looking procedure cannot repair an ambiguous claim.
+
+## Worked paper comparison: three evidence levels
+
+Consider three proposed observations about the same fictional draft:
+
+- A design document says every read checks ownership.
+- A decision-function fixture returns allow for A and deny for B.
+- A hypothetical integration test observes the resource boundary applying that decision to D1.
+
+These observations answer different questions. The document states intent. The fixture examines a particular implementation under its supplied inputs. The integration test could examine whether the application actually calls the decision at the relevant boundary. None can be silently substituted for another. A correct helper that is bypassed by a resource handler does not establish application enforcement.
+
+For your worksheet, record the identity source, resource, proposed action, expected result, minimum evidence and remaining uncertainty in separate fields. Keep “expected” distinct from “observed.” For an unexecuted paper case, the observed field must say not executed rather than repeat the expected result as though it happened.
+
+## Exercise: repair a weak oracle
+
+A proposed negative case says: “B receives an error page, therefore authorization works.” On paper, list what is missing. Then rewrite the oracle so it checks the relevant denial without collecting unrelated data.
+
+Explained answer: the error page alone does not establish which identity was used, whether the request concerned D1, whether content was disclosed elsewhere in the response, or whether an unintended state change occurred. A stronger proposed oracle associates the synthetic identity and resource with the response decision, absence of the protected synthetic marker and absence of the prohibited state change. Define only the evidence needed for this single claim. Do not plan acquisition of other students' records.
+
+Add the paired owner case. If both A and B are denied, the negative result may look protective while legitimate behavior is broken. That pair contradicts the combined requirement; it is not a successful authorization repair.
+
+## Troubleshooting the reasoning
+
+If the proposed test has no approved identity setup, stop at clarification. If the environment prevents any meaningful observation, classify the case as inconclusive rather than supported. If the test has not been run, classify it as not executed. If the evidence directly conflicts with the stated expected behavior, record contradicted and preserve the narrow claim rather than widening it to “the whole system is insecure.”
+
+For a hypothetical retest, retain the original claim, identities, resource relationship and comparison basis. Record the approved change separately. Changing both the implementation and the expected result until they agree destroys the original comparison.
+
+## Bounded human-led AI critique
+
+You may give an AI assistant an invented worksheet containing A, B and D1 and ask it to identify an ambiguous oracle or a missing positive case. Do not supply credentials, private evidence or real resource identifiers. Review every suggestion yourself. Reject suggestions that introduce executable requests, additional targets or broader data collection. The deliverable is your revised paper reasoning, including one accepted and one rejected suggestion with reasons; AI output supplies neither evidence nor authorization.

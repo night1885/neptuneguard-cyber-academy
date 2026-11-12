@@ -26,7 +26,7 @@ export function createCardRenderer({ courseId, bundle } = {}) {
 export function buildCardFrame(view, { pages } = {}) {
   if (!(shape(view, 'cards,heading,kind') || shape(view, 'cards,heading,kind,routes')) || view.kind !== 'review-cards-v1' ||
       typeof view.heading !== 'string' || !view.heading.trim() || view.heading.length > 120 ||
-      !Number.isInteger(pages) || pages < 2 || pages > 160 || !Array.isArray(view.cards) ||
+      !Number.isInteger(pages) || pages < 2 || pages > 192 || !Array.isArray(view.cards) ||
       view.cards.length < 1 || view.cards.length > 3) throw new Error('Invalid card frame');
   let routes;
   if (Object.hasOwn(view, 'routes')) {

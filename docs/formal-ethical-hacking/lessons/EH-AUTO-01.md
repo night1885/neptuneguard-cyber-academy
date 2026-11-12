@@ -49,3 +49,36 @@ https://docs.python.org/3/library/ipaddress.html
 https://devguide.owasp.org/en/04-design/02-web-app-checklist/05-validate-inputs/
 
 See SCOPE-VALIDATION-CHECKS.md for bounded local author results.
+
+
+## Extended teaching: validate a value without taking an action
+
+The teaching function remains offline. Its accepted pair is exactly the target string 192.0.2.20 and the actual integer port 8000. Do not connect it to a transport, scanner, bot or authorization adapter. A documentation address is an input value here, not a destination to contact.
+
+Use four separate questions when reviewing the function. Does the input have the contract's required type? Does it parse as the required kind of value? Does the parsed value match the exercise policy? Does an external authority permit a particular operation now? The original predicate addresses the first three for one hard-coded pair. It does not address the fourth or implement an operation.
+
+## Worked classification: representation is not membership
+
+Consider the accepted target with port 8000. Its expected result is True because both values meet this fictional contract. Now keep the port and change the target to another syntactically valid address. Parsing can succeed while exact membership fails; the expected result is False. That difference is why a textual prefix or broad network comparison is not the specified repair.
+
+Next keep the target and provide port text rather than an integer. The expected result is False, even if the text looks like the permitted number. Converting it to an integer would silently replace the stated input contract with a more permissive one. The same reasoning rejects a floating-point representation and the Boolean True. Do not treat “could be converted” as “is permitted.”
+
+An integer address input also conflicts with the target-string contract even if a parsing library accepts integers. The application must define and enforce its own input shape rather than inherit every representation the library happens to understand.
+
+## Exercise: construct a decision table before editing
+
+For each original named subcase, record target type, parse expectation, address-membership expectation, port type/value expectation and final expected Boolean. Keep those expectations unchanged. Then add the four independent categories already requested: floating-point port, another wrong integer port, malformed address and wrong target type. Use only synthetic values and local unit tests.
+
+Explained answer: the permitted address with an actual integer 8000 is the positive control. A valid neighboring address distinguishes parsing from membership. The correct address with another ordinary integer port distinguishes address acceptance from pair acceptance. A malformed address exercises parsing failure. Wrong types exercise the outer contract before any conversion broadens it. A test table should reveal which decision a failing case is meant to examine.
+
+Keep the original suite's counting honest: one unittest method can contain multiple named subcases. Report actual results in those terms rather than relabeling subcases as independent methods. Preserve the baseline failure evidence before making the minimal repair, then compare the repaired result with the same expectations.
+
+## Troubleshooting a deceptively successful repair
+
+If all cases pass after you changed their expected outcomes, you have not demonstrated the specified repair. If only the allowed pair is tested, broad acceptance can remain invisible. If every value is rejected, negative cases can pass while the positive behavior is broken. Use both kinds of case and explain the exact failure each is intended to expose.
+
+A passing local predicate also provides no evidence of enforcement unless a separately designed system uses the decision at its execution boundary. That is a limitation to describe, not a request to add network code to this exercise. Do not introduce name resolution, redirects, retries or real credentials to make the example appear more realistic.
+
+## Bounded human-led AI critique
+
+You may ask an AI assistant to review the fictional decision table for a missing wrong-type or wrong-port case. Do not supply secrets or ask it to choose real targets. Keep the contract and existing expectations fixed. Reject suggestions to coerce inputs, broaden the permitted network, resolve hostnames or attach a transport. You remain responsible for the minimal local diff and the explanation; an AI assertion that the function is “secure” is not a supported result.
