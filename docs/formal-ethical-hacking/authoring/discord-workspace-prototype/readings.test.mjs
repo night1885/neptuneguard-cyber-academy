@@ -19,6 +19,16 @@ function setText(d,id,text) {
   e.gitBlob=createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
   e.sha256=createHash('sha256').update(bytes).digest('hex');
 }
+// Synthetic in-memory coverage only; no reviewed snapshot or lesson file is expanded.
+function capacityData(counts) {
+  const d=data(),id='EH-LAB-03',path=`lessons/${id}.md`;
+  assert.deepEqual(d.manifest.entries.map(e=>e.id),['EH-LAB-00','EH-LAB-01','EH-LAB-02']);
+  assert.equal(counts.length,4);
+  d.manifest.entries.push({id,path,gitBlob:'0'.repeat(40),sha256:'0'.repeat(64)});
+  d.sources[id]={path,text:''};
+  d.manifest.entries.forEach((e,i)=>setText(d,e.id,('x'.repeat(800)+'\n').repeat(counts[i])));
+  return d;
+}
 function harness() {
   const state={allowed:true,now:0,n:0},flags={has:bit=>bit===64};
   const control=createReadingReviewWorkspace({enabled:true,...data(),guildId:G,entryChannelId:C,verifiedRoleId:R,
@@ -51,8 +61,10 @@ const cases=[
 ['renderer includes thirty-five reading pages inside eighty-two views',()=>{const r=createReadingCatalogueRenderer(data());assert.deepEqual([r.readingLessonCount,r.readingPageCount,r.pageCount],[3,35,82]);for(let page=0;page<82;page++)buildCardFrame(r.render({courseId:K,page}),{pages:82});}],
 ['unimported lessons remain explicit metadata previews',()=>{const r=createReadingCatalogueRenderer(data()),v=r.render({courseId:K,page:48});assert.match(v.heading,/metadata/);assert.match(v.cards[0].description,/lesson body is not loaded/);}],
 ['renderer snapshots original IDs, source and labels',()=>{const d=data(),r=createReadingCatalogueRenderer(d);d.catalogue.lessons[0].id='MUTATED';d.labels['EH-LAB-00']='MUTATED';d.sources['EH-LAB-00'].text='MUTATED';assert.equal(JSON.stringify(r.render({courseId:K,page:13})).includes('MUTATED'),false);}],
-['too many reading cursors are blocked, never truncated',()=>{const d=data();for(const id of Object.keys(d.sources))setText(d,id,('x'.repeat(800)+'\n').repeat(40));const r=compileLessonReadings(d);assert.deepEqual(Object.values(r).map(p=>p.length),[40,40,40]);assert.throws(()=>createReadingCatalogueRenderer(d),/Reading catalogue exceeds bounded navigation/);}],
-['catalogue accepts exactly 160 views and rejects 161',()=>{const d=data();Object.keys(d.sources).forEach((id,i)=>setText(d,id,('x'.repeat(800)+'\n').repeat([38,38,37][i])));const r=createReadingCatalogueRenderer(d);assert.equal(r.pageCount,160);buildCardFrame(r.render({courseId:K,page:159}),{pages:160});setText(d,Object.keys(d.sources)[2],('x'.repeat(800)+'\n').repeat(38));assert.throws(()=>createReadingCatalogueRenderer(d),/Reading catalogue exceeds bounded navigation/);}],
+['too many reading cursors are blocked, never truncated',()=>{const d=capacityData([40,40,40,40]),r=compileLessonReadings(d);assert.deepEqual(Object.values(r).map(p=>p.length),[40,40,40,40]);assert.equal(13+33+Object.values(r).flat().length,206);assert.throws(()=>createReadingCatalogueRenderer(d),/Reading catalogue exceeds bounded navigation/);}],
+['catalogue accepts exactly 192 views and rejects 193',()=>{const d=capacityData([37,37,36,36]),r=createReadingCatalogueRenderer(d);assert.equal(r.pageCount,192);for(let page=0;page<192;page++)buildCardFrame(r.render({courseId:K,page}),{pages:192});assert.throws(()=>r.render({courseId:K,page:192}));setText(d,'EH-LAB-03',('x'.repeat(800)+'\n').repeat(37));assert.deepEqual(Object.values(compileLessonReadings(d)).map(p=>p.length),[37,37,36,37]);assert.throws(()=>createReadingCatalogueRenderer(d),/Reading catalogue exceeds bounded navigation/);}],
+['previous three-source overflow now remains below the finite ceiling',()=>{const d=data();for(const id of Object.keys(d.sources))setText(d,id,('x'.repeat(800)+'\n').repeat(40));assert.deepEqual(Object.values(compileLessonReadings(d)).map(p=>p.length),[40,40,40]);assert.equal(createReadingCatalogueRenderer(d).pageCount,167);}],
+['larger catalogue ceiling does not relax forty-page source bounds',()=>{assert.throws(()=>splitReviewSource(('x'.repeat(750)+'\n').repeat(41)),/Incomplete source split/);}],
 ['foreign course and invalid source cursors reject',()=>{const r=createReadingCatalogueRenderer(data());for(const q of [{courseId:'other',page:0},{courseId:K,page:82},{courseId:K,page:true},{courseId:K,page:0,owner:A}])assert.throws(()=>r.render(q));}],
 ['composition defaults off without snapshots/readers',async()=>{const h=harness(),i=h.interaction();assert.equal(await createReadingReviewWorkspace().handle(i),false);assert.equal(i.calls.length,0);h.control.dispose();}],
 ['private Open Next and Home show actual source in place',async()=>{const h=harness(),home=await h.open();let i=await h.move(home,'open-13');assert.match(i.last.content,/EH-LAB-00 1\/11/);assert.ok(i.last.embeds[0].description.includes('Authorization and Computer Readiness'));assert.equal(i.calls[0][0],'deferUpdate');i=await h.move(i,'next');assert.match(i.last.content,/2\/11/);i=await h.move(i,'home');assert.match(i.last.content,/cards 1\/13/);assert.equal(i.calls.some(c=>c[0]==='reply'),false);h.control.dispose();}],
@@ -63,5 +75,5 @@ const cases=[
 ['missing assignment prevents any reading publication',async()=>{const h=harness();h.state.allowed=false;const i=await h.open();assert.deepEqual(i.last.embeds,[]);h.control.dispose();}]
 ];
 for(const [name,run] of cases)test(name,run);
-test('prototype navigation accepts 160 views and rejects 161',()=>{const config={enabled:true,guildId:G,entryChannelId:C,courseId:K,authorize:async()=>true,render:async()=> 'SYNTHETIC'};const c=createWorkspace({...config,pages:160});c.dispose();assert.throws(()=>createWorkspace({...config,pages:161}),TypeError);});
-test('card frames retain the 160-view ceiling and reject out-of-range routes',()=>{const view={kind:'review-cards-v1',heading:'Synthetic boundary',cards:[{title:'Boundary',description:'Synthetic',art:'prepare',target:null}],routes:{prev:null,home:0,next:159}};buildCardFrame(view,{pages:160});assert.throws(()=>buildCardFrame(view,{pages:161}));assert.throws(()=>buildCardFrame({...view,routes:{...view.routes,next:160}},{pages:160}));});
+test('prototype navigation accepts 192 views and rejects 193',()=>{const config={enabled:true,guildId:G,entryChannelId:C,courseId:K,authorize:async()=>true,render:async()=> 'SYNTHETIC'};const c=createWorkspace({...config,pages:192});c.dispose();assert.throws(()=>createWorkspace({...config,pages:193}),TypeError);});
+test('card frames retain the 192-view ceiling and reject out-of-range routes',()=>{const view={kind:'review-cards-v1',heading:'Synthetic boundary',cards:[{title:'Boundary',description:'Synthetic',art:'prepare',target:null}],routes:{prev:null,home:0,next:191}};buildCardFrame(view,{pages:192});assert.throws(()=>buildCardFrame(view,{pages:193}));assert.throws(()=>buildCardFrame({...view,routes:{...view.routes,next:192}},{pages:192}));});
