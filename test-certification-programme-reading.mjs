@@ -34,7 +34,7 @@ test('all canonical formal lessons retain exact complete source chunks and bound
  for(let index=0;index<catalogue.length;index++){const lesson=await loadFormalReadingLesson(index);const raw=await readFile(new URL(`./docs/formal-ethical-hacking/lessons/${lesson.id}.md`,import.meta.url),'utf8');assert.equal(lesson.chunks.join(''),raw);bounded(await render(`module:${index}:0`));for(let page=0;page<lesson.chunks.length;page++){const p=await render(`lesson:${index}:${page}`);bounded(p);assert.ok(p.embeds[0].description.endsWith(lesson.chunks[page]));}}
 });
 test('formal reader rejects practical, grading, malformed and out-of-range views',async()=>{
- for(const cursor of ['lab:0:0','quiz:0:0','answer:0:0:a','overview:9999:0','overview:0:9999','overview:1:9999','module:9999:0','module:0:1','lesson:0:9999','lesson:../x:0'])await assert.rejects(render(cursor));
+ for(const cursor of ['lab:0:0','quiz:0:0','answer:0:0:a','overview:9999:0','overview:0:9999','overview:1:9999','module:9999:0','module:0:3','lesson:0:9999','lesson:../x:0'])await assert.rejects(render(cursor));
 });
 test('unified course delivery does not flip source publication flags or alter Community Learning registry',async()=>{
  const catalogue=JSON.parse(await readFile(new URL('./docs/formal-ethical-hacking/curriculum-catalogue.json',import.meta.url),'utf8'));assert.equal(catalogue.status,'draft-not-published');assert.equal(catalogue.runtimeIntegration,false);assert.equal(catalogue.publishable,false);
@@ -43,4 +43,19 @@ test('unified course delivery does not flip source publication flags or alter Co
 test('formal access still requires an exact active course assignment and never writes records',async()=>{
  let calls=0;const pool={async query(sql,args){calls++;assert.ok(sql.startsWith('SELECT'));assert.match(sql,/JOIN certification_course_enrollments/);assert.equal(args[1],FORMAL_READING_PROGRAMME.key);return {rows:[]};}};
  const authorize=createCourseSectionAuthorization(pool,{enabled:true,ownerId:'100000000000000001'});assert.equal(await authorize('100000000000000002',FORMAL_READING_PROGRAMME.key),null);assert.equal(calls,1);
+});
+
+test('all formal lessons expose static study and self-review without response controls',async()=>{
+ const catalogue=await loadFormalReadingCatalogue();
+ for(let index=0;index<catalogue.length;index++){
+  const overview=await render(`module:${index}:0`);bounded(overview);
+  assert.ok(buttons(overview).some(b=>b.custom_id===prefix+`module:${index}:1`));
+  assert.ok(buttons(overview).some(b=>b.custom_id===prefix+`module:${index}:2`));
+  for(const page of [1,2]){
+   const p=await render(`module:${index}:${page}`);bounded(p);
+   assert.match(p.embeds[0].description,page===1?/Study workflow/:/Self-review/);
+   assert.ok(buttons(p).every(b=>/^Read lesson$|^Study workflow$|^Self-review$|^Course home$|^Lesson overview$|^Previous lesson$|^Next lesson$/.test(b.label)));
+   assert.equal(p.files,undefined);assert.equal(p.attachments,undefined);
+  }
+ }
 });
