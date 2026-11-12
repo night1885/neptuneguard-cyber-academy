@@ -1,3 +1,4 @@
+import { formalStudyGuidance } from './formal-programme-study-workflow.mjs';
 import { open, realpath } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { resolve } from 'node:path';
@@ -72,17 +73,19 @@ export async function renderFormalReadingPage({courseKey,cursor,buttonId}={},opt
   if(listPage+1<Math.ceil(indices.length/5))controls.push(button(`overview:${index}:${page+1}`,'Next lessons'));components.push(row(controls));
  }else{
   const lesson=await loadFormalReadingLesson(index,options);embed.title=`Ethical Hacking — ${displayTitle(lesson)}`.slice(0,256).replace(/[\uD800-\uDBFF]$/,'');
-  if(view==='module'){if(page!==0)throw Error('Invalid lesson overview');
+  if(view==='module'){if(page>2)throw Error('Invalid lesson overview');
+   if(page===0){
    const required=await Promise.all(lesson.requires.map(id=>loadFormalReadingLesson(catalogue.findIndex(item=>item.id===id),options)));
    embed.description=[`Lesson ${index+1} of ${catalogue.length}: ${displayTitle(lesson)}`,
     'Read the complete lesson for its learning outcomes, explanations, worked examples and practice instructions where included.',
     `Suggested prior reading: ${required.map(displayTitle).join('; ')||'Start here — no prior course lesson required'}.`,
     'Teaching material remains draft. Reading does not verify prerequisites or authorize practical exercises.'].join('\n\n');
-   components.push(row([button(`lesson:${index}:0`,'Read lesson')]));
+   }else embed.description=formalStudyGuidance(page);
+   components.push(row([button(`lesson:${index}:0`,'Read lesson'),button(`module:${index}:1`,'Study workflow'),button(`module:${index}:2`,'Self-review')]));
   }else{if(page>=lesson.chunks.length)throw Error('Invalid text page');embed.description=`Reading only — practical exercises are not activated.\nLesson ${index+1} of ${catalogue.length} — page ${page+1}/${lesson.chunks.length}\n\n${lesson.chunks[page]}`;}
   const controls=[button('overview:0:0','Course home')];
   if(view==='lesson'){controls.push(button(`module:${index}:0`,'Lesson overview'));if(page)controls.push(button(`lesson:${index}:${page-1}`,'Previous text'));if(page+1<lesson.chunks.length)controls.push(button(`lesson:${index}:${page+1}`,'Next text'));}
-  else{if(index)controls.push(button(`module:${index-1}:0`,'Previous lesson'));if(index+1<catalogue.length)controls.push(button(`module:${index+1}:0`,'Next lesson'));}components.push(row(controls));
+  else{if(page)controls.push(button(`module:${index}:0`,'Lesson overview'));if(index)controls.push(button(`module:${index-1}:0`,'Previous lesson'));if(index+1<catalogue.length)controls.push(button(`module:${index+1}:0`,'Next lesson'));}components.push(row(controls));
  }
  return {content:'',embeds:[embed],components,allowedMentions:{parse:[]}};
 }
