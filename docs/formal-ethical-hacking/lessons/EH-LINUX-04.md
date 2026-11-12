@@ -50,3 +50,38 @@ Submit minimal relevant observations, actual status, final state and limits usin
 Sources:
 https://www.gnu.org/software/bash/manual/html_node/Job-Control-Builtins.html
 https://www.man7.org/linux/man-pages/man1/ps.1.html
+
+
+## Extended teaching: follow one child's lifecycle
+
+Keep this explanation inside the original practical boundary: the one short-lived Python child started by your normal non-root Bash session. It introduces no additional process-control commands and no authority over another process.
+
+Think of the original exercise as a sequence of different observations. First the shell starts a background child. Next it saves the most recent background PID. Then a narrow process snapshot describes what is visible at one instant. Finally, the shell collects its child's result. These events are related, but they are not one atomic operation. A saved number alone cannot establish the entire lifecycle.
+
+The shell's job information supplies context that a bare PID lacks: this session started and tracks this work. The narrow ps output adds current process and parent information. Read those observations together. Do not replace a missing child with another Python process simply because its command-name field looks familiar.
+
+## Worked interpretation: separate three results
+
+Imagine that your own child is visible with the expected parent, and the original TERM command returns successfully. That observation concerns the signal request. It is not the child's final result. The original wait command is the separate operation used to collect the known child's termination status. Capturing its status immediately preserves that result before a later command replaces the shell's most recent status.
+
+Now imagine that the child reaches its natural 120-second exit before inspection. A missing process row can be consistent with that timing. Do not invent a sleeping snapshot, signal a guessed PID or treat an ordinary expiry as proof that ps failed. Record the actual sequence, use wait only for the known shell child as instructed, and distinguish what you observed from the explanation you consider plausible.
+
+A third possibility is that the variable is empty or the displayed parent is unexpected. That is a stop condition, not an invitation to repair the example by guessing. Preserve the minimal observation and seek the approved support route. Do not escalate privileges or broaden selection to find something to terminate.
+
+## Exercise: annotate the original command blocks
+
+Without adding commands, label each original line with its purpose: start work, save identity context, show shell tracking, inspect a snapshot, request termination, collect the child's result, or display a saved result. Explain which value could be overwritten by another background command and which status could be overwritten by another ordinary command.
+
+Explained answer: save the background PID immediately because a subsequent background launch changes the most-recent-background value. Save the wait result immediately because another command changes the most-recent-command status. Printing a value later is meaningful only if the intended value was saved first. Neither variable grants authority over whatever might later occupy the same numeric PID.
+
+## Troubleshooting without escalation
+
+Do not require one particular STAT character as proof of success. Timing affects a snapshot, and elapsed wall time is not CPU consumption. An unexpected result should produce a careful account of the session and observations, not a broad diagnosis of compromise or a forced match to an example screenshot.
+
+If TERM does not produce the expected outcome, do not move to KILL, system-service management, name-based termination or group signalling. The lesson deliberately excludes those actions. The distinction between observing a mismatch and being authorized to remediate it is part of the exercise.
+
+In the worksheet, separate the shell's observations, the child's collected result, final state and limitations. A copied PID from a previous run is not evidence for this run. State honestly if the child expired, if a field was unavailable or if the practical was not executed.
+
+## Bounded human-led AI critique
+
+An AI assistant may critique an invented lifecycle table and point out confusion between a signal request and a collected child result. Do not upload complete machine process lists or command-line dumps. Reject any proposed sudo, force-kill, broad matching or extra target. You decide whether the explanation fits the actual narrow observations; the assistant must not select or signal a process.
