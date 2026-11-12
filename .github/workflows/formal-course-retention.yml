@@ -1,0 +1,27 @@
+name: Formal course retention policy tests
+on:
+  push:
+    branches: [feat/consolidated-course-authoring]
+    paths: ['formal-course-retention.mjs', 'formal-course-retention.test.mjs', 'docs/formal-course-authoring/LEARNING-DATA-RETENTION.md', '.github/workflows/formal-course-retention.yml']
+  pull_request:
+    branches: [main]
+    paths: ['formal-course-retention.mjs', 'formal-course-retention.test.mjs', 'docs/formal-course-authoring/LEARNING-DATA-RETENTION.md', '.github/workflows/formal-course-retention.yml']
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Pure policy tests with synthetic lifecycle snapshots
+        run: node --test formal-course-retention.test.mjs

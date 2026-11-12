@@ -1,0 +1,120 @@
+name: Consolidated course authoring source checks
+on:
+  push:
+    branches: [feat/consolidated-course-authoring]
+    paths:
+      - 'docs/formal-course-authoring/**'
+      - 'docs/formal-ethical-hacking/curriculum-catalogue.json'
+      - 'docs/formal-ethical-hacking/lessons/**'
+      - 'docs/formal-ethical-hacking/fixtures/native-observation/**'
+      - 'docs/formal-ethical-hacking/fixtures/application-ownership/**'
+      - 'docs/formal-ethical-hacking/fixtures/python-foundations/**'
+      - 'soc-analyst.js'
+      - '.github/workflows/consolidated-course-authoring.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/formal-course-authoring/**'
+      - 'docs/formal-ethical-hacking/curriculum-catalogue.json'
+      - 'docs/formal-ethical-hacking/lessons/**'
+      - 'docs/formal-ethical-hacking/fixtures/native-observation/**'
+      - 'docs/formal-ethical-hacking/fixtures/application-ownership/**'
+      - 'docs/formal-ethical-hacking/fixtures/python-foundations/**'
+      - 'soc-analyst.js'
+      - '.github/workflows/consolidated-course-authoring.yml'
+permissions:
+  contents: read
+jobs:
+  source-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test source boundaries without importing teaching code
+        run: python3 -B -m unittest discover -s docs/formal-course-authoring -p test_build_review.py -v
+      - name: Test owner-review output verification against synthetic checkouts
+        run: python3 -B -m unittest discover -s docs/formal-course-authoring -p test_verify_review.py -v
+      - name: Assemble actual checkout sources for owner review only
+        run: python3 -B docs/formal-course-authoring/build_review.py --output "$RUNNER_TEMP/consolidated-course-review"
+      - name: Verify generated books and audit against the checkout
+        run: python3 -B docs/formal-course-authoring/verify_review.py --output "$RUNNER_TEMP/consolidated-course-review"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-owner-course-source-review
+          path: ${{ runner.temp }}/consolidated-course-review/
+          retention-days: 7
+          if-no-files-found: error
+  native-practicals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install native tools only in the ephemeral CI runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y curl nmap
+      - name: Test selected native observation boundaries
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: python3 -B -m unittest -v test_native
+      - name: Require actual owned curl Nmap and Linux observations
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: python3 -B verify_native.py --require-all-tools > "$RUNNER_TEMP/native-tools.json"
+      - name: Retain existing scripting regression checks
+        working-directory: docs/formal-ethical-hacking/fixtures/python-foundations
+        run: python3 -B -m unittest -v test_summary test_summary_additional
+      - name: Retain existing repaired loopback transport checks without scanning that helper
+        working-directory: docs/formal-ethical-hacking/fixtures/application-ownership
+        run: python3 -B -m unittest -v test_loopback
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: native-owned-observation-record
+          path: ${{ runner.temp }}/native-tools.json
+          retention-days: 7
+          if-no-files-found: warn
+  windows-owned-process:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Parse selected PowerShell sources without executing them
+        shell: pwsh
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: |
+          foreach ($name in @('verify_windows.ps1','test_windows.ps1')) {
+            $tokens=$null; $parseErrors=$null
+            $null=[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $name),[ref]$tokens,[ref]$parseErrors)
+            if ($null -ne $parseErrors -and $parseErrors.Count -gt 0) { throw "PowerShell parse failed: $name" }
+          }
+      - name: Check invented snapshot cases separately from native execution
+        shell: pwsh
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: ./test_windows.ps1
+      - name: Require actual owned Windows process evidence and cleanup
+        shell: pwsh
+        working-directory: docs/formal-ethical-hacking/fixtures/native-observation
+        run: |
+          $ErrorActionPreference='Stop'
+          $json = & ./verify_windows.ps1
+          $record = ($json -join "`n") | ConvertFrom-Json
+          if ($record.executed -ne $true -or $record.owned_child_closed -ne $true) { throw 'Native Windows result incomplete' }
+          $json | Set-Content -Encoding utf8 (Join-Path $env:RUNNER_TEMP 'windows-owned-process.json')
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: windows-owned-process-record
+          path: ${{ runner.temp }}/windows-owned-process.json
+          retention-days: 7
+          if-no-files-found: warn
