@@ -89,4 +89,6 @@ Write your own plan first. If an approved assistant is available, provide the fi
 4. Why change only the service state? Then a difference can be attributed to it.
 5. What would matching observations still leave unknown? Overall security, other ports and other vantage points.
 
+Clarification on causal interpretation: changing only the documented service state reduces competing explanations and makes the comparison more informative; it does not by itself prove causation. Correlate the learner-side observation with the peer’s listener state, and preserve uncertainty about unobserved changes.
+
 Technical basis: NIST SP 800-115, https://csrc.nist.gov/pubs/sp/800/115/final . It supports planning, analysis and reporting concepts; it does not endorse this course. No scan, network observation or learner-platform execution is claimed by this supplement.

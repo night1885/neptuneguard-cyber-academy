@@ -15,6 +15,8 @@ The browser normally acts as a TLS client for HTTPS. In a reverse-proxy design, 
 ## Application controls remain necessary
 HTTPS does not decide which user's record an authenticated person may access. It does not fix SQL query construction, unsafe HTML output, mass assignment or file-path authorization. Connect those limits to the earlier offline fixtures: encryption of an incorrect request or response does not make the underlying operation correct.
 
+Reading-sequence clarification: the SQL, HTML-output, field-update and file-path examples mentioned here are developed later in the catalogue. They are forward references, not assumed prior learning. The point at this stage is that protecting traffic does not establish correct application decisions.
+
 TLS also does not automatically encrypt application logs, database rows, backups or screenshots at rest. Logs and evidence still need privacy and retention controls. Traffic protection does not prove that either endpoint itself is uncompromised.
 
 ## Plain HTTP in the existing lab

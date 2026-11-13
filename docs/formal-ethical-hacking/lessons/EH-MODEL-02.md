@@ -73,3 +73,5 @@ For a hypothetical retest, retain the original claim, identities, resource relat
 ## Bounded human-led AI critique
 
 You may give an AI assistant an invented worksheet containing A, B and D1 and ask it to identify an ambiguous oracle or a missing positive case. Do not supply credentials, private evidence or real resource identifiers. Review every suggestion yourself. Reject suggestions that introduce executable requests, additional targets or broader data collection. The deliverable is your revised paper reasoning, including one accepted and one rejected suggestion with reasons; AI output supplies neither evidence nor authorization.
+
+Manual alternative: AI use is optional. Without an assistant, review the invented worksheet yourself for an ambiguous oracle, a missing positive case and any proposed action beyond the paper scope. Record one accepted revision and one rejected candidate revision with reasons. No AI transcript or tool use is required.
