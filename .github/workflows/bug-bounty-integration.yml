@@ -2,7 +2,7 @@ name: Bug Bounty consolidated integration validation
 'on':
   push:
     branches: ['content/bug-bounty-full-course-2026-11-13']
-    paths: ['bug-bounty-reading.mjs', 'test-bug-bounty-*.mjs', 'docs/bug-bounty/reader-source-lock.json', 'certification-course-sections.js', 'certification-student-course-renderer.js', '.github/workflows/bug-bounty-integration.yml']
+    paths: ['bug-bounty-reading.mjs', 'test-bug-bounty-*.mjs', 'docs/bug-bounty/reader-source-lock.json', 'certification-course-sections.js', 'certification-student-course-renderer.js', '.github/workflows/bug-bounty-integration.yml', '.github/workflows/manual-review-failure-capture.yml']
 permissions:
   contents: read
 jobs:
