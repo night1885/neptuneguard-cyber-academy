@@ -1,44 +1,34 @@
-# Bug Bounty content audit and targeted repair review
+# Bug Bounty combined curriculum and builder repair review
 
-Status: content remains under review; no academy or release approval.
-Original audited lesson snapshot: c2bd1f738bd8649270dccd4a99ce738eaad50101.
-Repair proposal base: a8b5735a90c6f8805ab3142c3167e18ca794e154.
 Review date: 2026-11-14.
+Proposal base: eb90a67ceaa44611a9b054b5b0a0e66083e9f8fc.
+Status: content and tooling draft; not academy or release approval.
 
-## Original findings and this repair scope
+## Included in this batch
 
-- The old two-lesson README was replaced in the consolidation commit. The manifest contains all 44 lessons exactly once in nine modules. Inventory presence does not establish teaching depth.
-- The resource-limit lesson referred to automation as a prerequisite, while ffuf required the resource-limit lesson. This repair replaces that vague reference with four explicit earlier lessons and places automation after the resource-limit lesson. It does not certify the full prerequisite graph.
-- The TLS command set SNI without explicit hostname verification, and brief output did not supply its promised certificate fields. This repair adds -verify_hostname, keeps -verify_return_error, bounds the connection attempt with GNU timeout, and separates certificate extraction and local x509 inspection from verification diagnostics. SNI and identity verification remain separate concepts.
-- The integrity example printed a failed comparison without enforcing a gate. This repair raises before parsing on failure and asserts that all rejected cases add zero parser calls.
+- Clarify the allowlist and API inventory prerequisites without requiring later inventory or object-access testing first.
+- Move redirect validation after origins, and uploads/server-side requests before their path/XML dependents. Keep all 44 lessons exactly once in nine modules and synchronize README with the manifest.
+- Restrict simple lesson-link rewriting to supported Markdown links outside fenced blocks and inline backtick spans. Preserve plain filenames and code examples. This remains a conservative renderer, not a complete Markdown implementation.
+- Add a standalone offline unittest suite and clarify self-review/owner-managed capstone feedback without implementing grading or certification.
 
-Only three lesson bodies and this audit are in the repair proposal. The other 41 lessons, README, manifest, builder, runtime and existing courses are unchanged.
+Three lesson bodies, README, manifest, builder, tests and this audit are proposed: eight files total. The other 41 lessons and all academy/runtime files are untouched. No target practice, PR, merge or deployment is included.
 
-## Targeted validation actually performed
+## Validation performed on the proposed files
 
-- Four shell blocks passed Bash syntax checks.
-- Three local blocks ran: resource-limit arithmetic, fixed-date arithmetic and the revised integrity gate.
-- Integrity controls: valid data parsed once; tampered body, wrong tag and unsigned malformed JSON were rejected with zero additional parser calls.
-- Using OpenSSL 3.5.5, a synthetic local certificate/transcript supported PEM extraction and display of subject, issuer, validity and SAN.
-- Local verification accepted the matching hostname, rejected another hostname and rejected a time before the certificate became valid.
-- Temporary fixture keys and certificates were not retained as deliverables.
+- Sixteen renderer cases passed, including both previously reproduced literal-rewriting failures, fenced code, inline/multiline code spans, escaped backticks, supported links and unsupported-link preservation.
+- Ten unittest methods passed. They cover those renderer subcases plus nine synthetic assembly/input/CLI checks: 44-lesson assembly, working-tree isolation, duplicate rejection, inventory mismatch, empty lessons, course identity, pinned SHA format, unclosed fences and overwrite refusal.
+- The allowlist, API inventory and capstone local blocks passed Bash syntax checks and ran offline.
+- Nine targeted dependency relationships were checked against the proposed order. All precede their dependents; this is not a full prerequisite certification.
+- README has 44 lesson links matching the manifest with no omission or duplication.
 
-No live handshake, browser/Burp workflow, program testing, full 44-lesson audit, CI, academy integration or deployment was performed. Local certificate checks are not a live s_client reproduction.
+These runs use synthetic local inputs, not the real 44 lesson bodies. Previous TLS/HMAC repairs remain in the selected historical source snapshot, but no live TLS, browser, Burp, scanner, jq practical, CI or academy-delivery run was performed here.
 
-## Notebook source pin and outstanding build
+## Source-pin and notebook limitation
 
-course-manifest.json now pins ae047f8a4d0f8289dbba1a4a66699a17c393f560, the committed lesson snapshot containing the three targeted repairs. The nine modules, 44 lesson identifiers and their order are unchanged. This metadata follow-up changes only the manifest source_commit and this audit section; it does not modify any lesson or builder.
+The manifest intentionally still pins ae047f8a4d0f8289dbba1a4a66699a17c393f560; no future or self-referential commit ID is invented. After an approved combined repair commit exists, prepare a separately reviewed pin update to that known commit. Otherwise the final notebook would omit the new lesson wording even though it uses the new order and renderer.
 
-The actual 44-lesson notebook has not yet been assembled or inspected. The pin selects the repaired inputs; it is not evidence of successful assembly, complete content review or academy readiness. Run the real pinned build and review the resulting complete notebook before academy implementation. No notebook is published by this update.
+The actual complete owner-review notebook is not included or claimed built. Its source acquisition, byte verification, assembly, heading/link/code inspection and full-content review remain outstanding. Unsupported Markdown links and unresolved prerequisite labels require manual review. Do not substitute test fixtures for the actual course.
 
-## Remaining checks before implementation
+## Before implementation
 
-Review every prerequisite, tool/version requirement, permitted program-based exercise, alternative result, evidence limit and cleanup step. Run the real pinned notebook build and inspect rendered headings, all links, code fences and complete content. Synthetic builder tests are not full-course delivery tests. The owner's complete Markdown notebook must be reviewed before academy implementation. Preserve Ethical Hacking, staging, verification bot, access, progress and grading behavior. PR, merge and deployment each require separate approval.
-
-## Technical references
-
-https://docs.openssl.org/master/man1/openssl-s_client/
-
-https://docs.openssl.org/master/man1/openssl-x509/
-
-https://portswigger.net/web-security/deserialization
+Review permitted program-based practice depth, tool installation/version instructions, response interpretation, evidence handling and cleanup across all lessons. Preserve existing courses, staging, verification bot and access/progress/grading behavior. No payout or learner acceptance is a release gate. Academy implementation follows complete notebook review; PR, merge and deployment remain separate approvals.

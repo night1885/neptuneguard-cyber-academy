@@ -2,7 +2,7 @@
 
 ## Outcome and prerequisites
 
-Convert a current program brief into a deliberately reviewed input list. Complete program-brief and API-inventory lessons. Bugcrowd and other platforms are the practice environment, but listing an asset does not authorize every method. Review exclusions, automation permission, identity requirements, rate and disclosure rules separately.
+Convert a current program brief into a deliberately reviewed input list. Complete read-program-brief.md first. API inventory is a later application of this scope review, not a prerequisite for it. Bugcrowd and other platforms are the practice environment, but listing an asset does not authorize every method. Review exclusions, automation permission, identity requirements, rate and disclosure rules separately.
 
 ## Optional local preparation
 

@@ -2,7 +2,7 @@
 
 ## Outcome and prerequisites
 
-Produce a complete, bounded plan for one eligible program without testing beyond written permission. Complete the earlier lessons. This capstone is graded on reasoning, evidence discipline and restraint, not on a valid finding or payout.
+Produce a complete, bounded plan for one eligible program without testing beyond written permission. Complete the earlier lessons. Use the self-review questions below and any owner-managed feedback to assess reasoning, evidence discipline and restraint, not a valid finding or payout. This lesson does not introduce automated grading, certification or a learner-acceptance release gate.
 
 ## Template
 

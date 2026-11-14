@@ -2,7 +2,7 @@
 
 ## Outcome and prerequisites
 
-Create an evidence-based list of API versions, hosts and purposes without guessing or scanning. Complete mapping, browser-network and authorization lessons. Use documented and observed routes only. Mapping an API is not permission to test every version or host.
+Create an evidence-based list of API versions, hosts and purposes without guessing or scanning. Complete map-application-workflows.md, read-browser-network-evidence.md and controlled-accounts-and-sessions.md first. The identity/authorization distinction in the session lesson is sufficient background for this inventory exercise; controlled object-authorization testing is a later activity, not a prerequisite here. Use documented and observed routes only. Mapping an API is not permission to test every version or host.
 
 OWASP's API risk list includes improper inventory management, because old, undocumented or nonproduction versions can retain weaker controls. Inventory work asks what exists, which version it is, who documents it and whether it is covered by the program. It does not require calling every route.
 

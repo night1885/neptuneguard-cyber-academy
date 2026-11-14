@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Assemble a private notebook from a pinned local Git snapshot; no network or lesson execution."""
+"""Build an owner-review notebook from existing pinned local Git objects."""
 import argparse
 import json
 import os
 import re
 import subprocess
 from pathlib import Path
+
+LINK = re.compile(r"(?<![!\\])(\[[^\]\n]*\]\()((?:\./)?(?:lessons/)?([a-z0-9-]+)\.md)(\))")
 
 
 def git(repo, *args):
@@ -16,9 +18,36 @@ def git(repo, *args):
     return result.stdout
 
 
+def rewrite(line, slugs, span):
+    def replace(match):
+        return match[1] + "#lesson-" + match[3] + match[4] if match[3] in slugs else match[0]
+    result = []
+    pos = 0
+    for token in re.finditer(r"`+", line):
+        start = token.start()
+        backslashes = 0
+        while start > backslashes and line[start - backslashes - 1] == "\\":
+            backslashes += 1
+        if span is None and backslashes % 2:
+            continue
+        chunk = line[pos:start]
+        result.append(chunk if span else LINK.sub(replace, chunk))
+        mark = token[0]
+        result.append(mark)
+        if span == mark:
+            span = None
+        elif span is None:
+            span = mark
+        pos = token.end()
+    chunk = line[pos:]
+    result.append(chunk if span else LINK.sub(replace, chunk))
+    return "".join(result), span
+
+
 def render(text, slugs):
     result = []
     fence = None
+    span = None
     for line in text.splitlines(keepends=True):
         marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
         if fence:
@@ -26,17 +55,14 @@ def render(text, slugs):
             if marker and marker[1][0] == fence[0] and len(marker[1]) >= fence[1] and not marker[2].strip():
                 fence = None
             continue
-        if marker:
+        if marker and span is None:
             fence = (marker[1][0], len(marker[1]))
             result.append(line)
             continue
         heading = re.match(r"^(#{1,6})([ \t]+.*)$", line.rstrip("\r\n"))
-        if heading:
-            ending = "\n" if line.endswith("\n") else ""
-            line = "#" * min(6, len(heading[1]) + 2) + heading[2] + ending
-        for slug in slugs:
-            for prefix in ("", "./", "lessons/", "./lessons/"):
-                line = line.replace("(" + prefix + slug + ".md)", "(#lesson-" + slug + ")")
+        if heading and span is None:
+            line = "#" * min(6, len(heading[1]) + 2) + heading[2] + ("\n" if line.endswith("\n") else "")
+        line, span = rewrite(line, slugs, span)
         result.append(line)
     if fence:
         raise ValueError("Unclosed Markdown fence")
@@ -57,16 +83,12 @@ def assemble(repo, manifest):
         raise ValueError("Invalid lesson identifier")
     prefix = "docs/bug-bounty/lessons/"
     inventory = git(repo, "ls-tree", "-r", "--name-only", "-z", commit, "--", prefix).decode("utf-8").split("\0")
-    actual = {name for name in inventory if name.endswith(".md")}
-    expected = {prefix + slug + ".md" for slug in slugs}
-    if actual != expected:
+    if {name for name in inventory if name.endswith(".md")} != {prefix + slug + ".md" for slug in slugs}:
         raise ValueError("Snapshot inventory differs from the manifest")
-    parts = ["# Bug Bounty\n\nOwner review notebook; not academy delivery or authorization.\n\nSource commit: `" + commit + "`\n\n"]
-    parts.append("## Contents\n\n")
+    parts = ["# Bug Bounty\n\nOwner review notebook; not academy delivery or authorization.\n\nSource commit: `" + commit + "`\n\n## Contents\n\n"]
     for group in groups:
         parts.append("### " + group["title"] + "\n\n")
-        for slug in group["lessons"]:
-            parts.append("- [" + slug.replace("-", " ") + "](#lesson-" + slug + ")\n")
+        parts.extend("- [" + slug.replace("-", " ") + "](#lesson-" + slug + ")\n" for slug in group["lessons"])
         parts.append("\n")
     for group in groups:
         parts.append("## " + group["title"] + "\n\n")
@@ -87,8 +109,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
-        text = assemble(args.repo, manifest)
+        text = assemble(args.repo, json.loads(args.manifest.read_text(encoding="utf-8")))
         with args.output.open("x", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
     except (ValueError, OSError, KeyError, TypeError, subprocess.TimeoutExpired) as error:

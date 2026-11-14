@@ -33,14 +33,14 @@
         "property-and-function-permissions",
         "account-recovery-boundaries",
         "jwt-claims-and-verification",
-        "oauth-redirect-and-callback-binding",
-        "open-redirects-and-redirect-validation"
+        "oauth-redirect-and-callback-binding"
       ]
     },
     {
       "title": "Browser trust boundaries",
       "lessons": [
         "origins-and-cors",
+        "open-redirects-and-redirect-validation",
         "csrf-and-state-changing-requests",
         "html-output-contexts",
         "websocket-handshake-and-messages"
@@ -50,10 +50,10 @@
       "title": "Inputs, parsers and server-side boundaries",
       "lessons": [
         "sql-code-and-data",
-        "path-traversal-and-file-reads",
         "file-upload-policy-boundaries",
-        "xml-parser-boundaries",
         "server-side-request-destinations",
+        "path-traversal-and-file-reads",
+        "xml-parser-boundaries",
         "template-injection-and-command-boundaries",
         "deserialization-boundaries",
         "prototype-pollution-model",
