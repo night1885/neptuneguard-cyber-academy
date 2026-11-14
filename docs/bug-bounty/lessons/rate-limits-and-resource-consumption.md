@@ -2,7 +2,7 @@
 
 ## Outcome and prerequisites
 
-Explain how request rate, response size, expensive operations and automation can create resource-consumption risk, while avoiding real denial-of-service activity. Complete automation, business-logic and race lessons. Many programs prohibit load, denial of service and brute force. Absence of a rule does not authorize traffic bursts.
+Explain how request rate, response size, expensive operations and automation can create resource-consumption risk, while avoiding real denial-of-service activity. Complete read-program-brief.md, build-a-scope-allowlist.md, business-workflow-invariants.md and race-condition-atomicity.md first. This lesson comes before httpx-bounded-probing.md, katana-bounded-crawling.md, ffuf-bounded-content-discovery.md and nuclei-bounded-templates.md; no automation lesson is a prerequisite here. Many programs prohibit load, denial of service and brute force. Absence of a rule does not authorize traffic bursts.
 
 OWASP lists unrestricted resource consumption as a distinct API risk. A report should concern a controlled and permitted observation, not an attempt to prove maximum damage. Many limits are about cost, quotas, uploads, pagination, search complexity or background work rather than raw request count.
 
