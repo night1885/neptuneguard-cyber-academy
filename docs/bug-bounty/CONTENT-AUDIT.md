@@ -25,9 +25,11 @@ Only three lesson bodies and this audit are in the repair proposal. The other 41
 
 No live handshake, browser/Burp workflow, program testing, full 44-lesson audit, CI, academy integration or deployment was performed. Local certificate checks are not a live s_client reproduction.
 
-## Notebook source pin remains an explicit follow-up
+## Notebook source pin and outstanding build
 
-course-manifest.json still pins c2bd1f738bd8649270dccd4a99ce738eaad50101. It therefore builds the old lesson snapshot, not these repairs. After the repair commit exists, prepare a separately reviewed manifest update to that known commit and assemble the real notebook. Do not silently change the source pin or describe the existing pin as repaired.
+course-manifest.json now pins ae047f8a4d0f8289dbba1a4a66699a17c393f560, the committed lesson snapshot containing the three targeted repairs. The nine modules, 44 lesson identifiers and their order are unchanged. This metadata follow-up changes only the manifest source_commit and this audit section; it does not modify any lesson or builder.
+
+The actual 44-lesson notebook has not yet been assembled or inspected. The pin selects the repaired inputs; it is not evidence of successful assembly, complete content review or academy readiness. Run the real pinned build and review the resulting complete notebook before academy implementation. No notebook is published by this update.
 
 ## Remaining checks before implementation
 
