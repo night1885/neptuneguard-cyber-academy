@@ -25,7 +25,7 @@ These runs use synthetic local inputs, not the real 44 lesson bodies. Previous T
 
 ## Source-pin and notebook limitation
 
-The manifest intentionally still pins ae047f8a4d0f8289dbba1a4a66699a17c393f560; no future or self-referential commit ID is invented. After an approved combined repair commit exists, prepare a separately reviewed pin update to that known commit. Otherwise the final notebook would omit the new lesson wording even though it uses the new order and renderer.
+The manifest pins 7c6e318537d35e0797256f0e9a0912862dc9ce7e, the existing approved combined repair commit containing the latest lesson wording. The nine modules and 44-lesson order are unchanged by this metadata follow-up. Only source_commit and the matching README/audit explanations change; no lesson, builder, test or runtime file changes. A further pin update is needed only if a later approved lesson snapshot is selected.
 
 The actual complete owner-review notebook is not included or claimed built. Its source acquisition, byte verification, assembly, heading/link/code inspection and full-content review remain outstanding. Unsupported Markdown links and unresolved prerequisite labels require manual review. Do not substitute test fixtures for the actual course.
 

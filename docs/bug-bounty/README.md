@@ -4,7 +4,7 @@ One course, nine named modules, 44 authored lessons. Filenames identify lessons,
 
 ## Delivery status and source pin
 
-This is work in progress, not an academy-ready release. The manifest defines the module membership and proposed reading order below. Its source_commit remains ae047f8a4d0f8289dbba1a4a66699a17c393f560. That historical snapshot includes the first targeted repairs but not the new prerequisite and capstone wording in this combined proposal. After this repair is committed, a separately approved source-pin update must select the resulting known commit before the final notebook build. Do not describe a notebook built from the old pin as including these later lesson edits.
+This is work in progress, not an academy-ready release. The manifest defines the module membership and proposed reading order below. Its source_commit is 7c6e318537d35e0797256f0e9a0912862dc9ce7e, the existing approved combined repair commit. That snapshot includes the latest allowlist/API prerequisites and capstone wording. The selected input snapshot now matches those approved lesson repairs; selecting it does not establish successful notebook assembly, complete content review or academy readiness.
 
 The complete real-source notebook has not been assembled or inspected. Academy registration, reader integration, delivery tests, CI, PR, merge and deployment remain pending.
 

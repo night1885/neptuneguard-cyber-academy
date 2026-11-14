@@ -1,7 +1,7 @@
 {
   "course": "Bug Bounty",
   "status": "draft; not academy-integrated",
-  "source_commit": "ae047f8a4d0f8289dbba1a4a66699a17c393f560",
+  "source_commit": "7c6e318537d35e0797256f0e9a0912862dc9ce7e",
   "modules": [
     {
       "title": "Foundations and evidence",
