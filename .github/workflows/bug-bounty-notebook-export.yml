@@ -1,0 +1,149 @@
+name: Bug Bounty owner-review notebook export
+'on':
+  push:
+    branches: ['content/bug-bounty-full-course-2026-11-13']
+    paths: ['.github/workflows/bug-bounty-notebook-export.yml']
+permissions:
+  contents: read
+jobs:
+  export:
+    if: github.repository == 'night1885/neptuneguard-cyber-academy' && contains(github.event.head_commit.message, '[bug-bounty-export]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GIT_NO_LAZY_FETCH: '1'
+      GIT_TERMINAL_PROMPT: '0'
+      DISCORD_TOKEN: ''
+      DATABASE_URL: ''
+      CERTIFICATION_DATABASE_URL: ''
+      CERTIFICATION_ENABLED: 'false'
+    steps:
+      - name: Check out approved authoring snapshot and source history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: 2957bb2d060040073673b8ab08b7f62e99b73eb3
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run existing synthetic builder regressions, not lesson commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir owner-review
+          python3 -B -m unittest discover -s docs/bug-bounty/tests -p 'test_*.py' -v 2>&1 | tee owner-review/regression-tests.log
+          grep -Eq '^Ran 10 tests in ' owner-review/regression-tests.log
+          grep -Eq '^OK$' owner-review/regression-tests.log
+      - name: Assemble all 44 real pinned lessons
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B docs/bug-bounty/build-notebook.py --repo . --manifest docs/bug-bounty/course-manifest.json --output owner-review/Bug-Bounty.md
+          cp docs/bug-bounty/course-manifest.json owner-review/course-manifest.json
+      - name: Verify real source identities and notebook structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B - <<'PY'
+          import hashlib, importlib.util, json, re, subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          out = root / 'owner-review'
+          manifest = json.loads((root / 'docs/bug-bounty/course-manifest.json').read_text())
+          source = '7c6e318537d35e0797256f0e9a0912862dc9ce7e'
+          authoring = '2957bb2d060040073673b8ab08b7f62e99b73eb3'
+          def require(ok, message):
+              if not ok:
+                  raise SystemExit(message)
+          def git(*args):
+              return subprocess.check_output(['git', *args], timeout=30)
+          require(git('rev-parse', 'HEAD').decode().strip() == authoring, 'Wrong authoring snapshot')
+          require(manifest.get('course') == 'Bug Bounty', 'Wrong course')
+          require(manifest.get('source_commit') == source, 'Unexpected source pin')
+          modules = manifest['modules']
+          slugs = [s for m in modules for s in m['lessons']]
+          require(len(modules) == 9 and len(slugs) == len(set(slugs)) == 44, 'Wrong course inventory')
+          prefix = 'docs/bug-bounty/lessons/'
+          entries = {}
+          for entry in git('ls-tree', '-r', '-z', source, '--', prefix).split(b'\0'):
+              if not entry:
+                  continue
+              meta, path = entry.split(b'\t', 1)
+              mode, kind, sha = meta.decode().split()
+              path = path.decode()
+              if path.endswith('.md'):
+                  require(kind == 'blob' and mode in ('100644', '100755'), 'Unexpected lesson object')
+                  entries[path] = sha
+          require(set(entries) == {prefix + s + '.md' for s in slugs}, 'Snapshot inventory mismatch')
+          spec = importlib.util.spec_from_file_location('builder', root / 'docs/bug-bounty/build-notebook.py')
+          builder = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(builder)
+          book = (out / 'Bug-Bounty.md').read_text(encoding='utf-8')
+          require(book == builder.assemble(root, manifest), 'Notebook differs from fresh assembly')
+          anchors = re.findall(r'^<a id="lesson-([a-z0-9-]+)"></a>$', book, re.M)
+          require(anchors == slugs, 'Lesson anchors missing, duplicated or reordered')
+          require(book.count('\n# Bug Bounty\n') == 0 and book.startswith('# Bug Bounty\n'), 'Wrong top-level course title')
+          def fences(text):
+              blocks, block, fence = [], [], None
+              for line in text.splitlines(keepends=True):
+                  marker = re.match(r'^ {0,3}(`{3,}|~{3,})(.*)$', line.rstrip('\r\n'))
+                  if fence:
+                      block.append(line)
+                      if marker and marker[1][0] == fence[0] and len(marker[1]) >= fence[1] and not marker[2].strip():
+                          blocks.append(''.join(block))
+                          block, fence = [], None
+                  elif marker:
+                      block, fence = [line], (marker[1][0], len(marker[1]))
+              require(fence is None, 'Unclosed Markdown fence')
+              return blocks
+          records, original_blocks = [], []
+          for slug in slugs:
+              path = prefix + slug + '.md'
+              raw = git('show', source + ':' + path)
+              blob = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+              require(blob == entries[path], 'Blob identity mismatch: ' + path)
+              text = raw.decode('utf-8')
+              require(bool(text.strip()), 'Empty lesson: ' + path)
+              blocks = fences(text)
+              original_blocks.extend(blocks)
+              records.append({'lesson': slug, 'path': path, 'bytes': len(raw), 'git_blob_sha1': blob,
+                              'sha256': hashlib.sha256(raw).hexdigest(), 'fenced_blocks': len(blocks)})
+          require(fences(book) == original_blocks, 'A fenced code block changed during assembly')
+          for module in modules:
+              require(book.count('\n## ' + module['title'] + '\n') == 1, 'Module heading missing or duplicated')
+          require(all(book.count('](#lesson-' + s + ')') >= 1 for s in slugs), 'Missing contents link')
+          report = {'course': 'Bug Bounty', 'status': 'owner-review export; not academy approval',
+                    'authoring_commit': authoring, 'lesson_source_commit': source,
+                    'module_count': len(modules), 'lesson_count': len(slugs),
+                    'notebook_bytes': len((out / 'Bug-Bounty.md').read_bytes()),
+                    'notebook_sha256': hashlib.sha256((out / 'Bug-Bounty.md').read_bytes()).hexdigest(),
+                    'checks': {'pinned_blob_identity': 'passed', 'real_source_assembly': 'passed',
+                               'repeat_assembly_equality': 'passed', 'lesson_anchor_order': 'passed',
+                               'module_headings_and_contents_targets': 'passed',
+                               'fenced_block_preservation': 'passed', 'fenced_blocks': len(original_blocks)},
+                    'not_established': ['complete human content review', 'complete prerequisite correctness',
+                                        'unsupported Markdown link correctness', 'browser rendering',
+                                        'lesson-command execution', 'live-program testing',
+                                        'academy integration', 'deployment readiness'],
+                    'sources': records}
+          (out / 'validation.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps({k: report[k] for k in ('module_count', 'lesson_count', 'notebook_bytes', 'notebook_sha256')}))
+          PY
+          git diff --exit-code
+          git diff --cached --exit-code
+          (cd owner-review && sha256sum Bug-Bounty.md course-manifest.json validation.json regression-tests.log > SHA256SUMS)
+      - name: Retain notebook, provenance, checksums and test log
+        id: artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: bug-bounty-owner-review-${{ github.run_id }}
+          path: owner-review/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Record the artifact link without claiming release readiness
+        if: ${{ success() }}
+        shell: bash
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          printf '%s\n' '# Bug Bounty owner-review export' '44 pinned lessons; 9 modules. Structural checks only.' "Artifact: $ARTIFACT_URL" 'Human content review, live practicals, academy integration and deployment remain unverified.' >> "$GITHUB_STEP_SUMMARY"

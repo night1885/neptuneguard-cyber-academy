@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COURSES } from './course-registry.js';
 import { FORMAL_READING_PROGRAMME } from './formal-programme-reading.mjs';
+import { BUG_BOUNTY_READING } from './bug-bounty-reading.mjs';
 import { COURSE_SECTION_CATALOG, COURSE_SECTION_KEYS, createCourseSectionAuthorization, createCourseSectionLoginHandler } from './certification-course-sections.js';
 import { createSectionIdentityVerifier } from './certification-section-identity.js';
 
@@ -31,7 +32,7 @@ function interaction(customId, modal = false, studentId = 'NG-fixture') {
 }
 
 test('course section mapping preserves registry keys and adds explicit formal reading metadata', () => {
-  assert.deepEqual([...COURSE_SECTION_KEYS], [...COURSES.map(course => course.key), FORMAL_READING_PROGRAMME.key]);
+  assert.deepEqual([...COURSE_SECTION_KEYS], [...COURSES.map(course => course.key), FORMAL_READING_PROGRAMME.key, BUG_BOUNTY_READING.key]);
   assert.ok(COURSE_SECTION_KEYS.length > 1); assert.ok(COURSE_SECTION_KEYS.includes('linux-fundamentals'));
   assert.ok(!COURSE_SECTION_KEYS.includes('training-readiness'));
   assert.ok(Object.isFrozen(COURSE_SECTION_KEYS) && Object.isFrozen(COURSE_SECTION_CATALOG));
