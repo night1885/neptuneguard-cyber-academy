@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { COURSES } from './course-registry.js';
+import { ADMIN_READING_COURSES, handleAdminReadingCourse, adminReadingCursor } from './certification-admin-reading-courses.mjs';
 import { formalLessonTitle } from './certification-formal-lesson-title.mjs';
 const PREFIX = 'cert:admin:courses:';
 const button = (id, label, disabled = false) => new ButtonBuilder().setCustomId(disabled ? `cert:disabled:courses:${id}` : id).setLabel(label.slice(0, 80)).setStyle(ButtonStyle.Secondary).setDisabled(disabled);
@@ -37,17 +38,27 @@ export async function handleConsoleCourses(interaction, config, guildId, formalP
       components.push(row(courses.map((course, index) => button(`${PREFIX}course:${page * 5 + index}:0`, course.title))));
     }
     if (page === 0 && typeof canInspectFormalAdminPreview === 'function' && canInspectFormalAdminPreview(interaction, config, guildId)) {
+      embed.addFields({ name: 'Registered reading courses', value: `${COURSES.length + ADMIN_READING_COURSES.length} registered courses total, including the original courses above. Reading courses: ${ADMIN_READING_COURSES.map(course => course.title).join(' • ')}` });
+    }
+    if (page === 0 && typeof canInspectFormalAdminPreview === 'function' && canInspectFormalAdminPreview(interaction, config, guildId)) {
       let preview;
       try { preview = await loadFormalAdminPreview({ interaction, config, guildId }); } catch {}
       embed.addFields({ name: 'Formal programme — unpublished draft', value: preview
         ? `${FORMAL_ADMIN_PREVIEW_TITLE}. ${preview.lessons.length} catalogue-listed draft lessons/capstones; not additional registered courses. Source availability is checked when each lesson is opened.`
         : 'Draft preview unavailable; its source could not be validated. Registered courses are unchanged.' });
-      components.push(row([button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:0`, FORMAL_ADMIN_PREVIEW_TITLE, !preview)]));
+      components.push(row([...ADMIN_READING_COURSES.map((course, index) => button(`${PREFIX}course:${COURSES.length + index}:0`, course.title)), button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:0`, FORMAL_ADMIN_PREVIEW_TITLE, !preview)]));
     }
     components.push(row([button(`${PREFIX}${Math.max(0, page - 1)}`, 'Previous courses', page === 0), button(`${PREFIX}${page}`, 'Refresh courses'), button(`${PREFIX}${page + 1}`, 'Next courses', page + 1 >= pages)]));
   } else {
     const match = moduleView || courseView;
     const courseIndex = Number(match[1]), course = COURSES[courseIndex];
+    const reading = ADMIN_READING_COURSES[courseIndex - COURSES.length];
+    if (reading) {
+      let cursor;
+      try { cursor = courseView ? (Number(courseView[2]) === 0 ? 'overview:0:0' : null) : adminReadingCursor(Number(moduleView[2]), Number(moduleView[3])); } catch {}
+      if (!cursor) return invalid();
+      return handleAdminReadingCourse(interaction, config, guildId, { index: courseIndex, course: reading, cursor, canInspect: canInspectFormalAdminPreview });
+    }
     if (courseIndex === FORMAL_ADMIN_PREVIEW_INDEX) {
       try {
         embed.setColor(0x8e44ad).setFooter({ text: 'Owner draft preview • Not published • No learner access, progress, submission or exercise authorization' });
