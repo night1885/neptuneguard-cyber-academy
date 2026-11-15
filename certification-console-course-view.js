@@ -39,7 +39,6 @@ export async function handleConsoleCourses(interaction, config, guildId, formalP
     }
     if (page === 0 && typeof canInspectFormalAdminPreview === 'function' && canInspectFormalAdminPreview(interaction, config, guildId)) {
       embed.addFields({ name: 'Registered reading courses', value: `${COURSES.length + ADMIN_READING_COURSES.length} registered courses total, including the original courses above. Reading courses: ${ADMIN_READING_COURSES.map(course => course.title).join(' • ')}` });
-      if (ADMIN_READING_COURSES.length) components.push(row(ADMIN_READING_COURSES.map((course, index) => button(`${PREFIX}course:${COURSES.length + index}:0`, course.title))));
     }
     if (page === 0 && typeof canInspectFormalAdminPreview === 'function' && canInspectFormalAdminPreview(interaction, config, guildId)) {
       let preview;
@@ -47,7 +46,7 @@ export async function handleConsoleCourses(interaction, config, guildId, formalP
       embed.addFields({ name: 'Formal programme — unpublished draft', value: preview
         ? `${FORMAL_ADMIN_PREVIEW_TITLE}. ${preview.lessons.length} catalogue-listed draft lessons/capstones; not additional registered courses. Source availability is checked when each lesson is opened.`
         : 'Draft preview unavailable; its source could not be validated. Registered courses are unchanged.' });
-      components.push(row([button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:0`, FORMAL_ADMIN_PREVIEW_TITLE, !preview)]));
+      components.push(row([...ADMIN_READING_COURSES.map((course, index) => button(`${PREFIX}course:${COURSES.length + index}:0`, course.title)), button(`${PREFIX}course:${FORMAL_ADMIN_PREVIEW_INDEX}:0`, FORMAL_ADMIN_PREVIEW_TITLE, !preview)]));
     }
     components.push(row([button(`${PREFIX}${Math.max(0, page - 1)}`, 'Previous courses', page === 0), button(`${PREFIX}${page}`, 'Refresh courses'), button(`${PREFIX}${page + 1}`, 'Next courses', page + 1 >= pages)]));
   } else {
