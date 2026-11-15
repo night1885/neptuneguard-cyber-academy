@@ -215,15 +215,22 @@ const restoreAudit = f => f.admin.query('DROP TRIGGER fail_combined_course_audit
     assert.equal((await enrollment(f)).student_id, f.approval.studentId);
   }));
 
-  await t.test('account isolation, Verified-role withdrawal and expiry protect sessions and confirmations', async () => isolated(async f => {
+  await t.test('account isolation and Verified-role withdrawal protect untimed readers while admin confirmations expire', async () => isolated(async f => {
     await waitFor(() => f.runtime.ready);
     const expires = await selectCourses(f, [first]), id = control(expires, 'cert:courselife:confirm:'); f.advance(300000);
     assert.match(courseMessageText(await f.send(id)), /expired/); assert.deepEqual(await courses(f), []);
     await assign(f); const entered = await enter(f, first), page = control(entered, 'cert:course:page:');
     assert.match(courseMessageText(await f.send(page, { actor: stranger })), /unavailable/); assertCourseTeachingView(await f.send(page, { actor: student }));
     f.setVerified(false); assert.match(courseMessageText(await f.send(page, { actor: student })), /unavailable/); f.setVerified(true);
-    const fresh = await enter(f, first), freshPage = control(fresh, 'cert:course:page:'); f.advance(300000);
-    assert.match(courseMessageText(await f.send(freshPage, { actor: student })), /expired/);
+    const fresh = await enter(f, first), freshPage = control(fresh, 'cert:course:page:');
+    const beforeViews = { enrollment: await enrollment(f), courses: await courses(f), actions: await actions(f) };
+    for (const elapsed of [300000, 86400000]) {
+      f.advance(elapsed);
+      assertCourseTeachingView(await f.send(freshPage, { actor: student }));
+      assert.deepEqual({ enrollment: await enrollment(f), courses: await courses(f), actions: await actions(f) }, beforeViews, 'Long-lived reader views must not change learner records');
+    }
+    assert.match(courseMessageText(await f.send(freshPage, { actor: stranger })), /unavailable/);
+    f.setVerified(false); assert.match(courseMessageText(await f.send(freshPage, { actor: student })), /unavailable/);
     assert.equal(await countAction(f, 'course_completed'), 0);
   }));
 
