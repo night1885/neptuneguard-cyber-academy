@@ -13,12 +13,13 @@ export function createProtectedCourseNavigation(pool,config,guildId,{verifiedRol
  const time=()=>{const n=now();if(!Number.isSafeInteger(n)||n<0||n>Number.MAX_SAFE_INTEGER-ttlMs)throw Error('Invalid navigation clock');return n;};
  const context=i=>{const origin=i.message?.interactionMetadata?.user?.id||i.message?.interaction?.user?.id;return !disposed&&config.enabled===true&&i.guildId===guildId&&i.guild?.id===guildId&&validId(i.user?.id)&&!(i.message?.flags?.has?.(64)===true&&origin&&origin!==i.user.id);};
  const respond=(i,payload)=>{const p={content:'',embeds:[],components:[],...payload,allowedMentions:{parse:[]}};return i.deferred||i.replied?i.editReply(p):i.reply({...p,flags:64});};
- const deny=i=>respond(i,{content:'Course navigation is unavailable, expired, or no longer authorized. Re-enter the course and check your current assignment.'});
- function forget(token){const g=grants.get(token);if(g)clearTimeout(g.timer);grants.delete(token);}
- const purge=()=>{const stamp=time();for(const [token,g] of grants)if(g.expiresAt<=stamp)forget(token);};
- const live=(i,token,g)=>context(i)&&grants.get(token)===g&&g&&g.actor===i.user.id&&g.guildId===i.guildId&&time()<g.expiresAt;
+ const deny=i=>respond(i,{content:buttonOnlyEntry?'Course navigation is unavailable or no longer authorized. Re-enter the course and check your current assignment.':'Course navigation is unavailable, expired, or no longer authorized. Re-enter the course and check your current assignment.'});
+ function forget(token){const g=grants.get(token);if(g?.timer)clearTimeout(g.timer);grants.delete(token);}
+ function touch(token,g){if(buttonOnlyEntry&&grants.get(token)===g){grants.delete(token);grants.set(token,g);}}
+ const purge=()=>{const stamp=time();for(const [token,g] of grants)if(g.expiresAt!==null&&g.expiresAt<=stamp)forget(token);};
+ const live=(i,token,g)=>context(i)&&grants.get(token)===g&&g&&g.actor===i.user.id&&g.guildId===i.guildId&&(g.expiresAt===null||time()<g.expiresAt);
  const matches=(a,g)=>a?.student_id===g.studentId&&a?.course_key===g.courseKey;
- function grant(i,courseKey,studentId){purge();for(const [token,g] of grants)if(g.actor===i.user.id&&g.courseKey===courseKey)forget(token);if(grants.size>=maxSessions)throw Error('Course session capacity reached');const token=randomUUID(),g={actor:i.user.id,guildId,courseKey,studentId,expiresAt:time()+ttlMs};grants.set(token,g);g.timer=setTimeout(()=>forget(token),ttlMs);g.timer.unref?.();return token;}
+ function grant(i,courseKey,studentId){purge();for(const [token,g] of grants)if(g.actor===i.user.id&&g.courseKey===courseKey)forget(token);if(grants.size>=maxSessions){if(buttonOnlyEntry)forget(grants.keys().next().value);else throw Error('Course session capacity reached');}const token=randomUUID(),g={actor:i.user.id,guildId,courseKey,studentId,expiresAt:buttonOnlyEntry?null:time()+ttlMs};grants.set(token,g);if(!buttonOnlyEntry){g.timer=setTimeout(()=>forget(token),ttlMs);g.timer.unref?.();}return token;}
  function safePayload(payload,token){
   if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('Course page payload required');const rows=(payload.components||[]).map(json);
   if(!Array.isArray(rows)||rows.length>5||(payload.content!==undefined&&(typeof payload.content!=='string'||payload.content.length>2000))||(payload.embeds!==undefined&&(!Array.isArray(payload.embeds)||payload.embeds.length>10)))throw Error('Invalid course page bounds');
@@ -31,7 +32,7 @@ export function createProtectedCourseNavigation(pool,config,guildId,{verifiedRol
    const buttonId=next=>{if(typeof next!=='string'||!cursorPattern.test(next))throw Error('Invalid course cursor');const id=`cert:course:page:${token}:${next}`;if(id.length>100)throw Error('Course control too long');return id;};
    const payload=safePayload(await renderPage({courseKey:g.courseKey,cursor,buttonId}),token);
    if(!live(i,token,g)||!matches(await authorize(g.actor,g.courseKey),g)||!live(i,token,g)){forget(token);await deny(i);return;}
-   await respond(i,payload);});}catch{forget(token);await deny(i);}
+   await respond(i,payload);touch(token,g);});}catch{forget(token);await deny(i);}
  }
  login=buttonOnlyEntry?null:createCourseSectionLoginHandler(pool,config,guildId,{now,ttlMs,async onVerified(i,courseKey){if(!context(i))throw Error('Course context changed');const studentId=i.fields.getTextInputValue('student_id').trim();await deliver(i,grant(i,courseKey,studentId),'overview:0:0',true);}});
  async function handle(i){
