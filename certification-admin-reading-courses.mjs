@@ -1,15 +1,25 @@
-import { COURSE_SECTION_CATALOG } from './certification-course-sections.js';
-import { renderStudentCoursePage } from './certification-student-course-renderer.js';
 const prefix = 'cert:admin:courses:';
 const types = ['overview', 'module', 'lesson'];
 const json = value => typeof value?.toJSON === 'function' ? value.toJSON() : value;
-export const ADMIN_READING_COURSES = Object.freeze(COURSE_SECTION_CATALOG.filter(course => ['ethical-hacking-reading', 'bug-bounty-reading'].includes(course.key)));
-export async function handleAdminReadingCourse(interaction, config, guildId, { index, course, cursor, canInspect, renderPage = renderStudentCoursePage } = {}) {
+// Metadata only: importing the shared inspector must not load academy runtime dependencies.
+export const ADMIN_READING_COURSES = Object.freeze([
+  Object.freeze({ key: 'ethical-hacking-reading', title: 'Ethical Hacking' }),
+  Object.freeze({ key: 'bug-bounty-reading', title: 'Bug Bounty' })
+]);
+export async function handleAdminReadingCourse(interaction, config, guildId, { index, course, cursor, canInspect, renderPage = null } = {}) {
   const respond = payload => interaction.editReply({ content: '', embeds: [], components: [], ...payload, allowedMentions: { parse: [] } });
   const authorized = () => config?.enabled === true && typeof canInspect === 'function' && canInspect(interaction, config, guildId) === true;
   if (!authorized()) { await respond({ content: 'Admin course preview is unavailable or not authorized in this context.' }); return true; }
   try {
-    if (!Number.isSafeInteger(index) || index < 0 || index > 99999 || !ADMIN_READING_COURSES.some(item => item.key === course?.key) || typeof renderPage !== 'function') throw Error('Invalid preview');
+    if (!Number.isSafeInteger(index) || index < 0 || index > 99999 || !ADMIN_READING_COURSES.some(item => item.key === course?.key) || (renderPage !== null && typeof renderPage !== 'function')) throw Error('Invalid preview');
+    if (renderPage === null) {
+      const [{ COURSE_SECTION_CATALOG }, { renderStudentCoursePage }] = await Promise.all([
+        import('./certification-course-sections.js'), import('./certification-student-course-renderer.js')
+      ]);
+      if (!authorized() || !COURSE_SECTION_CATALOG.some(item => item.key === course.key)) throw Error('Registered authorized preview required');
+      renderPage = renderStudentCoursePage;
+    }
+    if (!authorized()) throw Error('Context changed');
     const buttonId = next => {
       const match = /^(overview|module|lesson):(0|[1-9][0-9]{0,3}):(0|[1-9][0-9]{0,3})$/.exec(next || '');
       if (!match) throw Error('Invalid reading cursor');
